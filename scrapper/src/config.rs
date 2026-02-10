@@ -14,4 +14,7 @@ pub struct Config {
     /// The news sources to use for the investment periodical news briefing
     #[serde(default)]
     pub investment_rss_sources: Vec<reqwest::Url>,
+
+    /// SerpAPI key for fetching news from Google News
+    pub serp_api_key: String,
 }

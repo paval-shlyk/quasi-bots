@@ -4,6 +4,9 @@ serve:
 fetch:
     curl -s -L http://localhost:8080/news | jq
 
+search:
+    curl -s -L "http://localhost:8080/search?q=why%20tesla%20falling" > d.json
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

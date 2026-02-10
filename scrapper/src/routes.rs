@@ -16,11 +16,27 @@ pub fn create_routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/news", get(get_news))
+        .route("/topics", get(get_topics).post(add_topic))
         .with_state(state)
 }
 
 async fn health_check() -> impl IntoResponse {
     (StatusCode::OK, "OK")
+}
+
+async fn add_topic(State(_): State<Arc<AppState>>) -> impl IntoResponse {
+    (StatusCode::NOT_IMPLEMENTED, "Topic added")
+}
+
+async fn get_topics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
+    let topics = state
+        .config
+        .rss_sources
+        .iter()
+        .map(|source| source.clone())
+        .collect::<Vec<_>>();
+
+    Json(topics)
 }
 
 async fn get_news(State(state): State<Arc<AppState>>) -> impl IntoResponse {
@@ -47,9 +63,12 @@ async fn get_news(State(state): State<Arc<AppState>>) -> impl IntoResponse {
 async fn fetch_feed(
     client: &reqwest::Client,
     url: reqwest::Url,
-) -> Result<Vec<Article>, Box<dyn std::error::Error>> {
+) -> anyhow::Result<Vec<Article>> {
     //huge width to prevent line breaks in the middle of sentences
     const HTML_WIDTH: usize = 1_000_000;
+
+    //todo: run bert or other model to summarize the content or simply truncate it to a certain
+    //length
 
     let response = client.get(url).send().await?;
     let content = response.bytes().await?;

@@ -10,6 +10,10 @@ pub async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // Initialize database
+    let db_url = "sqlite://scrapper.db?mode=rwc";
+    let pool = scrapper::connect_db(db_url).await;
+
     let raw_config = tokio::fs::read_to_string("config.toml")
         .await
         .expect("Failed to read config file");
@@ -19,7 +23,9 @@ pub async fn main() {
 
     let state = std::sync::Arc::new(scrapper::routes::AppState {
         config: std::sync::Arc::new(config),
+        pool,
     });
+
     let app = scrapper::routes::create_routes(state);
 
     let addr: std::net::SocketAddr =

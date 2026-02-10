@@ -1,3 +1,6 @@
+build-deps:
+    sudo dnf install -y sqlite
+
 serve:
     cargo run --bin cli
 
@@ -5,8 +8,9 @@ fetch:
     curl -s -L http://localhost:8080/news | jq
 
 search:
-    curl -s -L "http://localhost:8080/search?q=why%20tesla%20falling" > d.json
+    curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"
 
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings
+

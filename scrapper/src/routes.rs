@@ -48,6 +48,9 @@ async fn fetch_feed(
     client: &reqwest::Client,
     url: reqwest::Url,
 ) -> Result<Vec<Article>, Box<dyn std::error::Error>> {
+    //huge width to prevent line breaks in the middle of sentences
+    const HTML_WIDTH: usize = 1_000_000;
+
     let response = client.get(url).send().await?;
     let content = response.bytes().await?;
     let feed = feed_rs::parser::parse(content.as_ref())?;
@@ -57,32 +60,36 @@ async fn fetch_feed(
         .into_iter()
         .map(|entry| {
             let title = entry.title.map(|t| t.content).unwrap_or_default();
-            let link = entry
-                .links
-                .first()
-                .map(|l| l.href.clone())
-                .unwrap_or_default();
+            let link = entry.links.first().map(|l| l.href.clone());
 
-            let summary = entry.summary.map(|s| s.content).unwrap_or_default();
-            
+            let parse_body = |content_type: mediatype::MediaTypeBuf, body: String| -> Option<String> {
+                //fixme: process other content types, e.g. markdown
+                if content_type.subty().as_str() == "html" {
+                    match html2text::from_read(body.as_bytes(), HTML_WIDTH) {
+                        Ok(text) => Some(text),
+                        Err(e) => {
+                            tracing::error!("Failed to convert HTML to text for entry '{}': {}", title, e);
+                            Some(body.clone())
+                        }
+                    }
+                } else {
+                    Some(body)
+                }
+            };
+
+            let parse_summary = || entry.summary.and_then(|s| parse_body(s.content_type, s.content));
+
             let content = entry
                 .content
-                .as_ref()
-                .and_then(|c| {
-                    let body = c.body.as_ref()?;
-                    if c.content_type.subty().as_str() == "html" {
-                        match html2text::from_read(body.as_bytes(), 120) {
-                            Ok(text) => Some(text),
-                            Err(e) => {
-                                tracing::error!("Failed to convert HTML to text for entry '{}': {}", title, e);
-                                Some(body.clone())
-                            }
-                        }
-                    } else {
-                        Some(body.clone())
-                    }
-                })
-                .unwrap_or(summary);
+                .and_then(|c| parse_body(c.content_type, c.body?))
+                .unwrap_or_else(|| {
+                    let Some(summary) = parse_summary() else {
+                        tracing::warn!("Entry '{}' has no content or summary", title);
+                        return "".to_string();
+                    };
+
+                    summary
+                });
 
             let authors = entry.authors.into_iter().map(|a| a.name).collect();
 
@@ -91,10 +98,6 @@ async fn fetch_feed(
                 title,
                 link,
                 content,
-                ty: entry
-                    .content
-                    .map(|c| c.content_type.subty().to_string())
-                    .unwrap_or_default(),
             }
         })
         .collect();

@@ -1,5 +1,9 @@
 serve:
-	cargo run --bin cli
+    cargo run --bin cli
 
 fetch:
-	curl -s -L http://localhost:8080/news | jq
+    curl -s -L http://localhost:8080/news | jq
+
+lint:
+    cargo fmt --all --check
+    cargo clippy --all-targets -- -D warnings

@@ -1330,6 +1330,7 @@ dependencies = [
  "dashmap",
  "feed-rs",
  "html2text",
+ "mediatype",
  "reqwest",
  "serde",
  "tokio",

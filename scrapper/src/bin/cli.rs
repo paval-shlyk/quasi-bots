@@ -17,10 +17,13 @@ pub async fn main() {
     let config: scrapper::config::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
-    let state = std::sync::Arc::new(scrapper::routes::AppState { config: std::sync::Arc::new(config) });
+    let state = std::sync::Arc::new(scrapper::routes::AppState {
+        config: std::sync::Arc::new(config),
+    });
     let app = scrapper::routes::create_routes(state);
 
-    let addr: std::net::SocketAddr = "0.0.0.0:8080".parse().expect("Failed to parse address");
+    let addr: std::net::SocketAddr =
+        "0.0.0.0:8080".parse().expect("Failed to parse address");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("Starting server on {}", addr);
 

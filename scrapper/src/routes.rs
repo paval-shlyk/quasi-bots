@@ -151,6 +151,7 @@ pub struct KnowledgeGraph {
 
 #[derive(serde::Serialize)]
 pub struct SearchResult {
+    pub answer: Option<String>,
     /// knowledge graph information about the search query, e.g. a short description of the topic
     /// or a list of related topics
     pub knowledge_graph: Option<KnowledgeGraph>,
@@ -210,7 +211,16 @@ async fn perform_search(
         })
     };
 
+    let parse_answer = || {
+        let answer_box = results["answer_box"].as_object()?;
+
+        let answer = answer_box.get("answer")?.as_str()?.to_string();
+
+        Some(answer)
+    };
+
     Ok(SearchResult {
+        answer: parse_answer(),
         knowledge_graph: parse_knowledge_graph(),
         articles,
     })

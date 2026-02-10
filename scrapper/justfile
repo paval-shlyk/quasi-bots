@@ -1,0 +1,5 @@
+serve:
+	cargo run --bin cli
+
+fetch:
+	curl -s -L http://localhost:8080/news | jq

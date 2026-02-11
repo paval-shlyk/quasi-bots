@@ -15,7 +15,7 @@ pub struct AssetQuery {
 }
 
 ///Generate report for given
-pub async fn get_symbol_report(
+pub async fn get_report(
     State(_state): State<Arc<AppState>>,
     Query(query): Query<AssetQuery>,
 ) -> impl IntoResponse {
@@ -37,16 +37,5 @@ pub async fn post_tracking_asset() -> impl IntoResponse {
 
 // return news about hype assets
 pub async fn get_market_recommendations() -> impl IntoResponse {
-    match super::recommendations::get_full_market_report().await {
-        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
-        Err(e) => {
-            tracing::warn!("Failed to fetch market recommendations: {e}");
-
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Failed to fetch recommendations",
-            )
-                .into_response()
-        }
-    }
+    StatusCode::NOT_IMPLEMENTED
 }

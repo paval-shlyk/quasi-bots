@@ -107,7 +107,7 @@ async fn perform_search(
     })
 }
 
-pub async fn search_news(
+pub async fn get_search(
     search: Query<SearchQuery>,
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {

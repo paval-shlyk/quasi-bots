@@ -1,12 +1,13 @@
+mod model;
+
 use std::sync::Arc;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
-use crate::{
-    model::{FamousQuote, QuoteAuthor},
-    routes::AppState,
-};
+use crate::routes::AppState;
+
+pub use model::*;
 
 pub async fn get_known_authors(
     State(state): State<Arc<AppState>>,

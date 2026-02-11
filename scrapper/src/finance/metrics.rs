@@ -1,4 +1,4 @@
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 use ta::Next;
 /// This module contains essential logic for finance management
 use ta::indicators::{BollingerBands, RelativeStrengthIndex};
@@ -29,7 +29,6 @@ pub struct TechnicalReport {
 pub struct AnalysisConfig {
     pub rsi_low: f64,
     pub rsi_high: f64,
-    pub history_duration: Duration,
 }
 
 impl Default for AnalysisConfig {
@@ -37,7 +36,6 @@ impl Default for AnalysisConfig {
         Self {
             rsi_low: 30.0,
             rsi_high: 70.0,
-            history_duration: Duration::from_secs(150 * 24 * 60 * 60), //6 months
         }
     }
 }

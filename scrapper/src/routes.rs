@@ -29,11 +29,11 @@ pub fn create_routes(state: Arc<AppState>) -> Router {
         .route("/search", get(search::get_search))
         .route("/quotes-bank/authors", get(quotes::get_known_authors))
         .route("/quotes-bank/next", post(quotes::post_next_unused_quote))
-        .route("/market-tracker/report", get(finance::routes::get_report))
-        // .route(
-        //     "/market-tracker/recommendations",
-        //     get(finance::routes::handler_recommendations),
-        // )
+        .route("/market-tracker/report", get(finance::get_report))
+        .route(
+            "/market-tracker/recommendations",
+            get(finance::get_market_recommendations),
+        )
         .with_state(state)
 }
 

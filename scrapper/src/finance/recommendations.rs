@@ -1,5 +1,4 @@
-use std::cmp::Ordering;
-
+#![allow(unused)]
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
@@ -9,15 +8,18 @@ pub struct RecommendationResponse {
     pub assets: Vec<RecommendedAsset>,
 }
 
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 pub struct RecommendedAsset {
     pub symbol: String,
+    /// full name of the asset
     pub name: String,
+    /// current price in USD
     pub price: f64,
+    /// per day change
     pub change_percent: f64,
-    pub volume_spike: String, // "2.5x Normal" - понятная метрика для LLM
-    pub reason: String,       // "High Volume Rally"
-    ///  
+    //wtf?
+    pub volume_spike: String, // "2.5x Normal"
+    pub reason: String,
     pub score: f64,
 }
 

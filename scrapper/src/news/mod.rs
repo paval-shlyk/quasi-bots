@@ -61,8 +61,8 @@ async fn fetch_feed(
     //todo: run bert or other model to summarize the content or simply truncate it to a certain
     //length
 
-    let response = client.get(url).send().await?;
-    let content = response.bytes().await?;
+    let resp = client.get(url).send().await?;
+    let content = resp.bytes().await?;
     let feed = feed_rs::parser::parse(content.as_ref())?;
 
     let articles = feed

@@ -14,13 +14,17 @@ pub async fn get_known_authors(
     let authors = sqlx::query_as!(
         QuoteAuthor,
         r#"
-            SELECT
-            a.name as name, 
-            COUNT(q.id) as "quotes_count: u64"
-            FROM
-            author as a
-            LEFT JOIN quote as q ON a.id = q.author_id
-            GROUP BY a.id
+            SELECT name, quotes_count as "quotes_count: u64"
+            FROM (
+                SELECT
+                    a.name as name, 
+                    COUNT(q.id) as quotes_count
+                FROM author as a
+                LEFT JOIN quote as q ON a.id = q.author_id
+                GROUP BY a.id
+            )
+            WHERE quotes_count > 0
+	    ORDER BY quotes_count DESC
         "#
     )
     .fetch_all(&state.pool)

@@ -30,7 +30,7 @@ pub async fn get_known_authors(
     Json(authors)
 }
 
-pub async fn get_next_unused_quote(
+pub async fn post_next_unused_quote(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
     match fetch_famous_quote(&state.pool).await {
@@ -39,7 +39,7 @@ pub async fn get_next_unused_quote(
             None => {
                 state.needs_more_quotes.notify_one();
                 (
-                    StatusCode::OK,
+                    StatusCode::NOT_FOUND,
                     "No fresh quotes available, please try again later",
                 )
                     .into_response()

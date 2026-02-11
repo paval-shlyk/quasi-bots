@@ -10,7 +10,7 @@ use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::get,
+    routing::{get, post},
 };
 
 #[derive(Clone)]
@@ -29,7 +29,7 @@ pub fn create_routes(state: Arc<AppState>) -> Router {
         .route("/topics", get(get_topics).post(add_topic))
         .route("/search", get(search_news))
         .route("/quotes-bank/authors", get(quotes::get_known_authors))
-        .route("/quotes-bank/next", get(quotes::get_next_unused_quote))
+        .route("/quotes-bank/next", post(quotes::post_next_unused_quote))
         .with_state(state)
 }
 

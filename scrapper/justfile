@@ -16,6 +16,12 @@ next-quote:
         curl -s -L "http://localhost:8080/quotes-bank/next" | jq
     done
 
+fetch_market:
+    # add mozilla user agent to avoid 403 error
+    # curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,BTC-USD,GC=F" | jq
+    # curl -s -L "http://localhost:8080/market-tracker/report?asset=TSLA"
+    curl -s -L "http://localhost:8080/market-tracker/recommendations"
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

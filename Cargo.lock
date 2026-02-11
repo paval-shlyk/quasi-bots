@@ -3560,6 +3560,7 @@ dependencies = [
  "chrono",
  "dashmap",
  "feed-rs",
+ "futures",
  "html2text",
  "mediatype",
  "polars",
@@ -3567,6 +3568,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "ta",
  "tokio",
  "toml",
  "tonic",
@@ -3575,6 +3577,7 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-scalar",
+ "yahoo_finance_api",
  "yfinance-rs",
 ]
 
@@ -4205,6 +4208,12 @@ dependencies = [
  "core-foundation-sys",
  "libc",
 ]
+
+[[package]]
+name = "ta"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "609409d472a0a7d8d4dd9e19891bbdef546b9dce670c3057d0e02192dc541226"
 
 [[package]]
 name = "tap"
@@ -5413,6 +5422,19 @@ name = "xxhash-rust"
 version = "0.8.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fdd20c5420375476fbd4394763288da7eb0cc0b8c11deed431a91562af7335d3"
+
+[[package]]
+name = "yahoo_finance_api"
+version = "4.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc75c0aef2fb5095c7fb103dc2aaec2d0bdeed8c4a34b2cd504f083e29f6f128"
+dependencies = [
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "time",
+]
 
 [[package]]
 name = "yfinance-rs"

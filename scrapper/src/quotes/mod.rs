@@ -1,4 +1,5 @@
 mod model;
+pub mod sync_task;
 
 use std::sync::Arc;
 

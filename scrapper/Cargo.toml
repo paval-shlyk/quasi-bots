@@ -38,4 +38,6 @@ tonic = "0.14.3"
 tower-http = "0.6.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+utoipa = "5.4.0"
+utoipa-scalar = "0.3.0"
 yfinance-rs = "0.7.2"

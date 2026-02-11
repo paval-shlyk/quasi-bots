@@ -11,7 +11,10 @@ search:
     curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"
 
 next-quote:
-    curl -s -L "http://localhost:8080/quotes-bank/next"
+    #!/bin/bash
+    for i in {1..5}; do \
+        curl -s -L "http://localhost:8080/quotes-bank/next" | jq
+    done
 
 lint:
     cargo fmt --all --check

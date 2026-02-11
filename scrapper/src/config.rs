@@ -1,9 +1,16 @@
+use std::path::PathBuf;
+
 /// Morning briefing news sources
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct RssSource {
     /// unique name for a group of news sources, e.g. "Tech News"
     pub topic: String,
     pub urls: Vec<reqwest::Url>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct KnowledgeDatabaseConfig {
+    pub directory: PathBuf,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

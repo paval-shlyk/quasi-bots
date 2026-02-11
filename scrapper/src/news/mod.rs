@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
-use crate::routes::AppState;
+use crate::AppState;
 
 use model::Article;
 

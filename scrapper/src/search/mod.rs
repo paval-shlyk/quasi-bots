@@ -8,7 +8,7 @@ use axum::{
 };
 use reqwest::StatusCode;
 
-use crate::routes::AppState;
+use crate::AppState;
 
 #[derive(serde::Deserialize)]
 pub struct SearchQuery {

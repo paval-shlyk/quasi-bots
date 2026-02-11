@@ -21,10 +21,10 @@ pub async fn main() {
         .await
         .expect("Failed to read config file");
 
-    let config: scrapper::config::Config =
+    let config: scrapper::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
-    let state = Arc::new(scrapper::routes::AppState {
+    let state = Arc::new(scrapper::AppState {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(Notify::new()),

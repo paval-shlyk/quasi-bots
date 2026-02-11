@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Context;
 
-use crate::routes::AppState;
+use crate::AppState;
 
 pub async fn task(state: Arc<AppState>) {
     #[derive(serde::Deserialize)]

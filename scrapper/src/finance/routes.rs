@@ -9,8 +9,8 @@ use axum::{
 use reqwest::StatusCode;
 
 use crate::{
+    AppState,
     finance::{metrics::AnalysisConfig, model::TrackingAsset},
-    routes::AppState,
 };
 
 #[derive(serde::Deserialize)]

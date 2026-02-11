@@ -1,3 +1,6 @@
+use std::sync::Arc;
+
+use tokio::sync::Notify;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -21,9 +24,10 @@ pub async fn main() {
     let config: scrapper::config::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
-    let state = std::sync::Arc::new(scrapper::routes::AppState {
-        config: std::sync::Arc::new(config),
+    let state = Arc::new(scrapper::routes::AppState {
+        config: Arc::new(config),
         pool,
+        needs_more_quotes: Arc::new(Notify::new()),
     });
 
     let app = scrapper::routes::create_routes(state);

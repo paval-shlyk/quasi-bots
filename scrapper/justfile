@@ -10,7 +10,9 @@ fetch:
 search:
     curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"
 
+next-quote:
+    curl -s -L "http://localhost:8080/quotes-bank/next"
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings
-

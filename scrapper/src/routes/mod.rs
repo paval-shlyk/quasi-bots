@@ -1,7 +1,9 @@
+mod quotes;
+
 use std::sync::Arc;
 
-use crate::model::{Article, QuoteAuthor};
-use crate::{config::Config, model::FamousQuote};
+use crate::config::Config;
+use crate::model::Article;
 use anyhow::Context;
 use axum::{
     Json, Router,
@@ -19,15 +21,15 @@ pub struct AppState {
 }
 
 pub fn create_routes(state: Arc<AppState>) -> Router {
-    tokio::task::spawn(quote_sync_task(state.pool.clone()));
+    tokio::task::spawn(quote_sync_task(state.clone()));
 
     Router::new()
         .route("/health", get(health_check))
         .route("/news", get(get_news))
         .route("/topics", get(get_topics).post(add_topic))
         .route("/search", get(search_news))
-        .route("/quotes-bank/authors", get(get_quote_authors))
-        .route("/quotes-bank/next", get(get_next_quote))
+        .route("/quotes-bank/authors", get(quotes::get_known_authors))
+        .route("/quotes-bank/next", get(quotes::get_next_unused_quote))
         .with_state(state)
 }
 
@@ -50,48 +52,6 @@ async fn get_topics(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     Json(topics)
 }
 
-async fn get_quote_authors(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
-    let authors = sqlx::query_as!(
-        QuoteAuthor,
-        r#"
-            SELECT
-            a.name as name, 
-            COUNT(q.id) as "quotes_count: u64"
-            FROM
-            author as a
-            LEFT JOIN quote as q ON a.id = q.author_id
-            GROUP BY a.id
-        "#
-    )
-    .fetch_all(&state.pool)
-    .await
-    .unwrap_or_default();
-
-    Json(authors)
-}
-
-async fn get_next_quote(
-    State(state): State<Arc<AppState>>,
-) -> impl IntoResponse {
-    match fetch_famous_quote(&state.pool).await {
-        Ok(maybe_quote) => match maybe_quote {
-            Some(quote) => (StatusCode::OK, Json(quote)).into_response(),
-            None => (
-                StatusCode::OK,
-                "No fresh quotes available, please try again later",
-            )
-                .into_response(),
-        },
-        Err(e) => {
-            tracing::error!("Failed to fetch quote: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch quote")
-                .into_response()
-        }
-    }
-}
-
 async fn quote_sync_task(state: Arc<AppState>) {
     #[derive(serde::Deserialize)]
     struct ZenQuote {
@@ -107,6 +67,8 @@ async fn quote_sync_task(state: Arc<AppState>) {
             let author_name = quote.a.trim();
             let quote_text = quote.q.trim();
 
+            let mut tx = pool.begin().await?;
+
             // Insert author if not exists
             let author_id = sqlx::query!(
                 r#"
@@ -116,7 +78,7 @@ async fn quote_sync_task(state: Arc<AppState>) {
                 "#,
                 author_name
             )
-            .fetch_one(pool)
+            .fetch_one(tx.as_mut())
             .await?
             .id;
 
@@ -128,11 +90,15 @@ async fn quote_sync_task(state: Arc<AppState>) {
                 quote_text,
                 author_id
             )
-            .fetch_optional(pool)
+            .fetch_optional(tx.as_mut())
             .await?
             .is_some();
 
             if already_exists {
+                tracing::info!(
+                    "Quote already exists in DB, skipping: '{}'",
+                    quote_text
+                );
                 continue;
             }
 
@@ -144,8 +110,10 @@ async fn quote_sync_task(state: Arc<AppState>) {
                 quote_text,
                 author_id
             )
-            .fetch_one(pool)
+            .execute(tx.as_mut())
             .await?;
+
+            tx.commit().await?;
         }
 
         Ok(())
@@ -166,6 +134,8 @@ async fn quote_sync_task(state: Arc<AppState>) {
         Ok(quotes)
     }
 
+    const MIN_FRESH_QUOTES: u64 = 10;
+
     loop {
         let count: u64 = sqlx::query!(
             r#"
@@ -179,72 +149,27 @@ async fn quote_sync_task(state: Arc<AppState>) {
         .map(|row| row.count)
         .unwrap_or_default();
 
-        if count > 0 {
+        if count > MIN_FRESH_QUOTES {
             tracing::info!(
                 "Found {} fresh quotes in DB, skipping fetch from external source",
                 count
             );
 
-            // Sleep for 4 hours before checking again
             tokio::select! {
                 _ = state.needs_more_quotes.notified() => {
                     tracing::info!("Received notification for more quotes, fetching from external source");
                 }
-                _ = tokio::time::sleep(std::time::Duration::from_secs(4 * 60 * 60)) => {
-                    tracing::info!("No fresh quotes found, fetching from external source");
-                    continue;
-                }
-            }
+                _ = tokio::time::sleep(std::time::Duration::from_secs(4 * 60 * 60)) => {}
+            };
+
+            continue;
         }
 
         let quotes = fetch_quotes_from_api().await.unwrap_or_default();
 
-        insert_new_quotes(quotes, &state.pool)
+        let _ = insert_new_quotes(quotes, &state.pool)
             .await
-            .unwrap_or_else(|e| {
-                tracing::error!("Failed to insert quotes: {}", e)
-            });
-    }
-}
-
-async fn fetch_famous_quote(
-    pool: &sqlx::SqlitePool,
-) -> anyhow::Result<Option<FamousQuote>> {
-    let mut tx = pool.begin().await?;
-
-    // Try to get a quote from DB that hasn't been used in 6 months or ever
-    let maybe_quote = sqlx::query_as!(
-        FamousQuote,
-        r#"
-        SELECT q.id, q.text, a.name as author, q.when_used as "when_used: chrono::DateTime<chrono::Utc>"
-        FROM quote q
-        JOIN author a ON q.author_id = a.id
-        WHERE q.when_used IS NULL OR q.when_used < datetime('now', '-6 months')
-        LIMIT 1
-        "#
-    )
-    .fetch_optional(tx.as_mut())
-    .await?;
-
-    match maybe_quote {
-        Some(quote) => {
-            // Mark as used
-            sqlx::query!(
-                r#"
-            UPDATE quote
-            SET when_used = datetime('now')
-            WHERE id = ?
-            "#,
-                quote.id
-            )
-            .execute(tx.as_mut())
-            .await?;
-
-            tx.commit().await?;
-
-            Ok(Some(quote))
-        }
-        None => Ok(None),
+            .inspect_err(|e| tracing::error!("Failed to insert quotes: {}", e));
     }
 }
 

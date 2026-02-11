@@ -70,16 +70,24 @@ async fn quote_sync_task(state: Arc<AppState>) {
             let mut tx = pool.begin().await?;
 
             // Insert author if not exists
-            let author_id = sqlx::query!(
+            let author_id: i64 = sqlx::query!(
                 r#"
-                    INSERT OR IGNORE INTO author (name)
+                    INSERT INTO author (name)
                     VALUES (?)
+                    ON CONFLICT(name) DO UPDATE SET name=excluded.name
                     RETURNING id
                 "#,
                 author_name
             )
             .fetch_one(tx.as_mut())
-            .await?
+            .await
+            .inspect_err(|e| {
+                tracing::error!(
+                    "Failed to insert author '{}' into DB: {}",
+                    author_name,
+                    e
+                )
+            })?
             .id;
 
             let already_exists = sqlx::query!(
@@ -165,7 +173,20 @@ async fn quote_sync_task(state: Arc<AppState>) {
             continue;
         }
 
-        let quotes = fetch_quotes_from_api().await.unwrap_or_default();
+        tracing::info!(
+            "Only {} fresh quotes available in DB, fetching more from external source",
+            count
+        );
+
+        let quotes = fetch_quotes_from_api()
+            .await
+            .inspect_err(|e| {
+                tracing::error!(
+                    "Failed to fetch quotes from external API: {}",
+                    e
+                )
+            })
+            .unwrap_or_default();
 
         let _ = insert_new_quotes(quotes, &state.pool)
             .await

@@ -36,11 +36,14 @@ pub async fn get_next_unused_quote(
     match fetch_famous_quote(&state.pool).await {
         Ok(maybe_quote) => match maybe_quote {
             Some(quote) => (StatusCode::OK, Json(quote)).into_response(),
-            None => (
-                StatusCode::OK,
-                "No fresh quotes available, please try again later",
-            )
-                .into_response(),
+            None => {
+                state.needs_more_quotes.notify_one();
+                (
+                    StatusCode::OK,
+                    "No fresh quotes available, please try again later",
+                )
+                    .into_response()
+            }
         },
         Err(e) => {
             tracing::error!("Failed to fetch quote: {}", e);

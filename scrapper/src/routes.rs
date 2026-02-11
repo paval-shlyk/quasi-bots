@@ -27,7 +27,7 @@ pub fn create_routes(state: Arc<AppState>) -> Router {
         .route("/quotes-bank/authors", get(quotes::get_known_authors))
         .route("/quotes-bank/next", post(quotes::post_next_unused_quote))
 
-        .route("/knowledge-bank/today", get(knowledge::get_daily_questions))
+        .route("/knowledge-bank/next", post(knowledge::post_next_daily_question))
         .route("/knowledge-bank/topics", get(knowledge::get_all_topics))
         .route("/knowledge-bank/entries", post(knowledge::post_new_knowledge))
 

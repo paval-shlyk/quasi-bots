@@ -8,4 +8,3 @@ pub struct AppState {
     pub pool: sqlx::SqlitePool,
     pub needs_more_quotes: Arc<tokio::sync::Notify>,
 }
-

@@ -9,14 +9,17 @@ pub struct RssSource {
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-pub struct KnowledgeDatabaseConfig {
-    pub directory: PathBuf,
+pub struct KnowledgeConfig {
+    /// Where yaml configuration files are loaded
+    pub knowledge_file: PathBuf,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Config {
     #[serde(alias = "rss_source")]
     pub rss_sources: Vec<RssSource>,
+
+    pub knowledge: KnowledgeConfig,
 
     /// The news sources to use for the investment periodical news briefing
     #[serde(default)]

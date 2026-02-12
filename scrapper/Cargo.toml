@@ -60,3 +60,6 @@ uuid = { version = "1.20.0", features = ["v4", "fast-rng", "macro-diagnostics"] 
 walkdir = "2.5.0"
 yahoo_finance_api = "4.1.0"
 yfinance-rs = "0.7.2"
+
+[dev-dependencies]
+proptest = "1.10.0"

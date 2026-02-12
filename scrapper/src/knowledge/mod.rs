@@ -1,75 +1,59 @@
 mod model;
 mod routes;
+mod topic_sequence;
 
 use std::collections::HashSet;
 
 pub use model::*;
 pub use routes::*;
+use topic_sequence::TopicSequence;
 
 pub type Topic = String;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug)]
 pub struct DataBase {
-    pub entries: Vec<KnowledgeEntry>,
-    pub topics: TopicSequence,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct TopicSequence {
-    topics: Vec<Topic>,
-    ///index to start
-    next_topic: usize,
-}
-
-impl TopicSequence {
-    pub fn from_slice(topics: &[Topic]) -> Self {
-        let set = HashSet::<Topic>::from_iter(topics.iter().cloned());
-
-        assert_eq!(set.len(), topics.len(), "Duplicated topics are detected");
-
-        Self {
-            topics: topics.to_vec(),
-            next_topic: 0,
-        }
-    }
-
-    pub fn next(&mut self) -> Option<Topic> {
-        if self.next_topic >= self.topics.len() {
-            return None;
-        }
-
-        let unused_topics = &self.topics[self.next_topic..];
-        let idx = rand::random_range(0..unused_topics.len());
-
-        let topic = unused_topics[idx].clone();
-
-        self.topics.swap(self.next_topic, idx + self.next_topic);
-        self.next_topic += 1;
-
-        Some(topic)
-    }
-
-    pub fn try_push(&mut self, topic: Topic) -> anyhow::Result<()> {
-        let is_duplicate =
-            self.topics.iter().find(|old| **old == topic).is_some();
-
-        if is_duplicate {
-            return Err(anyhow::anyhow!("Duplicated topic"));
-        }
-
-        Ok(())
-    }
+    entries: Vec<KnowledgeEntry>,
+    topics: TopicSequence,
+    pool: sqlx::SqlitePool,
 }
 
 impl DataBase {
-    pub async fn load(config: &crate::Config) -> Self {
+    pub async fn load(
+        config: &crate::Config,
+        pool: sqlx::SqlitePool,
+    ) -> anyhow::Result<Self> {
         let raw_entries =
             tokio::fs::read_to_string(&config.knowledge.knowledge_file)
                 .await
                 .expect("Failed to load knowledge file");
 
+        //todo: drop tables somehow
+
         let entries: Vec<KnowledgeEntry> = serde_yaml::from_str(&raw_entries)
             .expect("Invalid YAML format for knowledge file");
+
+        // for entry in entries.iter() {
+        //     let topic_id: i64 = sqlx::query!(
+        //         r#"
+        //             INSERT INTO topic (name)
+        //             VALUES (?)
+        //             ON CONFLICT(name) DO UPDATE SET name=excluded.name
+        //             RETURNING id
+        //         "#,
+        //         entry.topic
+        //     )
+        //     .fetch_one(&pool)
+        //     .await?
+        //     .id;
+        //
+        //     // sqlx::query!(
+        //     //     r#"
+        //     //         INSERT INTO entry (id, topic_id, question, truth, added_at, reviewed_at, complexity)
+        //     //         VALUES (?, ?, ?, ?, ?,)
+        //     //     "#
+        //     // ).execute(&pool)
+        //     // .await?;
+        // }
 
         let topics = {
             let topics =
@@ -80,11 +64,51 @@ impl DataBase {
             TopicSequence::from_slice(&topics)
         };
 
-        Self { entries, topics }
+        Ok(Self {
+            topics,
+            entries,
+            pool,
+        })
     }
 
-    pub fn update(&mut self) {
+    /// Fetch new knowledge and mutate internal state
+    pub fn next_knowledge(&mut self) -> anyhow::Result<KnowledgeEntry> {
+        assert!(self.topics.len() > 0);
 
+        let topic = {
+            match self.topics.next() {
+                Some(topic) => topic,
+                None => {
+                    self.topics.reset();
+
+                    self.topics.next().expect("Sequence is reset")
+                }
+            }
+        };
+
+        let mut entries = self
+            .entries
+            .iter_mut()
+            .filter(|e| e.topic == topic)
+            .collect::<Vec<_>>();
+
+        if entries.is_empty() {
+            return Err(anyhow::anyhow!("No entries for topic: {topic}"));
+        }
+
+        if let Some(entry) =
+            entries.iter_mut().find(|e| e.reviewed_at.is_none())
+        {
+            entry.reviewed_at = Some(chrono::Utc::now());
+            return Ok(entry.clone());
+        }
+
+        //todo: what do you think about switching topic instead using old one?
+        entries.iter_mut().for_each(|e| e.reviewed_at = None);
+
+        entries[0].reviewed_at = Some(chrono::Utc::now());
+
+        Ok(entries[0].clone())
     }
 }
 

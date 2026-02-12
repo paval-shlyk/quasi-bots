@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
 pub struct KnowledgeEntry {
     /// Unique question identifier
     pub id: String,
@@ -11,10 +11,8 @@ pub struct KnowledgeEntry {
     pub truth: String,
 
     pub added_at: chrono::DateTime<chrono::Utc>,
-    pub last_review: Option<chrono::DateTime<chrono::Utc>>,
+    pub reviewed_at: Option<chrono::DateTime<chrono::Utc>>,
 
-    // alternative for SuperMemo-2
-    pub hardness_factor: f64,
-    // good point about when to review)
-    pub next_review: Option<chrono::DateTime<chrono::Utc>>,
+    /// value from 0 to 100
+    pub complexity: u16,
 }

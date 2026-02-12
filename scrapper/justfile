@@ -32,6 +32,15 @@ next-knowledge:
 fetch_topics:
     curl -s -L "http://localhost:8080/knowledge-bank/topics" | jq
 
+fetch_tags:
+    curl -s -L "http://localhost:8080/knowledge-bank/tags" | jq
+
+fr:
+    curl -s -L "http://localhost:8080/knowledge-bank/reviews" | jq
+
+set_attempt:
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"attempts": 1}' 
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

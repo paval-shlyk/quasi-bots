@@ -10,7 +10,7 @@ pub struct TopicSequence {
 }
 
 impl TopicSequence {
-    pub fn from_slice(topics: &[Topic]) -> Self {
+    pub fn new(topics: &[Topic]) -> Self {
         let set = HashMap::<String, Topic>::from_iter(
             topics.iter().map(|t| (t.name.clone(), t.clone())),
         );
@@ -63,6 +63,10 @@ impl TopicSequence {
     pub fn to_vec(&self) -> Vec<Topic> {
         self.topics.clone()
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.topics.is_empty()
+    }
 }
 
 #[cfg(test)]
@@ -91,7 +95,7 @@ mod tests {
                 }
             }
 
-            let mut seq = TopicSequence::from_slice(&topics);
+            let mut seq = TopicSequence::new(&topics);
 
             let mut seen_names_out = HashSet::new();
             for _ in 0..topics.len() {
@@ -122,7 +126,7 @@ mod tests {
                 }
             }
 
-            let mut seq = TopicSequence::from_slice(&topics);
+            let mut seq = TopicSequence::new(&topics);
 
             prop_assert!(seq.try_push(new_topic.clone()).is_ok());
 
@@ -151,7 +155,7 @@ mod tests {
 
              if topics.is_empty() { return Ok(()); }
 
-             let mut seq = TopicSequence::from_slice(&topics);
+             let mut seq = TopicSequence::new(&topics);
 
              let duplicate = topics[0].clone();
              prop_assert!(seq.try_push(duplicate).is_err());
@@ -169,7 +173,7 @@ mod tests {
                 }
             }
 
-            let mut seq = TopicSequence::from_slice(&topics);
+            let mut seq = TopicSequence::new(&topics);
 
             // Consume partial
             if !topics.is_empty() {

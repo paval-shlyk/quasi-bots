@@ -23,8 +23,20 @@ fetch_market:
     curl -s -L "http://localhost:8080/market-tracker/recommendations"
 
 next-knowledge:
-    curl -X POST -s -L "http://localhost:8080/knowledge-bank/next"
+    #!/bin/bash
+    for i in {1..5}; do \
+        curl -X POST -s -L "http://localhost:8080/knowledge-bank/next" | jq; \
+    done
+    # curl -X POST -s -L "http://localhost:8080/knowledge-bank/next"
 
+fetch_topics:
+    curl -s -L "http://localhost:8080/knowledge-bank/topics" | jq
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings
+
+reset-db:
+    export DATABASE_URL="sqlite://$(pwd)/scrapper.db"
+    sqlx database drop
+    sqlx database create
+    sqlx migrate run

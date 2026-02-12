@@ -1,18 +1,11 @@
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Entry {
-    /// Unique question identifier
+    // Unique identifier for the entry, can be a UUID or any string
     pub id: String,
     pub topic: String,
     pub tags: Vec<String>,
 
-    /// Question itself
     pub question: String,
 
     pub truth: String,
-
-    pub added_at: chrono::DateTime<chrono::Utc>,
-    pub reviewed_at: Option<chrono::DateTime<chrono::Utc>>,
-
-    /// value from 0 to 100
-    pub complexity: u16,
 }

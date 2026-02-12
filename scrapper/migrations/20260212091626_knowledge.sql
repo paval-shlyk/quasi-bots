@@ -17,8 +17,23 @@ CREATE TABLE IF NOT EXISTS entry (
 	question TEXT NOT NULL UNIQUE,
 	truth TEXT NOT NULL,
 
-	added_at DATETIME NOT NULL,
-	reviewed_at DATETIME,
+	added_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	reviewed_at DATETIME DEFAULT NULL,
 
 	FOREIGN KEY(topic_id) REFERENCES topic(id)
+);
+
+CREATE TABLE IF NOT EXISTS tag (
+	id INTEGER PRIMARY KEY,
+	name VARCHAR(100) NOT NULL UNIQUE
+);
+
+CREATE TABLE IF NOT EXISTS m2m_entry_tag (
+	entry_id INTEGER NOT NULL,
+	tag_id INTEGER NOT NULL,
+
+	PRIMARY KEY (entry_id, tag_id),
+
+	FOREIGN KEY(entry_id) REFERENCES entry(id),
+	FOREIGN KEY(tag_id) REFERENCES tag(id)
 );

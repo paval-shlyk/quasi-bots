@@ -41,7 +41,7 @@ impl Database {
         .await?;
 
         Ok(Self {
-            topics: TopicSequence::from_slice(&topics),
+            topics: TopicSequence::new(&topics),
             pool,
         })
     }
@@ -59,92 +59,178 @@ impl Database {
 
         sqlx::query!(
             r#"
+                DELETE FROM m2m_entry_tag;
                 DELETE FROM entry;
+                DELETE FROM tag;
                 DELETE FROM topic;
             "#
         )
         .execute(&self.pool)
         .await?;
 
-        todo!()
-        // let topics = {
-        //     let topics =
-        //         entries.iter().map(|e| &e.topic).collect::<HashSet<_>>();
-        //
-        //     let topics = topics.into_iter().cloned()
-        //
-        //         .map(|name| Topic{nam})
-        //         .collect::<Vec<_>>();
-        //
-        //     TopicSequence::from_slice(&topics)
-        // };
+        for entry in entries.iter() {
+            let topic_id: i64 = sqlx::query!(
+                r#"
+                        INSERT INTO topic (name)
+                        VALUES (?)
+                        ON CONFLICT(name) DO UPDATE SET name=excluded.name
+                        RETURNING id
+                    "#,
+                entry.topic
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .id;
 
-        // for entry in entries.iter() {
-        //     let topic_id: i64 = sqlx::query!(
-        //         r#"
-        //             INSERT INTO topic (name)
-        //             VALUES (?)
-        //             ON CONFLICT(name) DO UPDATE SET name=excluded.name
-        //             RETURNING id
-        //         "#,
-        //         entry.topic
-        //     )
-        //     .fetch_one(&pool)
-        //     .await?
-        //     .id;
-        //
-        //     // sqlx::query!(
-        //     //     r#"
-        //     //         INSERT INTO entry (id, topic_id, question, truth, added_at, reviewed_at, complexity)
-        //     //         VALUES (?, ?, ?, ?, ?,)
-        //     //     "#
-        //     // ).execute(&pool)
-        //     // .await?;
-        // }
+            let entry_id = sqlx::query!(
+                r#"
+                        INSERT INTO entry (topic_id, name, question, truth)
+                        VALUES (?, ?, ?, ?)
+                        RETURNING id
+                    "#,
+                topic_id,
+                entry.id,
+                entry.question,
+                entry.truth
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .id;
+
+            for tag in entry.tags.iter() {
+                let tag_id: i64 = sqlx::query!(
+                        r#"
+                                INSERT INTO tag (name)
+                                VALUES (?)
+                                ON CONFLICT(name) DO UPDATE SET name=excluded.name
+                                RETURNING id
+                            "#,
+                        tag
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .id;
+
+                sqlx::query!(
+                    r#"
+                        INSERT INTO m2m_entry_tag (entry_id, tag_id)
+                        VALUES (?, ?)
+                    "#,
+                    entry_id,
+                    tag_id
+                )
+                .execute(&self.pool)
+                .await?;
+            }
+        }
+
+        let topics: Vec<Topic> = sqlx::query_as!(
+            Topic,
+            r#"
+                SELECT id as "id: u64", name
+                FROM topic
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        self.topics = TopicSequence::new(&topics);
+
+        Ok(())
     }
 
     /// Fetch new knowledge and mutate internal state
-    pub fn next_knowledge(&mut self) -> anyhow::Result<Entry> {
-        assert!(self.topics.len() > 0);
-        todo!()
+    pub async fn next_knowledge(&mut self) -> anyhow::Result<Entry> {
+        if self.topics.is_empty() {
+            return Err(anyhow::anyhow!("No topics available"));
+        }
 
-        // let topic = {
-        //     match self.topics.next() {
-        //         Some(topic) => topic,
-        //         None => {
-        //             self.topics.reset();
-        //
-        //             self.topics.next().expect("Sequence is reset")
-        //         }
-        //     }
-        // };
-        //
-        // let mut entries = self
-        //     .entries
-        //     .iter_mut()
-        //     .filter(|e| e.topic == topic)
-        //     .collect::<Vec<_>>();
-        //
-        // if entries.is_empty() {
-        //     return Err(
-        //         anyhow::anyhow!("No entries for topic: {}"),
-        //         topic.name,
-        //     );
-        // }
-        //
-        // if let Some(entry) =
-        //     entries.iter_mut().find(|e| e.reviewed_at.is_none())
-        // {
-        //     entry.reviewed_at = Some(chrono::Utc::now());
-        //     return Ok(entry.clone());
-        // }
-        //
-        // //todo: what do you think about switching topic instead using old one?
-        // entries.iter_mut().for_each(|e| e.reviewed_at = None);
-        //
-        // entries[0].reviewed_at = Some(chrono::Utc::now());
-        //
-        // Ok(entries[0].clone())
+        let topic = {
+            match self.topics.next() {
+                Some(topic) => topic,
+                None => {
+                    self.topics.reset();
+
+                    self.topics.next().expect("Sequence is reset")
+                }
+            }
+        };
+
+        let topic_id = topic.id as i64;
+
+        #[derive(Debug, Clone, sqlx::FromRow)]
+        struct EntryWithoutTags {
+            pub id: i64,
+            pub name: String,
+            pub topic: String,
+            pub question: String,
+            pub truth: String,
+        }
+        async fn fetch_entry(
+            pool: &sqlx::SqlitePool,
+            topic_id: i64,
+        ) -> anyhow::Result<Option<EntryWithoutTags>> {
+            let maybe_entry = sqlx::query_as!(
+                EntryWithoutTags,
+                r#"
+                SELECT e.id, e.name, t.name as topic, e.question, e.truth
+                FROM entry as e
+                JOIN topic as t ON e.topic_id = t.id
+                WHERE t.id = ? AND e.reviewed_at IS NULL
+                ORDER BY RANDOM()
+                LIMIT 1
+            "#,
+                topic_id
+            )
+            .fetch_optional(pool)
+            .await?;
+
+            Ok(maybe_entry)
+        }
+
+        let entry = match fetch_entry(&self.pool, topic_id).await? {
+            Some(entry) => entry,
+            None => {
+                // No unrevised entry, reset review status and try again
+                sqlx::query!(
+                    r#"
+                        UPDATE entry
+                        SET reviewed_at = NULL
+                        WHERE topic_id = ?
+                    "#,
+                    topic_id
+                )
+                .execute(&self.pool)
+                .await?;
+
+                fetch_entry(&self.pool, topic_id).await?.ok_or_else(|| {
+                    anyhow::anyhow!("Entries exist but failed to fetch after resetting review status")
+                })?
+            }
+        };
+
+        let tags = sqlx::query!(
+            r#"
+                SELECT tag.name
+                FROM m2m_entry_tag as mt
+                JOIN tag ON mt.tag_id = tag.id
+                WHERE mt.entry_id = ?
+            "#,
+            entry.id
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|record| record.name)
+        .collect::<Vec<String>>();
+
+        Ok(Entry {
+            id: entry.name,
+            topic: entry.topic,
+            tags,
+            question: entry.question,
+            truth: entry.truth,
+        })
     }
 
     pub async fn fetch_topics(

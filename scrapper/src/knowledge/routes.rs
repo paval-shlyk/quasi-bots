@@ -27,9 +27,13 @@ pub async fn get_all_topics(
 pub async fn post_next_daily_question(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    tracing::info!("Next POST");
-
-    match state.knowledge_database.write().await.next_knowledge() {
+    match state
+        .knowledge_database
+        .write()
+        .await
+        .next_knowledge()
+        .await
+    {
         Ok(entry) => (StatusCode::OK, Json(entry)).into_response(),
         Err(e) => {
             (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()

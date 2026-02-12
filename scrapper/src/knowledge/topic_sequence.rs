@@ -1,8 +1,8 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use crate::knowledge::Topic;
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug)]
 pub struct TopicSequence {
     topics: Vec<Topic>,
     ///index to start
@@ -11,7 +11,9 @@ pub struct TopicSequence {
 
 impl TopicSequence {
     pub fn from_slice(topics: &[Topic]) -> Self {
-        let set = HashSet::<Topic>::from_iter(topics.iter().cloned());
+        let set = HashMap::<String, Topic>::from_iter(
+            topics.iter().map(|t| (t.name.clone(), t.clone())),
+        );
 
         assert_eq!(set.len(), topics.len(), "Duplicated topics are detected");
 
@@ -38,8 +40,7 @@ impl TopicSequence {
     }
 
     pub fn try_push(&mut self, topic: Topic) -> anyhow::Result<()> {
-        let is_duplicate =
-            self.topics.iter().find(|old| **old == topic).is_some();
+        let is_duplicate = self.topics.iter().any(|old| old.name == topic.name);
 
         if is_duplicate {
             return Err(anyhow::anyhow!("Duplicated topic"));
@@ -70,21 +71,35 @@ mod tests {
     use proptest::prelude::*;
     use std::collections::HashSet;
 
+    prop_compose! {
+        fn arb_topic()(id in any::<u64>(), name in "[a-zA-Z0-9_]+") -> Topic {
+            Topic { id, name }
+        }
+    }
+
     proptest! {
         #[test]
         fn test_sequence_exhaustion(
-            topics in proptest::collection::hash_set(".*", 1..100)
+            raw_topics in proptest::collection::vec(arb_topic(), 1..100)
         ) {
-            let topic_list: Vec<Topic> = topics.iter().cloned().collect();
-            let mut seq = TopicSequence::from_slice(&topic_list);
+            // Deduplicate inputs by name
+            let mut topics = Vec::new();
+            let mut seen_names = HashSet::new();
+            for t in raw_topics {
+                if seen_names.insert(t.name.clone()) {
+                    topics.push(t);
+                }
+            }
 
-            let mut seen = HashSet::new();
+            let mut seq = TopicSequence::from_slice(&topics);
+
+            let mut seen_names_out = HashSet::new();
             for _ in 0..topics.len() {
                 let t = seq.next();
                 prop_assert!(t.is_some());
                 let t = t.unwrap();
-                prop_assert!(seen.insert(t.clone())); // Ensure uniqueness of output
-                prop_assert!(topics.contains(&t)); // Ensure it belongs to input
+                prop_assert!(seen_names_out.insert(t.name.clone())); // Ensure uniqueness of output
+                prop_assert!(topics.iter().any(|input| input.name == t.name)); // Ensure it belongs to input
             }
 
             prop_assert!(seq.next().is_none());
@@ -92,15 +107,22 @@ mod tests {
 
         #[test]
         fn test_try_push_success(
-            mut topics in proptest::collection::hash_set(".*", 0..50),
-            new_topic in ".*"
+            raw_topics in proptest::collection::vec(arb_topic(), 0..50),
+            new_topic in arb_topic()
         ) {
-            // Ensure new_topic is not in initial set
-            if topics.contains(&new_topic) {
-                topics.remove(&new_topic);
+            let mut topics = Vec::new();
+            let mut seen_names = HashSet::new();
+
+            // Ensure new_topic name is not in initial list
+            seen_names.insert(new_topic.name.clone());
+
+            for t in raw_topics {
+                if seen_names.insert(t.name.clone()) {
+                    topics.push(t);
+                }
             }
-            let topic_list: Vec<Topic> = topics.iter().cloned().collect();
-            let mut seq = TopicSequence::from_slice(&topic_list);
+
+            let mut seq = TopicSequence::from_slice(&topics);
 
             prop_assert!(seq.try_push(new_topic.clone()).is_ok());
 
@@ -108,30 +130,46 @@ mod tests {
             let mut count = 0;
             let mut found = false;
             while let Some(t) = seq.next() {
-                if t == new_topic { found = true; }
+                if t.name == new_topic.name { found = true; }
                 count += 1;
             }
-            prop_assert_eq!(count, topic_list.len() + 1);
+            prop_assert_eq!(count, topics.len() + 1);
             prop_assert!(found);
         }
 
         #[test]
         fn test_try_push_duplicate(
-             topics in proptest::collection::hash_set(".*", 1..50)
+             raw_topics in proptest::collection::vec(arb_topic(), 1..50)
         ) {
-             let topic_list: Vec<Topic> = topics.iter().cloned().collect();
-             let mut seq = TopicSequence::from_slice(&topic_list);
+             let mut topics = Vec::new();
+             let mut seen_names = HashSet::new();
+             for t in raw_topics {
+                 if seen_names.insert(t.name.clone()) {
+                     topics.push(t);
+                 }
+             }
 
-             let duplicate = topic_list[0].clone();
+             if topics.is_empty() { return Ok(()); }
+
+             let mut seq = TopicSequence::from_slice(&topics);
+
+             let duplicate = topics[0].clone();
              prop_assert!(seq.try_push(duplicate).is_err());
         }
 
         #[test]
         fn test_reset(
-            topics in proptest::collection::hash_set(".*", 1..50)
+            raw_topics in proptest::collection::vec(arb_topic(), 1..50)
         ) {
-            let topic_list: Vec<Topic> = topics.iter().cloned().collect();
-            let mut seq = TopicSequence::from_slice(&topic_list);
+            let mut topics = Vec::new();
+            let mut seen_names = HashSet::new();
+            for t in raw_topics {
+                if seen_names.insert(t.name.clone()) {
+                    topics.push(t);
+                }
+            }
+
+            let mut seq = TopicSequence::from_slice(&topics);
 
             // Consume partial
             if !topics.is_empty() {

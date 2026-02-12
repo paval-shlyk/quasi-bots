@@ -11,15 +11,17 @@ pub struct NewKnowledge {}
 pub async fn post_new_knowledge(
     State(_state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    // Your implementation for posting new knowledge
 }
 
 pub async fn get_all_topics(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    let topics = state.knowledge_database.read().await.topics.to_vec();
-
-    Json(topics)
+    match state.knowledge_database.read().await.fetch_topics().await {
+        Ok(topics) => (StatusCode::OK, Json(topics)).into_response(),
+        Err(e) => {
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
 }
 
 pub async fn post_next_daily_question(

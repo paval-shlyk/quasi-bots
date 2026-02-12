@@ -25,10 +25,21 @@ pub async fn main() {
     let config: scrapper::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
-    let knowledge_database =
-        knowledge::Database::connect(&config, pool.clone())
+    let mut knowledge_database = knowledge::Database::connect(pool.clone())
+        .await
+        .expect("Failed to connect knowledge database");
+
+    let topics = knowledge_database
+        .fetch_topics()
+        .await
+        .expect("Failed to fetch topics");
+
+    if topics.is_empty() {
+        knowledge_database
+            .refresh_from_file(&config.knowledge.database_file)
             .await
-            .expect("Failed to connect knowledge database");
+            .expect("Failed to refresh empty knowledge database");
+    }
 
     let state = Arc::new(scrapper::AppState {
         config: Arc::new(config),

@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS topic_seq (
 CREATE TABLE IF NOT EXISTS entry (
 	id INTEGER PRIMARY KEY,
 	topic_id INTEGER NOT NULL,
+	--unique question string identifier
+	name VARCHAR(100) NOT NULL UNIQUE,
 
 	question TEXT NOT NULL UNIQUE,
 	truth TEXT NOT NULL,
@@ -18,5 +20,5 @@ CREATE TABLE IF NOT EXISTS entry (
 	added_at DATETIME NOT NULL,
 	reviewed_at DATETIME,
 
-	FOREIGN KEY(topic_id) REFERENCES knowledge_topic(id)
+	FOREIGN KEY(topic_id) REFERENCES topic(id)
 );

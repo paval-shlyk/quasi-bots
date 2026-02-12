@@ -1,0 +1,399 @@
+- id: "eng_001"
+  topic: "english"
+  tags: ["grammar", "conditionals"]
+  question: "What is the structure of the Second Conditional and when is it used?"
+  truth: "Structure: if + past simple, ... would + infinitive. It is used to talk about imaginary situations in the present or future."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/conditionals-if"
+
+- id: "eng_002"
+  topic: "english"
+  tags: ["vocabulary", "idioms"]
+  question: "What does the idiom 'break the ice' mean?"
+  truth: "To make people who have not met before feel more relaxed and comfortable."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/break-the-ice"
+
+- id: "eng_003"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "Define the phrasal verb 'look forward to' and give an example of its correct usage."
+  truth: "It means to feel happy and excited about something that is going to happen. Example: 'I look forward to hearing from you soon.' Note that it is followed by a gerund (-ing form) or a noun."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/look-forward-to"
+
+- id: "eng_004"
+  topic: "english"
+  tags: ["grammar", "common mistakes"]
+  question: "What is the difference between 'fewer' and 'less'?"
+  truth: "'Fewer' is used with countable nouns (e.g., fewer people, fewer apples). 'Less' is used with uncountable nouns (e.g., less water, less sugar)."
+  complexity: 1
+  source: "https://www.merriam-webster.com/grammar/fewer-vs-less"
+
+- id: "eng_005"
+  topic: "english"
+  tags: ["grammar", "perfect tenses"]
+  question: "When do we use the Present Perfect tense?"
+  truth: "We use the Present Perfect for actions that happened at an unspecified time before now, or actions that started in the past and continue to the present. It focuses on the result."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/present-perfect-simple-i-have-worked"
+
+- id: "eng_006"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'bite the bullet' mean?"
+  truth: "To force yourself to do something unpleasant or difficult, or to be brave in a difficult situation."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/bite-the-bullet"
+
+- id: "eng_007"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'give up' mean?"
+  truth: "To stop doing something or to stop trying to do something."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/give-up"
+
+- id: "eng_008"
+  topic: "english"
+  tags: ["grammar", "common mistakes"]
+  question: "Is it correct to say 'I am agree'?"
+  truth: "No, the correct form is 'I agree'. 'Agree' is a verb, so you do not need the auxiliary 'am'."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/agree"
+
+- id: "eng_009"
+  topic: "english"
+  tags: ["vocabulary"]
+  question: "What is the difference between 'imply' and 'infer'?"
+  truth: "To 'imply' is to suggest something indirectly. To 'infer' is to deduce or conclude something from evidence and reasoning. The speaker implies; the listener infers."
+  complexity: 2
+  source: "https://www.merriam-webster.com/grammar/imply-vs-infer"
+
+- id: "eng_010"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'hit the sack' mean?"
+  truth: "It is an informal idiom meaning to go to bed in order to sleep."
+  complexity: 0
+  source: "https://www.merriam-webster.com/dictionary/hit%20the%20sack"
+
+- id: "eng_011"
+  topic: "english"
+  tags: ["grammar", "relative clauses"]
+  question: "When should 'whom' be used instead of 'who'?"
+  truth: "'Whom' is the object form of 'who'. It should be used when the person is the object of the verb or preposition (e.g., 'To whom did you speak?'). In modern usage, 'who' is often used for both."
+  complexity: 2
+  source: "https://www.oxfordlearnersdictionaries.com/definition/english/whom"
+
+- id: "eng_012"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'run out of' mean?"
+  truth: "To finish, use, or sell all of something, so that there is none left."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/run-out-of"
+
+- id: "eng_013"
+  topic: "english"
+  tags: ["grammar", "future forms"]
+  question: "What is the difference between 'will' and 'going to' for future predictions?"
+  truth: "Use 'will' for general predictions based on opinion. Use 'going to' for predictions based on present evidence (e.g., 'Look at those clouds! It's going to rain')."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/future-will-and-shall"
+
+- id: "eng_014"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'cost an arm and a leg' mean?"
+  truth: "To be extremely expensive."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/cost-an-arm-and-a-leg"
+
+- id: "eng_015"
+  topic: "english"
+  tags: ["common mistakes"]
+  question: "Explain the difference between 'its' and 'it's'."
+  truth: "'It's' is a contraction for 'it is' or 'it has'. 'Its' is a possessive determiner (e.g., 'The dog wagged its tail')."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/it-s-or-its"
+
+- id: "eng_016"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'call off' mean?"
+  truth: "To decide that a planned event will not happen; to cancel."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/call-off"
+
+- id: "eng_017"
+  topic: "english"
+  tags: ["grammar"]
+  question: "What is a 'dangling modifier'?"
+  truth: "A word or phrase that modifies a word not clearly stated in the sentence, often leading to confusion (e.g., 'Walking down the street, the trees were beautiful' - implies the trees were walking)."
+  complexity: 2
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/participle-clauses"
+
+- id: "eng_018"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'piece of cake' mean?"
+  truth: "Something that is very easy to do."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/piece-of-cake"
+
+- id: "eng_019"
+  topic: "english"
+  tags: ["grammar"]
+  question: "When do you use 'an' instead of 'a'?"
+  truth: "Use 'an' before a word beginning with a vowel SOUND (e.g., an apple, an hour). Use 'a' before a word beginning with a consonant SOUND (e.g., a car, a university)."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/a-an-and-the"
+
+- id: "eng_020"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'get along with' mean?"
+  truth: "To have a good relationship with someone."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/get-along"
+
+- id: "eng_021"
+  topic: "english"
+  tags: ["common mistakes"]
+  question: "Is 'irregardless' a standard English word?"
+  truth: "It is widely considered nonstandard or incorrect. The standard word is 'regardless'."
+  complexity: 1
+  source: "https://www.merriam-webster.com/dictionary/irregardless"
+
+- id: "eng_022"
+  topic: "english"
+  tags: ["grammar", "passive voice"]
+  question: "How do you form the passive voice?"
+  truth: "Use the verb 'to be' in the appropriate tense + the past participle of the main verb."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/passive"
+
+- id: "eng_023"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'let the cat out of the bag' mean?"
+  truth: "To reveal a secret carelessly or by mistake."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/let-the-cat-out-of-the-bag"
+
+- id: "eng_024"
+  topic: "english"
+  tags: ["vocabulary"]
+  question: "What is the difference between 'complement' and 'compliment'?"
+  truth: "'Complement' means to complete or make perfect. 'Compliment' is a polite expression of praise or admiration."
+  complexity: 1
+  source: "https://www.merriam-webster.com/grammar/complement-vs-compliment"
+
+- id: "eng_025"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'put up with' mean?"
+  truth: "To accept or continue to accept an unpleasant situation or person, or to tolerate someone or something."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/put-up-with"
+
+- id: "eng_026"
+  topic: "english"
+  tags: ["grammar"]
+  question: "What is the rule for 'used to' vs 'be used to'?"
+  truth: "'Used to + infinitive' refers to past habits or states that are no longer true. 'Be used to + gerund/noun' means to be accustomed to something."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/used-to"
+
+- id: "eng_027"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'under the weather' mean?"
+  truth: "Feeling slightly sick or not as well as usual."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/under-the-weather"
+
+- id: "eng_028"
+  topic: "english"
+  tags: ["common mistakes"]
+  question: "What is the difference between 'lie' and 'lay'?"
+  truth: "'Lie' (past: lay) means to rest or recline (intransitive, no object). 'Lay' (past: laid) means to put something down (transitive, needs an object)."
+  complexity: 2
+  source: "https://www.merriam-webster.com/grammar/how-to-use-lay-and-lie"
+
+- id: "eng_029"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'bring up' mean?"
+  truth: "To mention a subject or start to talk about it; also, to raise a child."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/bring-up"
+
+- id: "eng_030"
+  topic: "english"
+  tags: ["grammar"]
+  question: "When do you use 'much' vs 'many'?"
+  truth: "'Much' is used with uncountable nouns (e.g., much money). 'Many' is used with countable nouns (e.g., many books)."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/much-many-a-lot-of-lots-of-quantifiers"
+
+- id: "eng_031"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'burn the midnight oil' mean?"
+  truth: "To work late into the night."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/burn-the-midnight-oil"
+
+- id: "eng_032"
+  topic: "english"
+  tags: ["vocabulary"]
+  question: "What is the difference between 'further' and 'farther'?"
+  truth: "'Farther' refers to physical distance. 'Further' refers to metaphorical or figurative distance (e.g., further education), though they are often used interchangeably in informal English."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/farther-farthest-or-further-furthest"
+
+- id: "eng_033"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'look after' mean?"
+  truth: "To take care of or be in charge of someone or something."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/look-after"
+
+- id: "eng_034"
+  topic: "english"
+  tags: ["grammar", "modals"]
+  question: "What does 'must' imply compared to 'have to'?"
+  truth: "'Must' often expresses a personal feeling of necessity or obligation from the speaker. 'Have to' expresses external obligation (e.g., a rule or law)."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/must"
+
+- id: "eng_035"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'cut corners' mean?"
+  truth: "To do something in the easiest, cheapest, or fastest way, often resulting in poor quality."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/cut-corners"
+
+- id: "eng_036"
+  topic: "english"
+  tags: ["common mistakes"]
+  question: "What is the difference between 'lose' and 'loose'?"
+  truth: "'Lose' is a verb meaning to misplace or not win. 'Loose' is an adjective meaning not tight."
+  complexity: 0
+  source: "https://www.merriam-webster.com/grammar/lose-vs-loose-usage"
+
+- id: "eng_037"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'figure out' mean?"
+  truth: "To understand or solve something."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/figure-out"
+
+- id: "eng_038"
+  topic: "english"
+  tags: ["grammar"]
+  question: "What is a 'split infinitive'?"
+  truth: "A grammatical construction where a word (usually an adverb) is placed between 'to' and the verb (e.g., 'to boldly go'). It is acceptable in modern English."
+  complexity: 2
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/infinitives-split-infinitives"
+
+- id: "eng_039"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'miss the boat' mean?"
+  truth: "To be too late to take an opportunity."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/miss-the-boat"
+
+- id: "eng_040"
+  topic: "english"
+  tags: ["vocabulary"]
+  question: "What is the difference between 'principal' and 'principle'?"
+  truth: "'Principal' refers to a person in charge or the main/most important thing. 'Principle' refers to a fundamental truth or rule."
+  complexity: 1
+  source: "https://www.merriam-webster.com/grammar/principle-vs-principal-difference"
+
+- id: "eng_041"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'turn down' mean?"
+  truth: "To refuse an offer or request; also, to reduce the volume or level of something."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/turn-down"
+
+- id: "eng_042"
+  topic: "english"
+  tags: ["grammar"]
+  question: "What is the difference between 'since' and 'for' in perfect tenses?"
+  truth: "'Since' is used with a starting point in time (e.g., since 2010). 'For' is used with a duration of time (e.g., for ten years)."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/for"
+
+- id: "eng_043"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'hit the nail on the head' mean?"
+  truth: "To describe exactly what is causing a situation or problem; to be exactly right."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/hit-the-nail-on-the-head"
+
+- id: "eng_044"
+  topic: "english"
+  tags: ["common mistakes"]
+  question: "Is 'alot' a word?"
+  truth: "No, 'a lot' should always be written as two words."
+  complexity: 0
+  source: "https://www.merriam-webster.com/grammar/a-lot-vs-alot"
+
+- id: "eng_045"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'carry on' mean?"
+  truth: "To continue doing something."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/carry-on"
+
+- id: "eng_046"
+  topic: "english"
+  tags: ["grammar", "articles"]
+  question: "When do we use 'the' with geographical names?"
+  truth: "We use 'the' with rivers, oceans, mountain ranges, and groups of islands. We generally do not use it with lakes, single mountains, or continents."
+  complexity: 2
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/names-geographical-places"
+
+- id: "eng_047"
+  topic: "english"
+  tags: ["idioms"]
+  question: "What does 'see eye to eye' mean?"
+  truth: "To agree with someone fully."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/dictionary/english/see-eye-to-eye"
+
+- id: "eng_048"
+  topic: "english"
+  tags: ["vocabulary"]
+  question: "What is the difference between 'stationary' and 'stationery'?"
+  truth: "'Stationary' means not moving. 'Stationery' refers to writing materials like paper and envelopes."
+  complexity: 1
+  source: "https://www.merriam-webster.com/grammar/stationary-vs-stationery"
+
+- id: "eng_049"
+  topic: "english"
+  tags: ["phrasal verbs"]
+  question: "What does 'back up' mean?"
+  truth: "To support someone or something; also, to make a copy of computer data."
+  complexity: 0
+  source: "https://dictionary.cambridge.org/dictionary/english/back-up"
+
+- id: "eng_050"
+  topic: "english"
+  tags: ["grammar"]
+  question: "What is a 'gerund'?"
+  truth: "A verb form ending in -ing that functions as a noun (e.g., 'Running is fun')."
+  complexity: 1
+  source: "https://dictionary.cambridge.org/grammar/british-grammar/gerunds"

@@ -1,0 +1,399 @@
+- id: "ru_001"
+  topic: "russian"
+  tags: ["grammar", "verb"]
+  question: "Как правильно: 'покласть' или 'положить'?"
+  truth: "Правильно: 'положить'. Глагол 'покласть' является просторечным. Глагол 'класть' употребляется без приставки (несовершенный вид), а 'положить' — только с приставкой (совершенный вид)."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EF&id=36_114"
+
+- id: "ru_002"
+  topic: "russian"
+  tags: ["orthography", "tsya-tsya"]
+  question: "Когда пишется 'тся', а когда 'ться' в глаголах?"
+  truth: "Если глагол отвечает на вопрос 'что делает?' или 'что сделает?' (3-е лицо), то пишется 'тся' без мягкого знака. Если глагол отвечает на вопрос 'что делать?' или 'что сделать?' (инфинитив), то пишется 'ться' с мягким знаком."
+  complexity: 1
+  source: "http://gramota.ru/uchebnik"
+
+- id: "ru_003"
+  topic: "russian"
+  tags: ["grammar", "noun"]
+  question: "Какого рода слово 'кофе'?"
+  truth: "В строгой литературной норме слово 'кофе' мужского рода. Однако в разговорной речи допустимо использование среднего рода (черное кофе), что зафиксировано в некоторых современных словарях, но для официальной речи рекомендуется мужской род."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EA&id=36_45"
+
+- id: "ru_004"
+  topic: "russian"
+  tags: ["orthography", "prepositions"]
+  question: "Как пишется предлог 'в течение': слитно или раздельно, с 'е' или 'и' на конце?"
+  truth: "Производный предлог 'в течение' (в значении времени: в течение часа, в течение года) пишется раздельно и с буквой 'е' на конце. Не путать с сочетанием предлога и существительного 'в течении' (реки), где окончание зависит от падежа."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E2&id=36_25"
+
+- id: "ru_005"
+  topic: "russian"
+  tags: ["grammar", "plural"]
+  question: "Как правильно во множественном числе: 'договоры' или 'договора'?"
+  truth: "В строгой литературной норме правильно: 'договОры'. Форма 'договорА' допустима в профессиональной и разговорной речи, но не рекомендуется для официального употребления."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E4&id=36_19"
+
+- id: "ru_006"
+  topic: "russian"
+  tags: ["orthography", "prefixes"]
+  question: "Когда после приставки пишется 'ы', а когда 'и' (например, предыстория)?"
+  truth: "После русских приставок, оканчивающихся на согласную, вместо 'и' пишется 'ы' (предыстория, безымянный, разыскать). Исключения: приставки меж- и сверх- (межинститутский, сверхизысканный), а также слово 'взимать'. После иноязычных приставок (дез-, контр-, пан- и др.) пишется 'и'."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_65"
+
+- id: "ru_007"
+  topic: "russian"
+  tags: ["punctuation", "introductory_words"]
+  question: "Выделяется ли слово 'однако' запятыми?"
+  truth: "Если 'однако' стоит в начале предложения и является противительным союзом (равно по значению 'но'), то запятая после него не ставится. Если 'однако' стоит в середине или конце предложения и является вводным словом (можно убрать без потери смысла), то оно выделяется запятыми."
+  complexity: 2
+  source: "http://gramota.ru/spravka/punctum/punctum_attach1/"
+
+- id: "ru_008"
+  topic: "russian"
+  tags: ["grammar", "numerals"]
+  question: "Как правильно: 'двое девушек' или 'две девушки'?"
+  truth: "Правильно: 'две девушки'. Собирательные числительные (двое, трое) не употребляются с существительными женского рода (обозначающими лиц женского пола). Они сочетаются с лицами мужского пола, детенышами животных и существительными 'парного' типа (ножницы, брюки)."
+  complexity: 2
+  source: "http://gramota.ru/spravka/letters?rub=rubric_92"
+
+- id: "ru_009"
+  topic: "russian"
+  tags: ["orthography", "negation"]
+  question: "Как пишется 'не' с глаголами?"
+  truth: "'Не' с глаголами пишется раздельно, кроме тех случаев, когда слово без 'не' не употребляется (ненавидеть, негодовать) или если глагол образован с приставкой 'недо-' в значении неполноты действия (недоедать)."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_61"
+
+- id: "ru_010"
+  topic: "russian"
+  tags: ["grammar", "comparative"]
+  question: "Можно ли сказать 'более лучше'?"
+  truth: "Нет, это грамматическая ошибка. Сравнительная степень прилагательного образуется либо с помощью суффикса (лучше, красивее), либо с помощью слов 'более/менее' и начальной формы (более хороший, более красивый). Сочетание обоих способов недопустимо."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EB&id=36_52"
+
+- id: "ru_011"
+  topic: "russian"
+  tags: ["orthography", "n-nn"]
+  question: "Сколько 'н' пишется в слове 'жареный'?"
+  truth: "В слове 'жареный' (отглагольное прилагательное) пишется одна 'н', если нет зависимых слов и приставок (кроме 'не-'). Если есть зависимые слова ('жаренный на масле') или приставка ('пожаренный'), то пишется две 'н' (причастие)."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_92"
+
+- id: "ru_012"
+  topic: "russian"
+  tags: ["grammar", "stress"]
+  question: "Где ставится ударение в слове 'звонит'?"
+  truth: "Ударение падает на окончание: звонИт, звонИшь, звонЯт. Ударение на корень (звОнит) является грубой ошибкой."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E7&id=36_35"
+
+- id: "ru_013"
+  topic: "russian"
+  tags: ["grammar", "stress"]
+  question: "Где ставится ударение в слове 'торты'?"
+  truth: "Ударение падает на первый слог: тОрты, тОртов. Не на окончание."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25F2&id=36_113"
+
+- id: "ru_014"
+  topic: "russian"
+  tags: ["punctuation", "address"]
+  question: "Как выделяется обращение на письме?"
+  truth: "Обращение всегда выделяется запятыми. Если обращение стоит в начале предложения, запятая ставится после него. Если в середине — с двух сторон. Если в конце — перед ним. Если обращение произносится с восклицательной интонацией, после него ставится восклицательный знак."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_128"
+
+- id: "ru_015"
+  topic: "russian"
+  tags: ["orthography", "hyphen"]
+  question: "Как пишется слово 'пол-Москвы'?"
+  truth: "Пишется через дефис: 'пол-Москвы'. Корень 'пол-' пишется через дефис, если вторая часть слова начинается с прописной буквы, гласной буквы (пол-яблока) или буквы 'л' (пол-лимона). В остальных случаях — слитно (полдома)."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_88"
+
+- id: "ru_016"
+  topic: "russian"
+  tags: ["grammar", "case"]
+  question: "Согласно (чего/чему)?"
+  truth: "Предлог 'согласно' требует дательного падежа: согласно (чему?) приказу, расписанию, уставу. Употребление родительного падежа (согласно приказа) характерно для официально-делового стиля прошлого, но сейчас считается ошибкой."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25F1&id=36_77"
+
+- id: "ru_017"
+  topic: "russian"
+  tags: ["orthography", "capitalization"]
+  question: "Как писать 'Вы' в личном письме?"
+  truth: "Местоимение 'Вы' пишется с прописной буквы при обращении к одному лицу в официальных документах и личных письмах как форма вежливости. При обращении к нескольким лицам или в неофициальной переписке (в интернете, смс) обычно пишется со строчной буквы 'вы', хотя прописная не запрещена."
+  complexity: 1
+  source: "http://gramota.ru/spravka/letters?rub=rubric_88"
+
+- id: "ru_018"
+  topic: "russian"
+  tags: ["grammar", "gender"]
+  question: "Какого рода слово 'тюль'?"
+  truth: "Слово 'тюль' мужского рода (как рояль, пароль). Правильно: красивый тюль, белым тюлем."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25F2&id=36_117"
+
+- id: "ru_019"
+  topic: "russian"
+  tags: ["grammar", "verb"]
+  question: "Существует ли слово 'придти'?"
+  truth: "В современном русском языке правильная форма инфинитива — 'прийти'. Форма 'придти' считается устаревшей и в настоящее время не является нормативной."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EF&id=36_118"
+
+- id: "ru_020"
+  topic: "russian"
+  tags: ["punctuation", "direct_speech"]
+  question: "Какие знаки препинания ставятся при прямой речи перед словами автора?"
+  truth: "Если прямая речь стоит перед словами автора, она заключается в кавычки, после нее ставится запятая (или вопросительный/восклицательный знак), а слова автора начинаются с тире и со строчной буквы. Пример: \"Я приду\", — сказал он."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_141"
+
+- id: "ru_021"
+  topic: "russian"
+  tags: ["grammar", "participle"]
+  question: "В чем ошибка фразы: 'Подъезжая к сией станции, у меня слетела шляпа'?"
+  truth: "Ошибка в употреблении деепричастного оборота. Деепричастие (подъезжая) должно обозначать добавочное действие того же лица (подлежащего), которое совершает основное действие. Здесь подлежащее 'шляпа', она не могла подъезжать. Правильно: 'Когда я подъезжал к станции, у меня слетела шляпа'."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E4&id=36_15"
+
+- id: "ru_022"
+  topic: "russian"
+  tags: ["orthography", "adverbs"]
+  question: "Как пишется 'вряд ли'?"
+  truth: "Частица 'ли' (ль) пишется раздельно со словами. Поэтому 'вряд ли' пишется раздельно в два слова."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E2&id=36_24"
+
+- id: "ru_023"
+  topic: "russian"
+  tags: ["grammar", "stress"]
+  question: "Где ударение в слове 'баловать'?"
+  truth: "Ударение падает на последний слог: баловАть, баловАю, балУю. Не бАловать."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E1&id=36_4"
+
+- id: "ru_024"
+  topic: "russian"
+  tags: ["grammar", "plural"]
+  question: "Множественное число слова 'дно'?"
+  truth: "Множественное число слова 'дно' — 'донья'. Родительный падеж — 'доньев'."
+  complexity: 3
+  source: "http://gramota.ru/slovari/dic/?word=%D0%B4%D0%BD%D0%BE&all=x"
+
+- id: "ru_025"
+  topic: "russian"
+  tags: ["grammar", "prepositions"]
+  question: "Оплатить за проезд или оплатить проезд?"
+  truth: "Глагол 'оплатить' переходный, требует винительного падежа без предлога: 'оплатить проезд'. 'Заплатить' требует предлога 'за': 'заплатить за проезд'."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EE&id=36_86"
+
+- id: "ru_026"
+  topic: "russian"
+  tags: ["grammar", "adjective"]
+  question: "Что такое краткое прилагательное?"
+  truth: "Краткое прилагательное — это форма качественного прилагательного, которая отвечает на вопросы 'каков? какова? каково? каковы?' и в предложении обычно выступает в роли сказуемого. Например: он весел, она красива. Не изменяется по падежам, только по родам и числам."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_84"
+
+- id: "ru_027"
+  topic: "russian"
+  tags: ["orthography", "endings"]
+  question: "Какое окончание в слове 'в постел...' (П.п.)?"
+  truth: "Существительное 'постель' относится к 3-му склонению (женский род, оканчивается на ь). В предложном падеже (о ком? о чем? - в постели) существительные 3-го склонения имеют окончание 'и'."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_78"
+
+- id: "ru_028"
+  topic: "russian"
+  tags: ["orthography", "roots"]
+  question: "Как проверить безударную гласную в корне?"
+  truth: "Чтобы проверить безударную гласную в корне слова, нужно изменить слово или подобрать однокоренное так, чтобы эта гласная оказалась под ударением. Пример: гора — гОры, вода — вОды."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_62"
+
+- id: "ru_029"
+  topic: "russian"
+  tags: ["grammar", "verbs"]
+  question: "Глаголы какого спряжения имеют окончания -ешь, -ет, -ем, -ете?"
+  truth: "Это окончания глаголов I спряжения."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_99"
+
+- id: "ru_030"
+  topic: "russian"
+  tags: ["grammar", "verbs"]
+  question: "Глаголы какого спряжения имеют окончания -ишь, -ит, -им, -ите?"
+  truth: "Это окончания глаголов II спряжения."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_99"
+
+- id: "ru_031"
+  topic: "russian"
+  tags: ["orthography", "b_sign"]
+  question: "Нужен ли мягкий знак в слове 'мышь'?"
+  truth: "Да, нужен. Существительные женского рода с шипящим на конце пишутся с мягким знаком (3-е склонение): мышь, рожь, дочь, тишь."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_75"
+
+- id: "ru_032"
+  topic: "russian"
+  tags: ["orthography", "b_sign"]
+  question: "Нужен ли мягкий знак в слове 'врач'?"
+  truth: "Нет. Существительные мужского рода с шипящим на конце (2-е склонение) пишутся без мягкого знака: врач, грач, гараж, шалаш."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_75"
+
+- id: "ru_033"
+  topic: "russian"
+  tags: ["grammar", "stress"]
+  question: "Где ударение в слове 'красивее'?"
+  truth: "Ударение на 'и' во втором слоге: красИвее."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EA&id=36_50"
+
+- id: "ru_034"
+  topic: "russian"
+  tags: ["orthography", "hyphen"]
+  question: "Как пишется 'кое-как'?"
+  truth: "Через дефис. Частица 'кое-' (кой-) пишется через дефис (кое-кто, кое-как), если не отделена от местоимения предлогом (кое у кого)."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_107"
+
+- id: "ru_035"
+  topic: "russian"
+  tags: ["orthography", "hyphen"]
+  question: "Как пишется 'кто-нибудь'?"
+  truth: "Через дефис. Частицы '-то', '-либо', '-нибудь' пишутся через дефис."
+  complexity: 1
+  source: "http://gramota.ru/class/coach/tbgramota/45_107"
+
+- id: "ru_036"
+  topic: "russian"
+  tags: ["lexicography", "paronyms"]
+  question: "В чем разница между 'надеть' и 'одеть'?"
+  truth: "'Надеть' — что-то на кого-то/что-то (надеть пальто, надеть очки, надеть чехол). 'Одеть' — кого-то (одеть ребенка, одеть куклу). Мнемоническая фраза: 'Одеть Надежду, надеть одежду'."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25EE&id=36_83"
+
+- id: "ru_037"
+  topic: "russian"
+  tags: ["orthography", "double_consonants"]
+  question: "Как пишется 'галерея'?"
+  truth: "С одной 'л'. Галерея."
+  complexity: 1
+  source: "http://gramota.ru/slovari/dic/?word=%D0%B3%D0%B0%D0%BB%D0%B5%D1%80%D0%B5%D1%8F&all=x"
+
+- id: "ru_038"
+  topic: "russian"
+  tags: ["orthography", "root"]
+  question: "Как правильно: 'растет' или 'ростет'?"
+  truth: "Правильно 'растет'. В корнях -раст-/-ращ-/-рос- перед 'ст' и 'щ' пишется 'а', перед 'с' без последующего 'т' — 'о'. Исключения: росток, ростовщик, Ростов, Ростислав, отрасль."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_64"
+
+- id: "ru_039"
+  topic: "russian"
+  tags: ["grammar", "imperative"]
+  question: "Повелительное наклонение от глагола 'ехать'?"
+  truth: "Литературная форма повелительного наклонения — 'поезжай' (или 'езжай' в разговорной речи, но лучше 'поезжай'). Формы 'едь', 'ехай' являются грубым просторечием."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E5&id=36_28"
+
+- id: "ru_040"
+  topic: "russian"
+  tags: ["punctuation", "colon"]
+  question: "Когда ставится двоеточие в бессоюзном сложном предложении?"
+  truth: "Двоеточие ставится, если вторая часть раскрывает содержание первой (можно вставить 'а именно'), указывает на причину (можно вставить 'потому что') или дополняет первую часть (можно вставить 'что')."
+  complexity: 3
+  source: "http://gramota.ru/class/coach/tbgramota/45_139"
+
+- id: "ru_041"
+  topic: "russian"
+  tags: ["grammar", "gender"]
+  question: "Какого рода слово 'шампунь'?"
+  truth: "Мужского рода. Мой шампунь, ароматным шампунем."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25F8&id=36_122"
+
+- id: "ru_042"
+  topic: "russian"
+  tags: ["grammar", "case"]
+  question: "Скучать по (вас/вам)?"
+  truth: "Старая норма требовала предложного падежа с местоимениями 1 и 2 лица мн.ч.: скучать по нас, по вас. Современная норма допускает дательный падеж: скучать по нам, по вам. Но вариант 'по вас' все еще считается предпочтительным в строгой речи."
+  complexity: 3
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25F1&id=36_137"
+
+- id: "ru_043"
+  topic: "russian"
+  tags: ["orthography", "hard_sign"]
+  question: "Когда пишется разделительный твердый знак (ъ)?"
+  truth: "Твердый знак пишется перед буквами е, ё, ю, я только после приставок, оканчивающихся на согласную (подъезд, объявление), а также в иноязычных словах после приставок аб-, ад-, диз-, ин-, интер-, кон-, контр-, об-, суб-, транс- (адъютант, инъекция) и в сложных словах с первой частью двух-, трех-, четырех- (трехъязычный)."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_57"
+
+- id: "ru_044"
+  topic: "russian"
+  tags: ["grammar", "participle"]
+  question: "Что такое причастный оборот?"
+  truth: "Причастный оборот — это причастие с зависимыми словами. Если причастный оборот стоит после определяемого слова, он выделяется запятыми. Если перед — обычно не выделяется."
+  complexity: 2
+  source: "http://gramota.ru/class/coach/tbgramota/45_132"
+
+- id: "ru_045"
+  topic: "russian"
+  tags: ["orthography", "prepositions"]
+  question: "Как пишется 'ввиду' (в значении 'из-за')?"
+  truth: "Слитно. Предлог 'ввиду' (из-за, по причине) пишется слитно. Пример: ввиду дождей. Раздельно пишется сочетание 'в виду' (в значении 'в поле зрения' или в выражении 'иметь в виду')."
+  complexity: 2
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E2&id=36_18"
+
+- id: "ru_046"
+  topic: "russian"
+  tags: ["grammar", "gender"]
+  question: "Какого рода аббревиатура МГУ?"
+  truth: "Род аббревиатуры обычно определяется по главному слову расшифровки. МГУ — Московский государственный университет. Университет — мужской род. Значит, МГУ принял студентов (м.р.)."
+  complexity: 2
+  source: "http://gramota.ru/spravka/letters?rub=rubric_90"
+
+- id: "ru_047"
+  topic: "russian"
+  tags: ["grammar", "spelling"]
+  question: "Как правильно: 'экстремальный' или 'экстримальный'?"
+  truth: "Правильно: 'экстремальный'. Проверочное слово не 'экстрим' (это позднее заимствование), а латинское extremus (крайний)."
+  complexity: 1
+  source: "http://gramota.ru/slovari/dic/?word=%D1%8D%D0%BA%D1%81%D1%82%D1%80%D0%B5%D0%BC%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9&all=x"
+
+- id: "ru_048"
+  topic: "russian"
+  tags: ["orthography", "uppercase"]
+  question: "Как пишутся названия праздников (например, Новый год)?"
+  truth: "В названиях праздников с прописной буквы пишется первое слово: Новый год, День учителя, День знаний. Если в название входят имена собственные, они тоже пишутся с прописной (День Святого Патрика). Исключение: День Победы (оба слова с прописной в знак особого уважения)."
+  complexity: 2
+  source: "http://gramota.ru/spravka/letters?rub=rubric_83"
+
+- id: "ru_049"
+  topic: "russian"
+  tags: ["grammar", "plural"]
+  question: "Множественное число слова 'директор'?"
+  truth: "ДиректорА (с ударением на окончание)."
+  complexity: 1
+  source: "http://gramota.ru/spravka/trudnosti?layout=spread&let=%25E4&id=36_17"
+
+- id: "ru_050"
+  topic: "russian"
+  tags: ["orthography", "root"]
+  question: "Как пишется слово 'винегрет'?"
+  truth: "Винегрет. Запоминается (словарное слово), происходит от фр. vinaigre (уксус)."
+  complexity: 1
+  source: "http://gramota.ru/slovari/dic/?word=%D0%B2%D0%B8%D0%BD%D0%B5%D0%B3%D1%80%D0%B5%D1%82&all=x"

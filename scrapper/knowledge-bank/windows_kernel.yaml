@@ -1,356 +1,459 @@
-- id: "win_001"
-  topic: "windows-kernel"
-  tags: ["processes", "architecture"]
-  question: "What is the primary difference between a process and a thread in Windows?"
-  truth: "A process is a container for resources (virtual address space, handle table, etc.), while a thread is the entity within a process that the kernel schedules for execution."
+- id: win_001
+  topic: windows-kernel
+  tags:
+  - processes
+  - architecture
+  question: What is the primary difference between a process and a thread in Windows?
+  truth: A process is a container for resources (virtual address space, handle table, etc.), while a thread is the entity within a process that the kernel schedules for execution.
   complexity: 1
-
-- id: "win_002"
-  topic: "windows-kernel"
-  tags: ["processes", "eprocess"]
-  question: "What is the kernel data structure that represents a process?"
-  truth: "The EPROCESS (Executive Process) block is the kernel's representation of a process object."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_002
+  topic: windows-kernel
+  tags:
+  - processes
+  - eprocess
+  question: What is the kernel data structure that represents a process?
+  truth: The EPROCESS (Executive Process) block is the kernel's representation of a process object.
   complexity: 1
-
-- id: "win_003"
-  topic: "windows-kernel"
-  tags: ["threads", "ethread"]
-  question: "Which kernel data structure contains the KTHREAD structure?"
-  truth: "The ETHREAD (Executive Thread) block contains the KTHREAD structure as its first member."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_003
+  topic: windows-kernel
+  tags:
+  - threads
+  - ethread
+  question: Which kernel data structure contains the KTHREAD structure?
+  truth: The ETHREAD (Executive Thread) block contains the KTHREAD structure as its first member.
   complexity: 1
-
-- id: "win_004"
-  topic: "windows-kernel"
-  tags: ["processes", "handles"]
-  question: "What is the purpose of the Object Table in a process?"
-  truth: "The Object Table (Handle Table) maps process-specific handle values to pointers to kernel objects."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_004
+  topic: windows-kernel
+  tags:
+  - processes
+  - handles
+  question: What is the purpose of the Object Table in a process?
+  truth: The Object Table (Handle Table) maps process-specific handle values to pointers to kernel objects.
   complexity: 2
-
-- id: "win_005"
-  topic: "windows-kernel"
-  tags: ["memory-management", "virtual-memory"]
-  question: "What is the default virtual address space size for a 32-bit process on a 32-bit Windows system without /3GB switch?"
-  truth: "2 GB."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_005
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - virtual-memory
+  question: What is the default virtual address space size for a 32-bit process on a 32-bit Windows system without /3GB switch?
+  truth: 2 GB.
   complexity: 1
-
-- id: "win_006"
-  topic: "windows-kernel"
-  tags: ["memory-management", "paging"]
-  question: "What is the role of the Page Table Entry (PTE)?"
-  truth: "A PTE maps a virtual page to a physical page frame or indicates that the page is invalid (e.g., swapped out or not allocated)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_006
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - paging
+  question: What is the role of the Page Table Entry (PTE)?
+  truth: A PTE maps a virtual page to a physical page frame or indicates that the page is invalid (e.g., swapped out or not allocated).
   complexity: 2
-
-- id: "win_007"
-  topic: "windows-kernel"
-  tags: ["io-manager", "irpl"]
-  question: "What does IRQL stand for?"
-  truth: "Interrupt Request Level."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_007
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - irpl
+  question: What does IRQL stand for?
+  truth: Interrupt Request Level.
   complexity: 1
-
-- id: "win_008"
-  topic: "windows-kernel"
-  tags: ["io-manager", "irp"]
-  question: "What data structure does the I/O Manager use to represent an I/O request?"
-  truth: "The I/O Request Packet (IRP)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_008
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - irp
+  question: What data structure does the I/O Manager use to represent an I/O request?
+  truth: The I/O Request Packet (IRP).
   complexity: 1
-
-- id: "win_009"
-  topic: "windows-kernel"
-  tags: ["security", "access-token"]
-  question: "What object identifies the security context of a process or thread?"
-  truth: "The Access Token (or simply Token)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_009
+  topic: windows-kernel
+  tags:
+  - security
+  - access-token
+  question: What object identifies the security context of a process or thread?
+  truth: The Access Token (or simply Token).
   complexity: 1
-
-- id: "win_010"
-  topic: "windows-kernel"
-  tags: ["security", "sid"]
-  question: "What is a SID?"
-  truth: "A Security Identifier (SID) is a variable-length structure used to uniquely identify users, groups, and computer accounts."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_010
+  topic: windows-kernel
+  tags:
+  - security
+  - sid
+  question: What is a SID?
+  truth: A Security Identifier (SID) is a variable-length structure used to uniquely identify users, groups, and computer accounts.
   complexity: 1
-
-- id: "win_011"
-  topic: "windows-kernel"
-  tags: ["alpc", "ipc"]
-  question: "What does ALPC stand for?"
-  truth: "Advanced Local Procedure Call."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_011
+  topic: windows-kernel
+  tags:
+  - alpc
+  - ipc
+  question: What does ALPC stand for?
+  truth: Advanced Local Procedure Call.
   complexity: 1
-
-- id: "win_012"
-  topic: "windows-kernel"
-  tags: ["registry", "hives"]
-  question: "What is a Registry Hive?"
-  truth: "A hive is a discrete body of keys, subkeys, and values that is rooted at the top of the registry hierarchy and backed by a single file on disk."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_012
+  topic: windows-kernel
+  tags:
+  - registry
+  - hives
+  question: What is a Registry Hive?
+  truth: A hive is a discrete body of keys, subkeys, and values that is rooted at the top of the registry hierarchy and backed by a single file on disk.
   complexity: 2
-
-- id: "win_013"
-  topic: "windows-kernel"
-  tags: ["processes", "peb"]
-  question: "Where is the Process Environment Block (PEB) located: user space or kernel space?"
-  truth: "User space."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_013
+  topic: windows-kernel
+  tags:
+  - processes
+  - peb
+  question: 'Where is the Process Environment Block (PEB) located: user space or kernel space?'
+  truth: User space.
   complexity: 1
-
-- id: "win_014"
-  topic: "windows-kernel"
-  tags: ["threads", "teb"]
-  question: "What is the TEB?"
-  truth: "The Thread Environment Block (TEB) is a user-mode data structure that stores information about a thread."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_014
+  topic: windows-kernel
+  tags:
+  - threads
+  - teb
+  question: What is the TEB?
+  truth: The Thread Environment Block (TEB) is a user-mode data structure that stores information about a thread.
   complexity: 1
-
-- id: "win_015"
-  topic: "windows-kernel"
-  tags: ["memory-management", "vad"]
-  question: "What structure does the memory manager use to track the virtual address space allocations of a process?"
-  truth: "The Virtual Address Descriptor (VAD) tree."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_015
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - vad
+  question: What structure does the memory manager use to track the virtual address space allocations of a process?
+  truth: The Virtual Address Descriptor (VAD) tree.
   complexity: 3
-
-- id: "win_016"
-  topic: "windows-kernel"
-  tags: ["memory-management", "pfn"]
-  question: "What is the PFN database?"
-  truth: "The Page Frame Number (PFN) database is an array of structures that describes the state of every physical page of memory in the system."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_016
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - pfn
+  question: What is the PFN database?
+  truth: The Page Frame Number (PFN) database is an array of structures that describes the state of every physical page of memory in the system.
   complexity: 3
-
-- id: "win_017"
-  topic: "windows-kernel"
-  tags: ["io-manager", "drivers"]
-  question: "What is a Filter Driver?"
-  truth: "A driver that layers itself above or below other drivers to monitor or modify I/O requests."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_017
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - drivers
+  question: What is a Filter Driver?
+  truth: A driver that layers itself above or below other drivers to monitor or modify I/O requests.
   complexity: 2
-
-- id: "win_018"
-  topic: "windows-kernel"
-  tags: ["io-manager", "completion-ports"]
-  question: "What mechanism allows a thread to wait for I/O completion from multiple handles efficiently?"
-  truth: "I/O Completion Ports (IOCP)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_018
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - completion-ports
+  question: What mechanism allows a thread to wait for I/O completion from multiple handles efficiently?
+  truth: I/O Completion Ports (IOCP).
   complexity: 2
-
-- id: "win_019"
-  topic: "windows-kernel"
-  tags: ["security", "acl"]
-  question: "What is the difference between a DACL and a SACL?"
-  truth: "A DACL (Discretionary Access Control List) controls access to an object, while a SACL (System Access Control List) controls the auditing of access attempts."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_019
+  topic: windows-kernel
+  tags:
+  - security
+  - acl
+  question: What is the difference between a DACL and a SACL?
+  truth: A DACL (Discretionary Access Control List) controls access to an object, while a SACL (System Access Control List) controls the auditing of access attempts.
   complexity: 2
-
-- id: "win_020"
-  topic: "windows-kernel"
-  tags: ["security", "privileges"]
-  question: "Name a privilege that allows a process to debug another process."
-  truth: "SeDebugPrivilege."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_020
+  topic: windows-kernel
+  tags:
+  - security
+  - privileges
+  question: Name a privilege that allows a process to debug another process.
+  truth: SeDebugPrivilege.
   complexity: 2
-
-- id: "win_021"
-  topic: "windows-kernel"
-  tags: ["alpc", "ports"]
-  question: "What kernel object is used for ALPC communication?"
-  truth: "The Port object."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_021
+  topic: windows-kernel
+  tags:
+  - alpc
+  - ports
+  question: What kernel object is used for ALPC communication?
+  truth: The Port object.
   complexity: 2
-
-- id: "win_022"
-  topic: "windows-kernel"
-  tags: ["registry", "cm"]
-  question: "Which component of the executive is responsible for managing the Registry?"
-  truth: "The Configuration Manager (Cm)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_022
+  topic: windows-kernel
+  tags:
+  - registry
+  - cm
+  question: Which component of the executive is responsible for managing the Registry?
+  truth: The Configuration Manager (Cm).
   complexity: 2
-
-- id: "win_023"
-  topic: "windows-kernel"
-  tags: ["processes", "jobs"]
-  question: "What is a Job Object used for?"
-  truth: "A Job Object is used to group processes together to manage them as a single unit, allowing for resource limits and control."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_023
+  topic: windows-kernel
+  tags:
+  - processes
+  - jobs
+  question: What is a Job Object used for?
+  truth: A Job Object is used to group processes together to manage them as a single unit, allowing for resource limits and control.
   complexity: 2
-
-- id: "win_024"
-  topic: "windows-kernel"
-  tags: ["threads", "scheduling"]
-  question: "What is the range of priority levels in Windows?"
-  truth: "0 to 31."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_024
+  topic: windows-kernel
+  tags:
+  - threads
+  - scheduling
+  question: What is the range of priority levels in Windows?
+  truth: 0 to 31.
   complexity: 1
-
-- id: "win_025"
-  topic: "windows-kernel"
-  tags: ["threads", "scheduling"]
-  question: "Which priority class is reserved for the zero page thread?"
-  truth: "Priority 0."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_025
+  topic: windows-kernel
+  tags:
+  - threads
+  - scheduling
+  question: Which priority class is reserved for the zero page thread?
+  truth: Priority 0.
   complexity: 2
-
-- id: "win_026"
-  topic: "windows-kernel"
-  tags: ["memory-management", "working-set"]
-  question: "What is the Working Set of a process?"
-  truth: "The set of pages in the virtual address space of a process that are currently resident in physical memory."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_026
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - working-set
+  question: What is the Working Set of a process?
+  truth: The set of pages in the virtual address space of a process that are currently resident in physical memory.
   complexity: 2
-
-- id: "win_027"
-  topic: "windows-kernel"
-  tags: ["memory-management", "pool"]
-  question: "What is the difference between Paged Pool and Non-Paged Pool?"
-  truth: "Paged Pool memory can be paged out to disk, whereas Non-Paged Pool memory is guaranteed to remain in physical RAM."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_027
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - pool
+  question: What is the difference between Paged Pool and Non-Paged Pool?
+  truth: Paged Pool memory can be paged out to disk, whereas Non-Paged Pool memory is guaranteed to remain in physical RAM.
   complexity: 2
-
-- id: "win_028"
-  topic: "windows-kernel"
-  tags: ["io-manager", "device-stack"]
-  question: "What is a Device Stack?"
-  truth: "A chain of device objects (and their associated drivers) that process an I/O request for a specific target device."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_028
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - device-stack
+  question: What is a Device Stack?
+  truth: A chain of device objects (and their associated drivers) that process an I/O request for a specific target device.
   complexity: 2
-
-- id: "win_029"
-  topic: "windows-kernel"
-  tags: ["security", "lsass"]
-  question: "What user-mode process is responsible for enforcing security policy and handling user logins?"
-  truth: "LSASS (Local Security Authority Subsystem Service)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_029
+  topic: windows-kernel
+  tags:
+  - security
+  - lsass
+  question: What user-mode process is responsible for enforcing security policy and handling user logins?
+  truth: LSASS (Local Security Authority Subsystem Service).
   complexity: 2
-
-- id: "win_030"
-  topic: "windows-kernel"
-  tags: ["alpc", "views"]
-  question: "How can large messages be transferred efficiently in ALPC?"
-  truth: "By using shared memory sections (views) mapped into both the sender's and receiver's address spaces."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_030
+  topic: windows-kernel
+  tags:
+  - alpc
+  - views
+  question: How can large messages be transferred efficiently in ALPC?
+  truth: By using shared memory sections (views) mapped into both the sender's and receiver's address spaces.
   complexity: 3
-
-- id: "win_031"
-  topic: "windows-kernel"
-  tags: ["registry", "values"]
-  question: "What registry value type represents a 32-bit number?"
-  truth: "REG_DWORD."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_031
+  topic: windows-kernel
+  tags:
+  - registry
+  - values
+  question: What registry value type represents a 32-bit number?
+  truth: REG_DWORD.
   complexity: 1
-
-- id: "win_032"
-  topic: "windows-kernel"
-  tags: ["processes", "creation"]
-  question: "Which API function is ultimately called by CreateProcess to create a process in the kernel?"
-  truth: "NtCreateUserProcess (or formerly NtCreateProcessEx)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_032
+  topic: windows-kernel
+  tags:
+  - processes
+  - creation
+  question: Which API function is ultimately called by CreateProcess to create a process in the kernel?
+  truth: NtCreateUserProcess (or formerly NtCreateProcessEx).
   complexity: 3
-
-- id: "win_033"
-  topic: "windows-kernel"
-  tags: ["threads", "apc"]
-  question: "What is an APC?"
-  truth: "An Asynchronous Procedure Call (APC) is a function that executes in the context of a specific thread."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_033
+  topic: windows-kernel
+  tags:
+  - threads
+  - apc
+  question: What is an APC?
+  truth: An Asynchronous Procedure Call (APC) is a function that executes in the context of a specific thread.
   complexity: 3
-
-- id: "win_034"
-  topic: "windows-kernel"
-  tags: ["memory-management", "mmu"]
-  question: "What hardware component handles the translation of virtual addresses to physical addresses?"
-  truth: "The Memory Management Unit (MMU) or Translation Lookaside Buffer (TLB)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_034
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - mmu
+  question: What hardware component handles the translation of virtual addresses to physical addresses?
+  truth: The Memory Management Unit (MMU) or Translation Lookaside Buffer (TLB).
   complexity: 1
-
-- id: "win_035"
-  topic: "windows-kernel"
-  tags: ["io-manager", "fast-io"]
-  question: "What is Fast I/O?"
-  truth: "A mechanism that allows I/O operations to bypass the generation of an IRP if the data is cached and available."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_035
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - fast-io
+  question: What is Fast I/O?
+  truth: A mechanism that allows I/O operations to bypass the generation of an IRP if the data is cached and available.
   complexity: 3
-
-- id: "win_036"
-  topic: "windows-kernel"
-  tags: ["security", "srm"]
-  question: "What is the Security Reference Monitor (SRM)?"
-  truth: "The kernel component responsible for performing access checks and security auditing."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_036
+  topic: windows-kernel
+  tags:
+  - security
+  - srm
+  question: What is the Security Reference Monitor (SRM)?
+  truth: The kernel component responsible for performing access checks and security auditing.
   complexity: 2
-
-- id: "win_037"
-  topic: "windows-kernel"
-  tags: ["alpc", "rpc"]
-  question: "Does Windows RPC use ALPC for local communication?"
-  truth: "Yes, local RPC (LRPC) is typically implemented over ALPC."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_037
+  topic: windows-kernel
+  tags:
+  - alpc
+  - rpc
+  question: Does Windows RPC use ALPC for local communication?
+  truth: Yes, local RPC (LRPC) is typically implemented over ALPC.
   complexity: 2
-
-- id: "win_038"
-  topic: "windows-kernel"
-  tags: ["registry", "transfers"]
-  question: "When is the registry flushed to disk?"
-  truth: "It is flushed lazily by the kernel (Configuration Manager) or explicitly via API calls like RegFlushKey."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_038
+  topic: windows-kernel
+  tags:
+  - registry
+  - transfers
+  question: When is the registry flushed to disk?
+  truth: It is flushed lazily by the kernel (Configuration Manager) or explicitly via API calls like RegFlushKey.
   complexity: 2
-
-- id: "win_039"
-  topic: "windows-kernel"
-  tags: ["processes", "wow64"]
-  question: "What is WoW64?"
-  truth: "Windows on Windows 64-bit, the subsystem that allows 32-bit applications to run on 64-bit Windows."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_039
+  topic: windows-kernel
+  tags:
+  - processes
+  - wow64
+  question: What is WoW64?
+  truth: Windows on Windows 64-bit, the subsystem that allows 32-bit applications to run on 64-bit Windows.
   complexity: 2
-
-- id: "win_040"
-  topic: "windows-kernel"
-  tags: ["threads", "fiber"]
-  question: "What is a Fiber?"
-  truth: "A unit of execution that must be manually scheduled by the application, often called a lightweight thread."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_040
+  topic: windows-kernel
+  tags:
+  - threads
+  - fiber
+  question: What is a Fiber?
+  truth: A unit of execution that must be manually scheduled by the application, often called a lightweight thread.
   complexity: 1
-
-- id: "win_041"
-  topic: "windows-kernel"
-  tags: ["memory-management", "heap"]
-  question: "Is the Heap managed by the kernel memory manager directly?"
-  truth: "No, heaps are user-mode memory structures managed by the Heap Manager (Rtl functions) on top of Virtual Memory."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_041
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - heap
+  question: Is the Heap managed by the kernel memory manager directly?
+  truth: No, heaps are user-mode memory structures managed by the Heap Manager (Rtl functions) on top of Virtual Memory.
   complexity: 2
-
-- id: "win_042"
-  topic: "windows-kernel"
-  tags: ["io-manager", "pnp"]
-  question: "What is the PnP Manager?"
-  truth: "The Plug and Play Manager, responsible for detecting hardware changes and allocating resources to devices."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_042
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - pnp
+  question: What is the PnP Manager?
+  truth: The Plug and Play Manager, responsible for detecting hardware changes and allocating resources to devices.
   complexity: 2
-
-- id: "win_043"
-  topic: "windows-kernel"
-  tags: ["security", "uac"]
-  question: "What is UAC (User Account Control) related to in terms of tokens?"
-  truth: "UAC involves using a filtered token with reduced privileges for standard operations, even for administrators."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_043
+  topic: windows-kernel
+  tags:
+  - security
+  - uac
+  question: What is UAC (User Account Control) related to in terms of tokens?
+  truth: UAC involves using a filtered token with reduced privileges for standard operations, even for administrators.
   complexity: 2
-
-- id: "win_044"
-  topic: "windows-kernel"
-  tags: ["alpc", "connection"]
-  question: "What type of port is used to listen for incoming ALPC connection requests?"
-  truth: "A Connection Port."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_044
+  topic: windows-kernel
+  tags:
+  - alpc
+  - connection
+  question: What type of port is used to listen for incoming ALPC connection requests?
+  truth: A Connection Port.
   complexity: 3
-
-- id: "win_045"
-  topic: "windows-kernel"
-  tags: ["registry", "virtualization"]
-  question: "What is Registry Virtualization?"
-  truth: "A compatibility feature that redirects writes to system keys (like HKLM\\Software) to a user-specific location for legacy apps."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_045
+  topic: windows-kernel
+  tags:
+  - registry
+  - virtualization
+  question: What is Registry Virtualization?
+  truth: A compatibility feature that redirects writes to system keys (like HKLM\Software) to a user-specific location for legacy apps.
   complexity: 3
-
-- id: "win_046"
-  topic: "windows-kernel"
-  tags: ["architecture", "hal"]
-  question: "What is the HAL?"
-  truth: "The Hardware Abstraction Layer, a loadable kernel module that hides platform-specific hardware details from the OS kernel."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_046
+  topic: windows-kernel
+  tags:
+  - architecture
+  - hal
+  question: What is the HAL?
+  truth: The Hardware Abstraction Layer, a loadable kernel module that hides platform-specific hardware details from the OS kernel.
   complexity: 1
-
-- id: "win_047"
-  topic: "windows-kernel"
-  tags: ["threads", "dpc"]
-  question: "What is a DPC?"
-  truth: "A Deferred Procedure Call (DPC) is a mechanism to execute high-priority system tasks at a lower IRQL than the interrupt handler."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_047
+  topic: windows-kernel
+  tags:
+  - threads
+  - dpc
+  question: What is a DPC?
+  truth: A Deferred Procedure Call (DPC) is a mechanism to execute high-priority system tasks at a lower IRQL than the interrupt handler.
   complexity: 3
-
-- id: "win_048"
-  topic: "windows-kernel"
-  tags: ["memory-management", "aslr"]
-  question: "What is ASLR?"
-  truth: "Address Space Layout Randomization, a security technique that randomizes the locations of the stack, heap, and libraries in memory."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_048
+  topic: windows-kernel
+  tags:
+  - memory-management
+  - aslr
+  question: What is ASLR?
+  truth: Address Space Layout Randomization, a security technique that randomizes the locations of the stack, heap, and libraries in memory.
   complexity: 1
-
-- id: "win_049"
-  topic: "windows-kernel"
-  tags: ["io-manager", "wdf"]
-  question: "What is WDF?"
-  truth: "Windows Driver Frameworks, a set of libraries that abstract much of the complexity of writing Windows drivers (replacing raw WDM for many cases)."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_049
+  topic: windows-kernel
+  tags:
+  - io-manager
+  - wdf
+  question: What is WDF?
+  truth: Windows Driver Frameworks, a set of libraries that abstract much of the complexity of writing Windows drivers (replacing raw WDM for many cases).
   complexity: 2
-
-- id: "win_050"
-  topic: "windows-kernel"
-  tags: ["processes", "csrss"]
-  question: "What is the role of CSRSS.EXE?"
-  truth: "Client/Server Runtime Subsystem; traditionally handled console windows and process/thread creation, though much functionality has moved to the kernel."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_050
+  topic: windows-kernel
+  tags:
+  - processes
+  - csrss
+  question: What is the role of CSRSS.EXE?
+  truth: Client/Server Runtime Subsystem; traditionally handled console windows and process/thread creation, though much functionality has moved to the kernel.
   complexity: 2
-
-- id: "win_051"
-  topic: "windows-kernel"
-  tags: ["architecture", "smss"]
-  question: "What is SMSS.EXE?"
-  truth: "The Session Manager Subsystem, the first user-mode process created by the kernel, responsible for creating environment sessions."
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals
+- id: win_051
+  topic: windows-kernel
+  tags:
+  - architecture
+  - smss
+  question: What is SMSS.EXE?
+  truth: The Session Manager Subsystem, the first user-mode process created by the kernel, responsible for creating environment sessions.
   complexity: 2
+  source: https://docs.microsoft.com/en-us/sysinternals/resources/windows-internals

@@ -1,349 +1,450 @@
-- id: "crypto_001"
-  topic: "crypto"
-  tags: ["symmetric", "general"]
-  question: "What is the fundamental difference between symmetric and asymmetric cryptography?"
-  truth: "Symmetric cryptography uses the same key for both encryption and decryption, whereas asymmetric cryptography uses a pair of mathematically related keys: a public key for encryption and a private key for decryption."
+- id: crypto_001
+  topic: crypto
+  tags:
+  - symmetric
+  - general
+  question: What is the fundamental difference between symmetric and asymmetric cryptography?
+  truth: 'Symmetric cryptography uses the same key for both encryption and decryption, whereas asymmetric cryptography uses a pair of mathematically related keys: a public key for encryption and a private key for decryption.'
   complexity: 1
-
-- id: "crypto_002"
-  topic: "crypto"
-  tags: ["symmetric", "block-cipher"]
-  question: "What is the block size of AES?"
-  truth: "The block size of AES (Advanced Encryption Standard) is fixed at 128 bits, regardless of the key size."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_002
+  topic: crypto
+  tags:
+  - symmetric
+  - block-cipher
+  question: What is the block size of AES?
+  truth: The block size of AES (Advanced Encryption Standard) is fixed at 128 bits, regardless of the key size.
   complexity: 1
-
-- id: "crypto_003"
-  topic: "crypto"
-  tags: ["symmetric", "block-cipher"]
-  question: "What are the three supported key lengths for AES?"
-  truth: "AES supports key lengths of 128, 192, and 256 bits."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_003
+  topic: crypto
+  tags:
+  - symmetric
+  - block-cipher
+  question: What are the three supported key lengths for AES?
+  truth: AES supports key lengths of 128, 192, and 256 bits.
   complexity: 1
-
-- id: "crypto_004"
-  topic: "crypto"
-  tags: ["symmetric", "stream-cipher"]
-  question: "Explain the One-Time Pad (OTP) and its condition for perfect secrecy."
-  truth: "The One-Time Pad is a stream cipher where the key is a random string of bits at least as long as the message. For perfect secrecy, the key must be truly random, used only once, and kept completely secret."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_004
+  topic: crypto
+  tags:
+  - symmetric
+  - stream-cipher
+  question: Explain the One-Time Pad (OTP) and its condition for perfect secrecy.
+  truth: The One-Time Pad is a stream cipher where the key is a random string of bits at least as long as the message. For perfect secrecy, the key must be truly random, used only once, and kept completely secret.
   complexity: 2
-
-- id: "crypto_005"
-  topic: "crypto"
-  tags: ["symmetric", "modes"]
-  question: "Why is Electronic Codebook (ECB) mode generally insecure for block ciphers?"
-  truth: "ECB mode encrypts identical plaintext blocks into identical ciphertext blocks. This preserves patterns in the data, making it vulnerable to analysis and leaking information about the plaintext structure (e.g., the famous Linux penguin image)."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_005
+  topic: crypto
+  tags:
+  - symmetric
+  - modes
+  question: Why is Electronic Codebook (ECB) mode generally insecure for block ciphers?
+  truth: ECB mode encrypts identical plaintext blocks into identical ciphertext blocks. This preserves patterns in the data, making it vulnerable to analysis and leaking information about the plaintext structure (e.g., the famous Linux penguin image).
   complexity: 2
-
-- id: "crypto_006"
-  topic: "crypto"
-  tags: ["symmetric", "modes"]
-  question: "What is the purpose of an Initialization Vector (IV) in CBC mode?"
-  truth: "The IV provides randomization for the first block of plaintext in Cipher Block Chaining (CBC) mode. It ensures that encrypting the same message twice with the same key yields different ciphertexts."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_006
+  topic: crypto
+  tags:
+  - symmetric
+  - modes
+  question: What is the purpose of an Initialization Vector (IV) in CBC mode?
+  truth: The IV provides randomization for the first block of plaintext in Cipher Block Chaining (CBC) mode. It ensures that encrypting the same message twice with the same key yields different ciphertexts.
   complexity: 2
-
-- id: "crypto_007"
-  topic: "crypto"
-  tags: ["hashing", "properties"]
-  question: "Define 'pre-image resistance' in the context of cryptographic hash functions."
-  truth: "Pre-image resistance (or one-wayness) means that given a hash value h, it is computationally infeasible to find any message m such that hash(m) = h."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_007
+  topic: crypto
+  tags:
+  - hashing
+  - properties
+  question: Define 'pre-image resistance' in the context of cryptographic hash functions.
+  truth: Pre-image resistance (or one-wayness) means that given a hash value h, it is computationally infeasible to find any message m such that hash(m) = h.
   complexity: 2
-
-- id: "crypto_008"
-  topic: "crypto"
-  tags: ["hashing", "properties"]
-  question: "Define 'collision resistance' in hash functions."
-  truth: "Collision resistance means it is computationally infeasible to find two distinct inputs, m1 and m2, such that hash(m1) = hash(m2)."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_008
+  topic: crypto
+  tags:
+  - hashing
+  - properties
+  question: Define 'collision resistance' in hash functions.
+  truth: Collision resistance means it is computationally infeasible to find two distinct inputs, m1 and m2, such that hash(m1) = hash(m2).
   complexity: 2
-
-- id: "crypto_009"
-  topic: "crypto"
-  tags: ["hashing", "attacks"]
-  question: "What is a 'birthday attack' against a hash function?"
-  truth: "A birthday attack exploits the mathematics of the birthday problem to find a collision. It reduces the effort needed to find a collision to approximately 2^(n/2) operations for an n-bit hash, rather than 2^n."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_009
+  topic: crypto
+  tags:
+  - hashing
+  - attacks
+  question: What is a 'birthday attack' against a hash function?
+  truth: A birthday attack exploits the mathematics of the birthday problem to find a collision. It reduces the effort needed to find a collision to approximately 2^(n/2) operations for an n-bit hash, rather than 2^n.
   complexity: 2
-
-- id: "crypto_010"
-  topic: "crypto"
-  tags: ["mac", "integrity"]
-  question: "What does HMAC stand for and what problem does it solve?"
-  truth: "HMAC stands for Hash-based Message Authentication Code. It uses a cryptographic hash function in combination with a secret key to provide both data integrity and authenticity, solving the issue of length extension attacks found in simple hash(key || message) constructions."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_010
+  topic: crypto
+  tags:
+  - mac
+  - integrity
+  question: What does HMAC stand for and what problem does it solve?
+  truth: HMAC stands for Hash-based Message Authentication Code. It uses a cryptographic hash function in combination with a secret key to provide both data integrity and authenticity, solving the issue of length extension attacks found in simple hash(key || message) constructions.
   complexity: 2
-
-- id: "crypto_011"
-  topic: "crypto"
-  tags: ["asymmetric", "rsa"]
-  question: "What mathematical problem is the security of RSA based on?"
-  truth: "RSA security is based on the difficulty of the integer factorization problem—specifically, factoring the product of two large prime numbers."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_011
+  topic: crypto
+  tags:
+  - asymmetric
+  - rsa
+  question: What mathematical problem is the security of RSA based on?
+  truth: RSA security is based on the difficulty of the integer factorization problem—specifically, factoring the product of two large prime numbers.
   complexity: 2
-
-- id: "crypto_012"
-  topic: "crypto"
-  tags: ["asymmetric", "diffie-hellman"]
-  question: "What is the primary purpose of the Diffie-Hellman protocol?"
-  truth: "The Diffie-Hellman protocol is a key exchange method that allows two parties to establish a shared secret over an insecure channel without having any prior shared secrets."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_012
+  topic: crypto
+  tags:
+  - asymmetric
+  - diffie-hellman
+  question: What is the primary purpose of the Diffie-Hellman protocol?
+  truth: The Diffie-Hellman protocol is a key exchange method that allows two parties to establish a shared secret over an insecure channel without having any prior shared secrets.
   complexity: 2
-
-- id: "crypto_013"
-  topic: "crypto"
-  tags: ["asymmetric", "ecc"]
-  question: "Why is Elliptic Curve Cryptography (ECC) preferred over RSA for mobile devices?"
-  truth: "ECC offers equivalent security to RSA with much smaller key sizes (e.g., a 256-bit ECC key is roughly equivalent to a 3072-bit RSA key), resulting in faster computations and lower power/storage consumption."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_013
+  topic: crypto
+  tags:
+  - asymmetric
+  - ecc
+  question: Why is Elliptic Curve Cryptography (ECC) preferred over RSA for mobile devices?
+  truth: ECC offers equivalent security to RSA with much smaller key sizes (e.g., a 256-bit ECC key is roughly equivalent to a 3072-bit RSA key), resulting in faster computations and lower power/storage consumption.
   complexity: 2
-
-- id: "crypto_014"
-  topic: "crypto"
-  tags: ["pki", "certificates"]
-  question: "What is a Digital Certificate?"
-  truth: "A Digital Certificate is an electronic document used to prove the ownership of a public key. It includes information about the key, the identity of its owner, and the digital signature of an entity that has verified the certificate's contents (usually a Certificate Authority)."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_014
+  topic: crypto
+  tags:
+  - pki
+  - certificates
+  question: What is a Digital Certificate?
+  truth: A Digital Certificate is an electronic document used to prove the ownership of a public key. It includes information about the key, the identity of its owner, and the digital signature of an entity that has verified the certificate's contents (usually a Certificate Authority).
   complexity: 1
-
-- id: "crypto_015"
-  topic: "crypto"
-  tags: ["pki", "standards"]
-  question: "What is X.509?"
-  truth: "X.509 is the standard defining the format of public key certificates, used in many Internet protocols, including TLS/SSL."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_015
+  topic: crypto
+  tags:
+  - pki
+  - standards
+  question: What is X.509?
+  truth: X.509 is the standard defining the format of public key certificates, used in many Internet protocols, including TLS/SSL.
   complexity: 1
-
-- id: "crypto_016"
-  topic: "crypto"
-  tags: ["attacks", "padding"]
-  question: "Describe a 'Padding Oracle Attack'."
-  truth: "A Padding Oracle Attack exploits a system that reveals whether a cryptographic message was correctly padded after decryption. By sending modified ciphertexts and observing the error responses, an attacker can decrypt the ciphertext byte-by-byte."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_016
+  topic: crypto
+  tags:
+  - attacks
+  - padding
+  question: Describe a 'Padding Oracle Attack'.
+  truth: A Padding Oracle Attack exploits a system that reveals whether a cryptographic message was correctly padded after decryption. By sending modified ciphertexts and observing the error responses, an attacker can decrypt the ciphertext byte-by-byte.
   complexity: 3
-
-- id: "crypto_017"
-  topic: "crypto"
-  tags: ["attacks", "mitm"]
-  question: "What is a Man-in-the-Middle (MitM) attack?"
-  truth: "A MitM attack occurs when an attacker secretly relays and possibly alters the communication between two parties who believe they are directly communicating with each other. Proper authentication is required to prevent this."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_017
+  topic: crypto
+  tags:
+  - attacks
+  - mitm
+  question: What is a Man-in-the-Middle (MitM) attack?
+  truth: A MitM attack occurs when an attacker secretly relays and possibly alters the communication between two parties who believe they are directly communicating with each other. Proper authentication is required to prevent this.
   complexity: 1
-
-- id: "crypto_018"
-  topic: "crypto"
-  tags: ["protocols", "tls"]
-  question: "What is Forward Secrecy (or Perfect Forward Secrecy) in TLS?"
-  truth: "Forward Secrecy ensures that the compromise of a server's long-term private key does not compromise past session keys. This is typically achieved using ephemeral Diffie-Hellman key exchange for each session."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_018
+  topic: crypto
+  tags:
+  - protocols
+  - tls
+  question: What is Forward Secrecy (or Perfect Forward Secrecy) in TLS?
+  truth: Forward Secrecy ensures that the compromise of a server's long-term private key does not compromise past session keys. This is typically achieved using ephemeral Diffie-Hellman key exchange for each session.
   complexity: 2
-
-- id: "crypto_019"
-  topic: "crypto"
-  tags: ["protocols", "tls"]
-  question: "What role does the 'ClientHello' message play in the TLS handshake?"
-  truth: "The ClientHello message initiates the TLS handshake. The client sends it to suggest cryptographic suites, compression methods, and the protocol version, and it includes a random number used later for key generation."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_019
+  topic: crypto
+  tags:
+  - protocols
+  - tls
+  question: What role does the 'ClientHello' message play in the TLS handshake?
+  truth: The ClientHello message initiates the TLS handshake. The client sends it to suggest cryptographic suites, compression methods, and the protocol version, and it includes a random number used later for key generation.
   complexity: 2
-
-- id: "crypto_020"
-  topic: "crypto"
-  tags: ["symmetric", "feistel"]
-  question: "What is a Feistel network?"
-  truth: "A Feistel network is a symmetric structure used in the construction of block ciphers (like DES). It splits the data block into two halves and applies a round function to one half using a subkey, then XORs the result with the other half, swapping halves for the next round."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_020
+  topic: crypto
+  tags:
+  - symmetric
+  - feistel
+  question: What is a Feistel network?
+  truth: A Feistel network is a symmetric structure used in the construction of block ciphers (like DES). It splits the data block into two halves and applies a round function to one half using a subkey, then XORs the result with the other half, swapping halves for the next round.
   complexity: 3
-
-- id: "crypto_021"
-  topic: "crypto"
-  tags: ["history", "des"]
-  question: "Why is DES (Data Encryption Standard) considered insecure today?"
-  truth: "DES uses a 56-bit key, which is too short. It allows for a brute-force attack to search the entire key space in a trivial amount of time using modern hardware."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_021
+  topic: crypto
+  tags:
+  - history
+  - des
+  question: Why is DES (Data Encryption Standard) considered insecure today?
+  truth: DES uses a 56-bit key, which is too short. It allows for a brute-force attack to search the entire key space in a trivial amount of time using modern hardware.
   complexity: 1
-
-- id: "crypto_022"
-  topic: "crypto"
-  tags: ["symmetric", "3des"]
-  question: "How does Triple DES (3DES) improve upon DES?"
-  truth: "3DES applies the DES algorithm three times to each data block (Encrypt-Decrypt-Encrypt) using two or three distinct keys, effectively increasing the key size to 112 or 168 bits to resist brute-force attacks."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_022
+  topic: crypto
+  tags:
+  - symmetric
+  - 3des
+  question: How does Triple DES (3DES) improve upon DES?
+  truth: 3DES applies the DES algorithm three times to each data block (Encrypt-Decrypt-Encrypt) using two or three distinct keys, effectively increasing the key size to 112 or 168 bits to resist brute-force attacks.
   complexity: 2
-
-- id: "crypto_023"
-  topic: "crypto"
-  tags: ["hashing", "sha"]
-  question: "What is the output size of SHA-256?"
-  truth: "SHA-256 produces a 256-bit (32-byte) message digest."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_023
+  topic: crypto
+  tags:
+  - hashing
+  - sha
+  question: What is the output size of SHA-256?
+  truth: SHA-256 produces a 256-bit (32-byte) message digest.
   complexity: 1
-
-- id: "crypto_024"
-  topic: "crypto"
-  tags: ["prng", "randomness"]
-  question: "What is the difference between a TRNG and a PRNG?"
-  truth: "A TRNG (True Random Number Generator) derives entropy from physical phenomena (like thermal noise), while a PRNG (Pseudo-Random Number Generator) uses a deterministic algorithm to expand a short initial seed into a long sequence of bits that appears random."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_024
+  topic: crypto
+  tags:
+  - prng
+  - randomness
+  question: What is the difference between a TRNG and a PRNG?
+  truth: A TRNG (True Random Number Generator) derives entropy from physical phenomena (like thermal noise), while a PRNG (Pseudo-Random Number Generator) uses a deterministic algorithm to expand a short initial seed into a long sequence of bits that appears random.
   complexity: 2
-
-- id: "crypto_025"
-  topic: "crypto"
-  tags: ["prng", "csprng"]
-  question: "What property makes a PRNG suitable for cryptography (CSPRNG)?"
-  truth: "A Cryptographically Secure PRNG (CSPRNG) must pass statistical randomness tests and, crucially, satisfy the 'next-bit test': given the first k bits of the sequence, there is no polynomial-time algorithm that can predict the (k+1)th bit with probability significantly greater than 50%."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_025
+  topic: crypto
+  tags:
+  - prng
+  - csprng
+  question: What property makes a PRNG suitable for cryptography (CSPRNG)?
+  truth: 'A Cryptographically Secure PRNG (CSPRNG) must pass statistical randomness tests and, crucially, satisfy the ''next-bit test'': given the first k bits of the sequence, there is no polynomial-time algorithm that can predict the (k+1)th bit with probability significantly greater than 50%.'
   complexity: 3
-
-- id: "crypto_026"
-  topic: "crypto"
-  tags: ["attacks", "side-channel"]
-  question: "What is a Side-Channel Attack?"
-  truth: "A side-channel attack targets the physical implementation of a cryptosystem rather than the algorithm itself. Examples include analyzing power consumption, electromagnetic emissions, or timing information to deduce keys."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_026
+  topic: crypto
+  tags:
+  - attacks
+  - side-channel
+  question: What is a Side-Channel Attack?
+  truth: A side-channel attack targets the physical implementation of a cryptosystem rather than the algorithm itself. Examples include analyzing power consumption, electromagnetic emissions, or timing information to deduce keys.
   complexity: 2
-
-- id: "crypto_027"
-  topic: "crypto"
-  tags: ["attacks", "replay"]
-  question: "What is a Replay Attack and how is it prevented?"
-  truth: "A Replay Attack involves an attacker intercepting valid data transmission and repeating it later to impersonate the sender. It is prevented using nonces, timestamps, or sequence numbers."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_027
+  topic: crypto
+  tags:
+  - attacks
+  - replay
+  question: What is a Replay Attack and how is it prevented?
+  truth: A Replay Attack involves an attacker intercepting valid data transmission and repeating it later to impersonate the sender. It is prevented using nonces, timestamps, or sequence numbers.
   complexity: 1
-
-- id: "crypto_028"
-  topic: "crypto"
-  tags: ["integrity", "signatures"]
-  question: "How does a Digital Signature provide non-repudiation?"
-  truth: "Because a digital signature is created using the signer's private key (which only they possess), the signer cannot successfully deny having signed the message, provided the private key has not been compromised."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_028
+  topic: crypto
+  tags:
+  - integrity
+  - signatures
+  question: How does a Digital Signature provide non-repudiation?
+  truth: Because a digital signature is created using the signer's private key (which only they possess), the signer cannot successfully deny having signed the message, provided the private key has not been compromised.
   complexity: 2
-
-- id: "crypto_029"
-  topic: "crypto"
-  tags: ["pki", "crl"]
-  question: "What is a CRL?"
-  truth: "A CRL (Certificate Revocation List) is a list of digital certificates that have been revoked by the issuing Certificate Authority (CA) before their scheduled expiration date and should no longer be trusted."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_029
+  topic: crypto
+  tags:
+  - pki
+  - crl
+  question: What is a CRL?
+  truth: A CRL (Certificate Revocation List) is a list of digital certificates that have been revoked by the issuing Certificate Authority (CA) before their scheduled expiration date and should no longer be trusted.
   complexity: 2
-
-- id: "crypto_030"
-  topic: "crypto"
-  tags: ["pki", "ocsp"]
-  question: "What advantage does OCSP have over CRLs?"
-  truth: "OCSP (Online Certificate Status Protocol) allows a client to query a CA for the revocation status of a specific certificate in real-time, avoiding the need to download and parse potentially large CRLs."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_030
+  topic: crypto
+  tags:
+  - pki
+  - ocsp
+  question: What advantage does OCSP have over CRLs?
+  truth: OCSP (Online Certificate Status Protocol) allows a client to query a CA for the revocation status of a specific certificate in real-time, avoiding the need to download and parse potentially large CRLs.
   complexity: 2
-
-- id: "crypto_031"
-  topic: "crypto"
-  tags: ["modes", "gcm"]
-  question: "What is GCM (Galois/Counter Mode)?"
-  truth: "GCM is an authenticated encryption mode for block ciphers. It combines Counter (CTR) mode for encryption with Galois mode multiplication for authentication, providing both confidentiality and data integrity efficiently."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_031
+  topic: crypto
+  tags:
+  - modes
+  - gcm
+  question: What is GCM (Galois/Counter Mode)?
+  truth: GCM is an authenticated encryption mode for block ciphers. It combines Counter (CTR) mode for encryption with Galois mode multiplication for authentication, providing both confidentiality and data integrity efficiently.
   complexity: 3
-
-- id: "crypto_032"
-  topic: "crypto"
-  tags: ["math", "modular-arithmetic"]
-  question: "What is a primitive root modulo n?"
-  truth: "A number g is a primitive root modulo n if every number coprime to n is congruent to a power of g modulo n. It is a generator of the multiplicative group of integers modulo n."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_032
+  topic: crypto
+  tags:
+  - math
+  - modular-arithmetic
+  question: What is a primitive root modulo n?
+  truth: A number g is a primitive root modulo n if every number coprime to n is congruent to a power of g modulo n. It is a generator of the multiplicative group of integers modulo n.
   complexity: 3
-
-- id: "crypto_033"
-  topic: "crypto"
-  tags: ["protocols", "ssh"]
-  question: "What is the 'Trust on First Use' (TOFU) model in SSH?"
-  truth: "TOFU is a security model where a client trusts a server's public key the first time it connects (usually prompting the user to verify the fingerprint). The key is stored locally, and subsequent connections verify the server against this stored key."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_033
+  topic: crypto
+  tags:
+  - protocols
+  - ssh
+  question: What is the 'Trust on First Use' (TOFU) model in SSH?
+  truth: TOFU is a security model where a client trusts a server's public key the first time it connects (usually prompting the user to verify the fingerprint). The key is stored locally, and subsequent connections verify the server against this stored key.
   complexity: 2
-
-- id: "crypto_034"
-  topic: "crypto"
-  tags: ["hashing", "salt"]
-  question: "Why is 'salting' passwords important before hashing them?"
-  truth: "Salting adds a unique random value to each password before hashing. This prevents attackers from using precomputed lookup tables (Rainbow Tables) to reverse hashes and ensures that identical passwords have different hash values."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_034
+  topic: crypto
+  tags:
+  - hashing
+  - salt
+  question: Why is 'salting' passwords important before hashing them?
+  truth: Salting adds a unique random value to each password before hashing. This prevents attackers from using precomputed lookup tables (Rainbow Tables) to reverse hashes and ensures that identical passwords have different hash values.
   complexity: 1
-
-- id: "crypto_035"
-  topic: "crypto"
-  tags: ["attacks", "brute-force"]
-  question: "How does key stretching (e.g., PBKDF2, bcrypt, Argon2) defend against brute-force attacks?"
-  truth: "Key stretching algorithms deliberately make the hashing process slow and computationally expensive (by iterating thousands of times or using memory hardness), significantly reducing the rate at which an attacker can test candidate passwords."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_035
+  topic: crypto
+  tags:
+  - attacks
+  - brute-force
+  question: How does key stretching (e.g., PBKDF2, bcrypt, Argon2) defend against brute-force attacks?
+  truth: Key stretching algorithms deliberately make the hashing process slow and computationally expensive (by iterating thousands of times or using memory hardness), significantly reducing the rate at which an attacker can test candidate passwords.
   complexity: 2
-
-- id: "crypto_036"
-  topic: "crypto"
-  tags: ["asymmetric", "elgamal"]
-  question: "What is ElGamal encryption based on?"
-  truth: "ElGamal encryption is an asymmetric key encryption algorithm based on the Diffie-Hellman key exchange and the difficulty of the Discrete Logarithm Problem."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_036
+  topic: crypto
+  tags:
+  - asymmetric
+  - elgamal
+  question: What is ElGamal encryption based on?
+  truth: ElGamal encryption is an asymmetric key encryption algorithm based on the Diffie-Hellman key exchange and the difficulty of the Discrete Logarithm Problem.
   complexity: 3
-
-- id: "crypto_037"
-  topic: "crypto"
-  tags: ["cryptanalysis", "linear"]
-  question: "Briefly describe Linear Cryptanalysis."
-  truth: "Linear Cryptanalysis is a known-plaintext attack that attempts to find linear approximations (equations utilizing XOR operations) describing the behavior of a block cipher, relating bits of the plaintext, ciphertext, and key."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_037
+  topic: crypto
+  tags:
+  - cryptanalysis
+  - linear
+  question: Briefly describe Linear Cryptanalysis.
+  truth: Linear Cryptanalysis is a known-plaintext attack that attempts to find linear approximations (equations utilizing XOR operations) describing the behavior of a block cipher, relating bits of the plaintext, ciphertext, and key.
   complexity: 3
-
-- id: "crypto_038"
-  topic: "crypto"
-  tags: ["cryptanalysis", "differential"]
-  question: "Briefly describe Differential Cryptanalysis."
-  truth: "Differential Cryptanalysis is a chosen-plaintext attack that studies how differences in input (plaintext) affect the differences in output (ciphertext) to discover non-random behavior and recover the key."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_038
+  topic: crypto
+  tags:
+  - cryptanalysis
+  - differential
+  question: Briefly describe Differential Cryptanalysis.
+  truth: Differential Cryptanalysis is a chosen-plaintext attack that studies how differences in input (plaintext) affect the differences in output (ciphertext) to discover non-random behavior and recover the key.
   complexity: 3
-
-- id: "crypto_039"
-  topic: "crypto"
-  tags: ["protocols", "ipsec"]
-  question: "What are the two main protocols within IPsec?"
-  truth: "The two main protocols are Authentication Header (AH), which provides integrity and authentication but no encryption, and Encapsulating Security Payload (ESP), which provides encryption along with optional authentication and integrity."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_039
+  topic: crypto
+  tags:
+  - protocols
+  - ipsec
+  question: What are the two main protocols within IPsec?
+  truth: The two main protocols are Authentication Header (AH), which provides integrity and authentication but no encryption, and Encapsulating Security Payload (ESP), which provides encryption along with optional authentication and integrity.
   complexity: 2
-
-- id: "crypto_040"
-  topic: "crypto"
-  tags: ["protocols", "ipsec"]
-  question: "What is IKE in the context of IPsec?"
-  truth: "IKE (Internet Key Exchange) is the protocol used in IPsec to set up a Security Association (SA). It negotiates protocols and algorithms and generates the keys used for AH or ESP."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_040
+  topic: crypto
+  tags:
+  - protocols
+  - ipsec
+  question: What is IKE in the context of IPsec?
+  truth: IKE (Internet Key Exchange) is the protocol used in IPsec to set up a Security Association (SA). It negotiates protocols and algorithms and generates the keys used for AH or ESP.
   complexity: 2
-
-- id: "crypto_041"
-  topic: "crypto"
-  tags: ["hashing", "length-extension"]
-  question: "Which hash function family is notoriously vulnerable to length extension attacks?"
-  truth: "The Merkle-Damgård construction based hashes, such as MD5, SHA-1, and SHA-2, are vulnerable to length extension attacks if used simply as H(secret || message) without HMAC."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_041
+  topic: crypto
+  tags:
+  - hashing
+  - length-extension
+  question: Which hash function family is notoriously vulnerable to length extension attacks?
+  truth: The Merkle-Damgård construction based hashes, such as MD5, SHA-1, and SHA-2, are vulnerable to length extension attacks if used simply as H(secret || message) without HMAC.
   complexity: 3
-
-- id: "crypto_042"
-  topic: "crypto"
-  tags: ["symmetric", "rc4"]
-  question: "Why is RC4 no longer recommended?"
-  truth: "RC4 is a stream cipher with significant biases in its output keystream (e.g., the first few bytes are not random). These biases allow attackers to recover plaintext or the key, leading to its prohibition in TLS."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_042
+  topic: crypto
+  tags:
+  - symmetric
+  - rc4
+  question: Why is RC4 no longer recommended?
+  truth: RC4 is a stream cipher with significant biases in its output keystream (e.g., the first few bytes are not random). These biases allow attackers to recover plaintext or the key, leading to its prohibition in TLS.
   complexity: 2
-
-- id: "crypto_043"
-  topic: "crypto"
-  tags: ["quantum", "post-quantum"]
-  question: "What is Shor's Algorithm and its impact on cryptography?"
-  truth: "Shor's Algorithm is a quantum computer algorithm that can factor integers and calculate discrete logarithms in polynomial time, effectively breaking current asymmetric cryptosystems like RSA and ECC."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_043
+  topic: crypto
+  tags:
+  - quantum
+  - post-quantum
+  question: What is Shor's Algorithm and its impact on cryptography?
+  truth: Shor's Algorithm is a quantum computer algorithm that can factor integers and calculate discrete logarithms in polynomial time, effectively breaking current asymmetric cryptosystems like RSA and ECC.
   complexity: 3
-
-- id: "crypto_044"
-  topic: "crypto"
-  tags: ["asymmetric", "hybrid"]
-  question: "What is a Hybrid Cryptosystem?"
-  truth: "A Hybrid Cryptosystem combines the convenience of asymmetric cryptography with the efficiency of symmetric cryptography. It uses asymmetric encryption to securely exchange a session key, which is then used for symmetric encryption of the actual message data."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_044
+  topic: crypto
+  tags:
+  - asymmetric
+  - hybrid
+  question: What is a Hybrid Cryptosystem?
+  truth: A Hybrid Cryptosystem combines the convenience of asymmetric cryptography with the efficiency of symmetric cryptography. It uses asymmetric encryption to securely exchange a session key, which is then used for symmetric encryption of the actual message data.
   complexity: 1
-
-- id: "crypto_045"
-  topic: "crypto"
-  tags: ["attacks", "known-plaintext"]
-  question: "What is a Known-Plaintext Attack (KPA)?"
-  truth: "In a KPA, the attacker has access to both the plaintext and its corresponding ciphertext (or several pairs) and attempts to deduce the key or the algorithm logic to decrypt further messages."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_045
+  topic: crypto
+  tags:
+  - attacks
+  - known-plaintext
+  question: What is a Known-Plaintext Attack (KPA)?
+  truth: In a KPA, the attacker has access to both the plaintext and its corresponding ciphertext (or several pairs) and attempts to deduce the key or the algorithm logic to decrypt further messages.
   complexity: 2
-
-- id: "crypto_046"
-  topic: "crypto"
-  tags: ["modes", "ctr"]
-  question: "How does Counter (CTR) mode turn a block cipher into a stream cipher?"
-  truth: "CTR mode generates a keystream by encrypting successive values of a counter combined with a nonce. This keystream is then XORed with the plaintext, effectively functioning like a stream cipher."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_046
+  topic: crypto
+  tags:
+  - modes
+  - ctr
+  question: How does Counter (CTR) mode turn a block cipher into a stream cipher?
+  truth: CTR mode generates a keystream by encrypting successive values of a counter combined with a nonce. This keystream is then XORed with the plaintext, effectively functioning like a stream cipher.
   complexity: 2
-
-- id: "crypto_047"
-  topic: "crypto"
-  tags: ["pki", "root-store"]
-  question: "What is a Root Store?"
-  truth: "A Root Store is a collection of trusted Root Certificate Authority certificates usually typically included in an operating system or browser. These serve as the trust anchors for the PKI hierarchy."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_047
+  topic: crypto
+  tags:
+  - pki
+  - root-store
+  question: What is a Root Store?
+  truth: A Root Store is a collection of trusted Root Certificate Authority certificates usually typically included in an operating system or browser. These serve as the trust anchors for the PKI hierarchy.
   complexity: 1
-
-- id: "crypto_048"
-  topic: "crypto"
-  tags: ["attacks", "downgrade"]
-  question: "What is a Protocol Downgrade Attack?"
-  truth: "A Downgrade Attack forces a system to abandon a high-quality mode of operation (e.g., TLS 1.3) in favor of an older, lower-quality mode (e.g., SSL 3.0) that has known vulnerabilities the attacker can exploit."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_048
+  topic: crypto
+  tags:
+  - attacks
+  - downgrade
+  question: What is a Protocol Downgrade Attack?
+  truth: A Downgrade Attack forces a system to abandon a high-quality mode of operation (e.g., TLS 1.3) in favor of an older, lower-quality mode (e.g., SSL 3.0) that has known vulnerabilities the attacker can exploit.
   complexity: 2
-
-- id: "crypto_049"
-  topic: "crypto"
-  tags: ["math", "zkp"]
-  question: "What is a Zero-Knowledge Proof?"
-  truth: "A Zero-Knowledge Proof is a cryptographic method by which one party (the prover) can prove to another party (the verifier) that they know a value x, without conveying any information apart from the fact that they know the value x."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_049
+  topic: crypto
+  tags:
+  - math
+  - zkp
+  question: What is a Zero-Knowledge Proof?
+  truth: A Zero-Knowledge Proof is a cryptographic method by which one party (the prover) can prove to another party (the verifier) that they know a value x, without conveying any information apart from the fact that they know the value x.
   complexity: 3
-
-- id: "crypto_050"
-  topic: "crypto"
-  tags: ["hashing", "sha3"]
-  question: "How does SHA-3 differ structurally from SHA-2?"
-  truth: "SHA-3 uses a sponge construction based on the Keccak algorithm, whereas SHA-2 relies on the Merkle-Damgård construction. This structural difference makes SHA-3 resistant to length extension attacks and diversifies the cryptographic standard."
+  source: https://www.schneier.com/books/applied_cryptography/
+- id: crypto_050
+  topic: crypto
+  tags:
+  - hashing
+  - sha3
+  question: How does SHA-3 differ structurally from SHA-2?
+  truth: SHA-3 uses a sponge construction based on the Keccak algorithm, whereas SHA-2 relies on the Merkle-Damgård construction. This structural difference makes SHA-3 resistant to length extension attacks and diversifies the cryptographic standard.
   complexity: 2
+  source: https://www.schneier.com/books/applied_cryptography/

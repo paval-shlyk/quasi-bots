@@ -1,349 +1,450 @@
-- id: "rust_001"
-  topic: "rust"
-  tags: ["ownership", "memory-management"]
-  question: "What is the core rule of ownership regarding the number of owners a value can have at once in Rust?"
-  truth: "Each value in Rust has a variable that’s called its owner. There can only be one owner at a time."
+- id: rust_001
+  topic: rust
+  tags:
+  - ownership
+  - memory-management
+  question: What is the core rule of ownership regarding the number of owners a value can have at once in Rust?
+  truth: Each value in Rust has a variable that’s called its owner. There can only be one owner at a time.
   complexity: 1
-
-- id: "rust_002"
-  topic: "rust"
-  tags: ["ownership", "scope"]
-  question: "What happens to a value when its owner goes out of scope?"
-  truth: "When the owner goes out of scope, the value will be dropped."
+  source: https://doc.rust-lang.org/book/
+- id: rust_002
+  topic: rust
+  tags:
+  - ownership
+  - scope
+  question: What happens to a value when its owner goes out of scope?
+  truth: When the owner goes out of scope, the value will be dropped.
   complexity: 1
-
-- id: "rust_003"
-  topic: "rust"
-  tags: ["borrowing", "references"]
-  question: "How many mutable references to a particular piece of data can you have in a particular scope?"
-  truth: "You can have only one mutable reference to a particular piece of data at a time."
+  source: https://doc.rust-lang.org/book/
+- id: rust_003
+  topic: rust
+  tags:
+  - borrowing
+  - references
+  question: How many mutable references to a particular piece of data can you have in a particular scope?
+  truth: You can have only one mutable reference to a particular piece of data at a time.
   complexity: 2
-
-- id: "rust_004"
-  topic: "rust"
-  tags: ["borrowing", "references"]
-  question: "Can you have a mutable reference and an immutable reference to the same value simultaneously?"
-  truth: "No. This rule exists to prevent **data races**. If a value were mutable while being aliased by immutable references, reading the data could result in undefined behavior or inconsistent state."
+  source: https://doc.rust-lang.org/book/
+- id: rust_004
+  topic: rust
+  tags:
+  - borrowing
+  - references
+  question: Can you have a mutable reference and an immutable reference to the same value simultaneously?
+  truth: No. This rule exists to prevent **data races**. If a value were mutable while being aliased by immutable references, reading the data could result in undefined behavior or inconsistent state.
   complexity: 2
-
-- id: "rust_005"
-  topic: "rust"
-  tags: ["lifetimes", "references"]
-  question: "What is the purpose of lifetime annotations in Rust?"
-  truth: "Lifetime annotations describe the relationships of the lifetimes of multiple references to each other without affecting the lifetimes."
+  source: https://doc.rust-lang.org/book/
+- id: rust_005
+  topic: rust
+  tags:
+  - lifetimes
+  - references
+  question: What is the purpose of lifetime annotations in Rust?
+  truth: Lifetime annotations describe the relationships of the lifetimes of multiple references to each other without affecting the lifetimes.
   complexity: 3
-
-- id: "rust_006"
-  topic: "rust"
-  tags: ["lifetimes", "static"]
-  question: "What does the 'static lifetime denote?"
-  truth: "The 'static lifetime denotes that the affected reference can live for the entire duration of the program."
+  source: https://doc.rust-lang.org/book/
+- id: rust_006
+  topic: rust
+  tags:
+  - lifetimes
+  - static
+  question: What does the 'static lifetime denote?
+  truth: The 'static lifetime denotes that the affected reference can live for the entire duration of the program.
   complexity: 2
-
-- id: "rust_007"
-  topic: "rust"
-  tags: ["unsafe", "pointers"]
-  question: "What is a raw pointer in Rust and how does it differ from a reference?"
-  truth: "Raw pointers (*const T and *mut T) are similar to references but are allowed to ignore borrowing rules, aren't guaranteed to point to valid memory, allowed to be null, and don't implement automatic cleanup."
+  source: https://doc.rust-lang.org/book/
+- id: rust_007
+  topic: rust
+  tags:
+  - unsafe
+  - pointers
+  question: What is a raw pointer in Rust and how does it differ from a reference?
+  truth: Raw pointers (*const T and *mut T) are similar to references but are allowed to ignore borrowing rules, aren't guaranteed to point to valid memory, allowed to be null, and don't implement automatic cleanup.
   complexity: 3
-
-- id: "rust_008"
-  topic: "rust"
-  tags: ["concurrency", "traits"]
-  question: "What is the purpose of the `Send` marker trait?"
-  truth: "The `Send` trait indicates that ownership of values of the type implementing it can be transferred between threads."
+  source: https://doc.rust-lang.org/book/
+- id: rust_008
+  topic: rust
+  tags:
+  - concurrency
+  - traits
+  question: What is the purpose of the `Send` marker trait?
+  truth: The `Send` trait indicates that ownership of values of the type implementing it can be transferred between threads.
   complexity: 3
-
-- id: "rust_009"
-  topic: "rust"
-  tags: ["concurrency", "traits"]
-  question: "What does the `Sync` marker trait indicate?"
-  truth: "The `Sync` marker trait indicates that it is safe for the type implementing it to be referenced from multiple threads."
+  source: https://doc.rust-lang.org/book/
+- id: rust_009
+  topic: rust
+  tags:
+  - concurrency
+  - traits
+  question: What does the `Sync` marker trait indicate?
+  truth: The `Sync` marker trait indicates that it is safe for the type implementing it to be referenced from multiple threads.
   complexity: 3
-
-- id: "rust_010"
-  topic: "rust"
-  tags: ["traits", "polymorphism"]
-  question: "What is a trait object and how is it created?"
-  truth: "A trait object allows for dynamic dispatch. It is created by specifying `dyn Trait` behind a pointer, like `&dyn Trait` or `Box<dyn Trait>`."
+  source: https://doc.rust-lang.org/book/
+- id: rust_010
+  topic: rust
+  tags:
+  - traits
+  - polymorphism
+  question: What is a trait object and how is it created?
+  truth: A trait object allows for dynamic dispatch. It is created by specifying `dyn Trait` behind a pointer, like `&dyn Trait` or `Box<dyn Trait>`.
   complexity: 4
-
-- id: "rust_011"
-  topic: "rust"
-  tags: ["traits", "generics"]
-  question: "What is a trait bound?"
-  truth: "A trait bound constrains a generic type parameter to types that implement a particular trait or set of traits."
+  source: https://doc.rust-lang.org/book/
+- id: rust_011
+  topic: rust
+  tags:
+  - traits
+  - generics
+  question: What is a trait bound?
+  truth: A trait bound constrains a generic type parameter to types that implement a particular trait or set of traits.
   complexity: 2
-
-- id: "rust_012"
-  topic: "rust"
-  tags: ["macros", "metaprogramming"]
-  question: "What is the difference between declarative macros and procedural macros?"
-  truth: "Declarative macros (macro_rules!) allow you to write something similar to a match expression. Procedural macros accept code as input, operate on that code, and produce code as output."
+  source: https://doc.rust-lang.org/book/
+- id: rust_012
+  topic: rust
+  tags:
+  - macros
+  - metaprogramming
+  question: What is the difference between declarative macros and procedural macros?
+  truth: Declarative macros (macro_rules!) allow you to write something similar to a match expression. Procedural macros accept code as input, operate on that code, and produce code as output.
   complexity: 4
-
-- id: "rust_013"
-  topic: "rust"
-  tags: ["smart-pointers", "memory"]
-  question: "What is `Box<T>` used for?"
-  truth: "`Box<T>` is used to store data on the heap rather than the stack. The pointer remains on the stack."
+  source: https://doc.rust-lang.org/book/
+- id: rust_013
+  topic: rust
+  tags:
+  - smart-pointers
+  - memory
+  question: What is `Box<T>` used for?
+  truth: '`Box<T>` is used to store data on the heap rather than the stack. The pointer remains on the stack.'
   complexity: 2
-
-- id: "rust_014"
-  topic: "rust"
-  tags: ["smart-pointers", "reference-counting"]
-  question: "What does `Rc<T>` enable?"
-  truth: "`Rc<T>` enables multiple ownership of data for single-threaded scenarios by keeping a reference count."
+  source: https://doc.rust-lang.org/book/
+- id: rust_014
+  topic: rust
+  tags:
+  - smart-pointers
+  - reference-counting
+  question: What does `Rc<T>` enable?
+  truth: '`Rc<T>` enables multiple ownership of data for single-threaded scenarios by keeping a reference count.'
   complexity: 3
-
-- id: "rust_015"
-  topic: "rust"
-  tags: ["smart-pointers", "interior-mutability"]
-  question: "What is `RefCell<T>` and when is it useful?"
-  truth: "`RefCell<T>` represents single ownership over the data it holds but allows for interior mutability: mutating data even when there are immutable references to that data, checked at runtime."
+  source: https://doc.rust-lang.org/book/
+- id: rust_015
+  topic: rust
+  tags:
+  - smart-pointers
+  - interior-mutability
+  question: What is `RefCell<T>` and when is it useful?
+  truth: '`RefCell<T>` represents single ownership over the data it holds but allows for interior mutability: mutating data even when there are immutable references to that data, checked at runtime.'
   complexity: 4
-
-- id: "rust_016"
-  topic: "rust"
-  tags: ["smart-pointers", "concurrency"]
-  question: "What is the thread-safe equivalent of `Rc<T>`?"
-  truth: "`Arc<T>` (Atomically Reference Counted) is the thread-safe equivalent of `Rc<T>`."
+  source: https://doc.rust-lang.org/book/
+- id: rust_016
+  topic: rust
+  tags:
+  - smart-pointers
+  - concurrency
+  question: What is the thread-safe equivalent of `Rc<T>`?
+  truth: '`Arc<T>` (Atomically Reference Counted) is the thread-safe equivalent of `Rc<T>`.'
   complexity: 3
-
-- id: "rust_017"
-  topic: "rust"
-  tags: ["ownership", "copy"]
-  question: "What types implement the `Copy` trait?"
-  truth: "Types stored entirely on the stack, like integers, floating point numbers, booleans, chars, and tuples containing only Copy types."
+  source: https://doc.rust-lang.org/book/
+- id: rust_017
+  topic: rust
+  tags:
+  - ownership
+  - copy
+  question: What types implement the `Copy` trait?
+  truth: Types stored entirely on the stack, like integers, floating point numbers, booleans, chars, and tuples containing only Copy types.
   complexity: 2
-
-- id: "rust_018"
-  topic: "rust"
-  tags: ["ownership", "drop"]
-  question: "Can you manually call `drop` on a value that implements the `Drop` trait?"
-  truth: "No, you cannot explicitly call the `drop` method. You have to call `std::mem::drop` passing the value as an argument to force early dropping."
+  source: https://doc.rust-lang.org/book/
+- id: rust_018
+  topic: rust
+  tags:
+  - ownership
+  - drop
+  question: Can you manually call `drop` on a value that implements the `Drop` trait?
+  truth: No, you cannot explicitly call the `drop` method. You have to call `std::mem::drop` passing the value as an argument to force early dropping.
   complexity: 3
-
-- id: "rust_019"
-  topic: "rust"
-  tags: ["unsafe", "ffi"]
-  question: "Why do interactions with FFI (Foreign Function Interface) require `unsafe` blocks?"
-  truth: "Because the Rust compiler cannot guarantee the memory safety or correctness of code written in other languages."
+  source: https://doc.rust-lang.org/book/
+- id: rust_019
+  topic: rust
+  tags:
+  - unsafe
+  - ffi
+  question: Why do interactions with FFI (Foreign Function Interface) require `unsafe` blocks?
+  truth: Because the Rust compiler cannot guarantee the memory safety or correctness of code written in other languages.
   complexity: 4
-
-- id: "rust_020"
-  topic: "rust"
-  tags: ["lifetimes", "elision"]
-  question: "What are lifetime elision rules?"
-  truth: "They are a set of deterministic rules the compiler follows to infer lifetimes in function signatures so programmers don't need to write them explicitly in common cases."
+  source: https://doc.rust-lang.org/book/
+- id: rust_020
+  topic: rust
+  tags:
+  - lifetimes
+  - elision
+  question: What are lifetime elision rules?
+  truth: They are a set of deterministic rules the compiler follows to infer lifetimes in function signatures so programmers don't need to write them explicitly in common cases.
   complexity: 3
-
-- id: "rust_021"
-  topic: "rust"
-  tags: ["traits", "associated-types"]
-  question: "What are associated types in traits?"
-  truth: "Associated types connect a type placeholder with a trait such that the trait method definitions can use these placeholder types in their signatures."
+  source: https://doc.rust-lang.org/book/
+- id: rust_021
+  topic: rust
+  tags:
+  - traits
+  - associated-types
+  question: What are associated types in traits?
+  truth: Associated types connect a type placeholder with a trait such that the trait method definitions can use these placeholder types in their signatures.
   complexity: 4
-
-- id: "rust_022"
-  topic: "rust"
-  tags: ["concurrency", "mutex"]
-  question: "How does `Mutex<T>` allow access to its data?"
-  truth: "To access the data in a `Mutex<T>`, you must first signal that you want access by calling `lock`, which blocks the current thread until the lock can be acquired."
+  source: https://doc.rust-lang.org/book/
+- id: rust_022
+  topic: rust
+  tags:
+  - concurrency
+  - mutex
+  question: How does `Mutex<T>` allow access to its data?
+  truth: To access the data in a `Mutex<T>`, you must first signal that you want access by calling `lock`, which blocks the current thread until the lock can be acquired.
   complexity: 3
-
-- id: "rust_023"
-  topic: "rust"
-  tags: ["concurrency", "channels"]
-  question: "What is an `mpsc` channel?"
-  truth: "`mpsc` stands for 'multiple producer, single consumer', a channel type allowing multiple threads to send messages to a single receiver."
+  source: https://doc.rust-lang.org/book/
+- id: rust_023
+  topic: rust
+  tags:
+  - concurrency
+  - channels
+  question: What is an `mpsc` channel?
+  truth: '`mpsc` stands for ''multiple producer, single consumer'', a channel type allowing multiple threads to send messages to a single receiver.'
   complexity: 3
-
-- id: "rust_024"
-  topic: "rust"
-  tags: ["error-handling", "result"]
-  question: "What is the `?` operator used for?"
-  truth: "The `?` operator is a shortcut for propagating errors. It returns the value inside `Ok`, or returns the `Err` from the function early."
+  source: https://doc.rust-lang.org/book/
+- id: rust_024
+  topic: rust
+  tags:
+  - error-handling
+  - result
+  question: What is the `?` operator used for?
+  truth: The `?` operator is a shortcut for propagating errors. It returns the value inside `Ok`, or returns the `Err` from the function early.
   complexity: 2
-
-- id: "rust_025"
-  topic: "rust"
-  tags: ["traits", "orphan-rule"]
-  question: "What is the orphan rule regarding trait implementation?"
-  truth: "You can implement a trait on a type only if either the trait or the type is defined within your crate."
+  source: https://doc.rust-lang.org/book/
+- id: rust_025
+  topic: rust
+  tags:
+  - traits
+  - orphan-rule
+  question: What is the orphan rule regarding trait implementation?
+  truth: You can implement a trait on a type only if either the trait or the type is defined within your crate.
   complexity: 3
-
-- id: "rust_026"
-  topic: "rust"
-  tags: ["types", "slices"]
-  question: "What is a string slice (`&str`)?"
-  truth: "A string slice is a reference to a part of a String, essentially a pointer to the bytes and a length."
+  source: https://doc.rust-lang.org/book/
+- id: rust_026
+  topic: rust
+  tags:
+  - types
+  - slices
+  question: What is a string slice (`&str`)?
+  truth: A string slice is a reference to a part of a String, essentially a pointer to the bytes and a length.
   complexity: 2
-
-- id: "rust_027"
-  topic: "rust"
-  tags: ["macros", "derive"]
-  question: "What does `#[derive(...)]` do?"
-  truth: "It generates code to implement default behaviors for traits on a struct or enum using procedural macros."
+  source: https://doc.rust-lang.org/book/
+- id: rust_027
+  topic: rust
+  tags:
+  - macros
+  - derive
+  question: What does `#[derive(...)]` do?
+  truth: It generates code to implement default behaviors for traits on a struct or enum using procedural macros.
   complexity: 2
-
-- id: "rust_028"
-  topic: "rust"
-  tags: ["collections", "vectors"]
-  question: "What happens if you try to access a vector index that is out of bounds using `[]` notation?"
-  truth: "The program will panic."
+  source: https://doc.rust-lang.org/book/
+- id: rust_028
+  topic: rust
+  tags:
+  - collections
+  - vectors
+  question: What happens if you try to access a vector index that is out of bounds using `[]` notation?
+  truth: The program will panic.
   complexity: 1
-
-- id: "rust_029"
-  topic: "rust"
-  tags: ["collections", "hashmap"]
-  question: "What happens to ownership of keys and values when they are inserted into a HashMap?"
-  truth: "For types that implement the `Copy` trait, the values are copied. For owned values like `String`, the values are moved and the HashMap becomes the owner."
+  source: https://doc.rust-lang.org/book/
+- id: rust_029
+  topic: rust
+  tags:
+  - collections
+  - hashmap
+  question: What happens to ownership of keys and values when they are inserted into a HashMap?
+  truth: For types that implement the `Copy` trait, the values are copied. For owned values like `String`, the values are moved and the HashMap becomes the owner.
   complexity: 2
-
-- id: "rust_030"
-  topic: "rust"
-  tags: ["pattern-matching", "match"]
-  question: "Must `match` arms cover every possible pattern?"
-  truth: "Yes, `match` expressions in Rust must be exhaustive."
+  source: https://doc.rust-lang.org/book/
+- id: rust_030
+  topic: rust
+  tags:
+  - pattern-matching
+  - match
+  question: Must `match` arms cover every possible pattern?
+  truth: Yes, `match` expressions in Rust must be exhaustive.
   complexity: 1
-
-- id: "rust_031"
-  topic: "rust"
-  tags: ["pattern-matching", "refutability"]
-  question: "What is the difference between refutable and irrefutable patterns?"
-  truth: "Irrefutable patterns always match (like variable assignment), while refutable patterns can fail to match (like in `if let` or `match` arms)."
+  source: https://doc.rust-lang.org/book/
+- id: rust_031
+  topic: rust
+  tags:
+  - pattern-matching
+  - refutability
+  question: What is the difference between refutable and irrefutable patterns?
+  truth: Irrefutable patterns always match (like variable assignment), while refutable patterns can fail to match (like in `if let` or `match` arms).
   complexity: 4
-
-- id: "rust_032"
-  topic: "rust"
-  tags: ["advanced-types", "never-type"]
-  question: "What is the 'never type' (`!`)?"
-  truth: "The never type represents a value that never exists. It is used in functions that do not return, like `panic!` or `loop` without break."
+  source: https://doc.rust-lang.org/book/
+- id: rust_032
+  topic: rust
+  tags:
+  - advanced-types
+  - never-type
+  question: What is the 'never type' (`!`)?
+  truth: The never type represents a value that never exists. It is used in functions that do not return, like `panic!` or `loop` without break.
   complexity: 4
-
-- id: "rust_033"
-  topic: "rust"
-  tags: ["advanced-types", "newtype"]
-  question: "What is the 'newtype' pattern?"
-  truth: "Creating a new type using a tuple struct with one field to provide type safety and distinct behavior from the underlying type."
+  source: https://doc.rust-lang.org/book/
+- id: rust_033
+  topic: rust
+  tags:
+  - advanced-types
+  - newtype
+  question: What is the 'newtype' pattern?
+  truth: Creating a new type using a tuple struct with one field to provide type safety and distinct behavior from the underlying type.
   complexity: 3
-
-- id: "rust_034"
-  topic: "rust"
-  tags: ["closures", "traits"]
-  question: "What are the three traits that closures can implement?"
-  truth: "`Fn` (borrows immutably), `FnMut` (borrows mutably), and `FnOnce` (takes ownership)."
+  source: https://doc.rust-lang.org/book/
+- id: rust_034
+  topic: rust
+  tags:
+  - closures
+  - traits
+  question: What are the three traits that closures can implement?
+  truth: '`Fn` (borrows immutably), `FnMut` (borrows mutably), and `FnOnce` (takes ownership).'
   complexity: 4
-
-- id: "rust_035"
-  topic: "rust"
-  tags: ["closures", "move"]
-  question: "What does the `move` keyword do before a closure definition?"
-  truth: "It forces the closure to take ownership of the values it uses from the environment."
+  source: https://doc.rust-lang.org/book/
+- id: rust_035
+  topic: rust
+  tags:
+  - closures
+  - move
+  question: What does the `move` keyword do before a closure definition?
+  truth: It forces the closure to take ownership of the values it uses from the environment.
   complexity: 3
-
-- id: "rust_036"
-  topic: "rust"
-  tags: ["iterators", "lazy"]
-  question: "Are iterators lazy in Rust?"
-  truth: "Yes, iterators do nothing unless they are consumed by a method that drives the iterator."
+  source: https://doc.rust-lang.org/book/
+- id: rust_036
+  topic: rust
+  tags:
+  - iterators
+  - lazy
+  question: Are iterators lazy in Rust?
+  truth: Yes, iterators do nothing unless they are consumed by a method that drives the iterator.
   complexity: 2
-
-- id: "rust_037"
-  topic: "rust"
-  tags: ["unsafe", "static-mut"]
-  question: "Why is accessing or modifying a mutable static variable `unsafe`?"
-  truth: "Because it's difficult to ensure there are no data races when multiple threads access a global mutable state."
+  source: https://doc.rust-lang.org/book/
+- id: rust_037
+  topic: rust
+  tags:
+  - unsafe
+  - static-mut
+  question: Why is accessing or modifying a mutable static variable `unsafe`?
+  truth: Because it's difficult to ensure there are no data races when multiple threads access a global mutable state.
   complexity: 3
-
-- id: "rust_038"
-  topic: "rust"
-  tags: ["lifetimes", "subtyping"]
-  question: "Is `&'static T` a subtype of `&'a T`?"
-  truth: "Yes, because a static lifetime outlives any other lifetime 'a."
+  source: https://doc.rust-lang.org/book/
+- id: rust_038
+  topic: rust
+  tags:
+  - lifetimes
+  - subtyping
+  question: Is `&'static T` a subtype of `&'a T`?
+  truth: Yes, because a static lifetime outlives any other lifetime 'a.
   complexity: 5
-
-- id: "rust_039"
-  topic: "rust"
-  tags: ["lifetimes", "hrtb"]
-  question: "What is a Higher-Rank Trait Bound (HRTB)?"
-  truth: "A bound like `for<'a> F: Fn(&'a i32)` which expresses that a closure must work for *any* lifetime, not just a specific one."
+  source: https://doc.rust-lang.org/book/
+- id: rust_039
+  topic: rust
+  tags:
+  - lifetimes
+  - hrtb
+  question: What is a Higher-Rank Trait Bound (HRTB)?
+  truth: 'A bound like `for<''a> F: Fn(&''a i32)` which expresses that a closure must work for *any* lifetime, not just a specific one.'
   complexity: 5
-
-- id: "rust_040"
-  topic: "rust"
-  tags: ["traits", "default-impl"]
-  question: "Can traits provide default implementations for methods?"
-  truth: "Yes, traits can provide default implementations, which implementors can override or use as-is."
+  source: https://doc.rust-lang.org/book/
+- id: rust_040
+  topic: rust
+  tags:
+  - traits
+  - default-impl
+  question: Can traits provide default implementations for methods?
+  truth: Yes, traits can provide default implementations, which implementors can override or use as-is.
   complexity: 2
-
-- id: "rust_041"
-  topic: "rust"
-  tags: ["modules", "visibility"]
-  question: "What is the default visibility of items in a module?"
-  truth: "Private. Items must be marked `pub` to be accessible outside their parent module."
+  source: https://doc.rust-lang.org/book/
+- id: rust_041
+  topic: rust
+  tags:
+  - modules
+  - visibility
+  question: What is the default visibility of items in a module?
+  truth: Private. Items must be marked `pub` to be accessible outside their parent module.
   complexity: 1
-
-- id: "rust_042"
-  topic: "rust"
-  tags: ["cargo", "dependencies"]
-  question: "What is the purpose of `Cargo.lock`?"
-  truth: "It ensures reproducible builds by storing the exact versions of dependencies used in the last successful build."
+  source: https://doc.rust-lang.org/book/
+- id: rust_042
+  topic: rust
+  tags:
+  - cargo
+  - dependencies
+  question: What is the purpose of `Cargo.lock`?
+  truth: It ensures reproducible builds by storing the exact versions of dependencies used in the last successful build.
   complexity: 2
-
-- id: "rust_043"
-  topic: "rust"
-  tags: ["traits", "deref"]
-  question: "What is 'Deref coercion'?"
-  truth: "Automatic conversion of a reference to a type that implements the `Deref` trait into a reference to the target type (e.g., `&String` to `&str`)."
+  source: https://doc.rust-lang.org/book/
+- id: rust_043
+  topic: rust
+  tags:
+  - traits
+  - deref
+  question: What is 'Deref coercion'?
+  truth: Automatic conversion of a reference to a type that implements the `Deref` trait into a reference to the target type (e.g., `&String` to `&str`).
   complexity: 4
-
-- id: "rust_044"
-  topic: "rust"
-  tags: ["memory-layout", "sized"]
-  question: "What does the `Sized` trait indicate?"
-  truth: "It indicates that the size of a type is known at compile time."
+  source: https://doc.rust-lang.org/book/
+- id: rust_044
+  topic: rust
+  tags:
+  - memory-layout
+  - sized
+  question: What does the `Sized` trait indicate?
+  truth: It indicates that the size of a type is known at compile time.
   complexity: 3
-
-- id: "rust_045"
-  topic: "rust"
-  tags: ["memory-layout", "dst"]
-  question: "What is a Dynamically Sized Type (DST)?"
-  truth: "A type whose size is not known at compile time, such as `str` or `[T]`. They must generally be used behind a pointer like `&str` or `Box<[T]>`."
+  source: https://doc.rust-lang.org/book/
+- id: rust_045
+  topic: rust
+  tags:
+  - memory-layout
+  - dst
+  question: What is a Dynamically Sized Type (DST)?
+  truth: A type whose size is not known at compile time, such as `str` or `[T]`. They must generally be used behind a pointer like `&str` or `Box<[T]>`.
   complexity: 4
-
-- id: "rust_046"
-  topic: "rust"
-  tags: ["testing", "attributes"]
-  question: "What attribute marks a function as a unit test?"
-  truth: "`#[test]`"
+  source: https://doc.rust-lang.org/book/
+- id: rust_046
+  topic: rust
+  tags:
+  - testing
+  - attributes
+  question: What attribute marks a function as a unit test?
+  truth: '`#[test]`'
   complexity: 1
-
-- id: "rust_047"
-  topic: "rust"
-  tags: ["macros", "hygiene"]
-  question: "What is macro hygiene?"
-  truth: "The property that variables defined in a macro do not accidentally clash with variables in the scope where the macro is expanded."
+  source: https://doc.rust-lang.org/book/
+- id: rust_047
+  topic: rust
+  tags:
+  - macros
+  - hygiene
+  question: What is macro hygiene?
+  truth: The property that variables defined in a macro do not accidentally clash with variables in the scope where the macro is expanded.
   complexity: 4
-
-- id: "rust_048"
-  topic: "rust"
-  tags: ["unsafe", "transmute"]
-  question: "What does `std::mem::transmute` do?"
-  truth: "It reinterprets the bits of a value of one type as another type. It is incredibly unsafe."
+  source: https://doc.rust-lang.org/book/
+- id: rust_048
+  topic: rust
+  tags:
+  - unsafe
+  - transmute
+  question: What does `std::mem::transmute` do?
+  truth: It reinterprets the bits of a value of one type as another type. It is incredibly unsafe.
   complexity: 5
-
-- id: "rust_049"
-  topic: "rust"
-  tags: ["generics", "monomorphization"]
-  question: "How does Rust handle generics at compile time?"
-  truth: "Through monomorphization: generating specific code for each concrete type used with generic functions or structs."
+  source: https://doc.rust-lang.org/book/
+- id: rust_049
+  topic: rust
+  tags:
+  - generics
+  - monomorphization
+  question: How does Rust handle generics at compile time?
+  truth: 'Through monomorphization: generating specific code for each concrete type used with generic functions or structs.'
   complexity: 4
-
-- id: "rust_050"
-  topic: "rust"
-  tags: ["pinning", "future"]
-  question: "What is the purpose of `Pin<P>`?"
-  truth: "It ensures that the pointee of pointer `P` has a stable location in memory and cannot be moved, which is crucial for self-referential futures."
+  source: https://doc.rust-lang.org/book/
+- id: rust_050
+  topic: rust
+  tags:
+  - pinning
+  - future
+  question: What is the purpose of `Pin<P>`?
+  truth: It ensures that the pointee of pointer `P` has a stable location in memory and cannot be moved, which is crucial for self-referential futures.
   complexity: 5
+  source: https://doc.rust-lang.org/book/

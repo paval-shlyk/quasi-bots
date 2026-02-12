@@ -1,356 +1,461 @@
-- id: "algo_001"
-  topic: "algorithms"
-  tags: ["sorting", "comparison-sort"]
-  question: "What is the lower bound for the worst-case running time of any comparison-based sorting algorithm?"
-  truth: "The lower bound is Omega(n lg n). This is derived from the decision tree model, where a tree of height h with n! leaves implies h >= lg(n!)."
+- id: algo_001
+  topic: algorithms
+  tags:
+  - sorting
+  - comparison-sort
+  question: What is the lower bound for the worst-case running time of any comparison-based sorting algorithm?
+  truth: The lower bound is Omega(n lg n). This is derived from the decision tree model, where a tree of height h with n! leaves implies h >= lg(n!).
   complexity: 2
-
-- id: "algo_002"
-  topic: "algorithms"
-  tags: ["sorting", "quicksort"]
-  question: "In Quicksort, what is the worst-case time complexity and under what condition does it typically occur?"
-  truth: "O(n^2). This typically occurs when the input array is already sorted or reverse sorted, and the pivot is chosen as the first or last element."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_002
+  topic: algorithms
+  tags:
+  - sorting
+  - quicksort
+  question: In Quicksort, what is the worst-case time complexity and under what condition does it typically occur?
+  truth: O(n^2). This typically occurs when the input array is already sorted or reverse sorted, and the pivot is chosen as the first or last element.
   complexity: 2
-
-- id: "algo_003"
-  topic: "algorithms"
-  tags: ["sorting", "heapsort"]
-  question: "Is Heapsort a stable sorting algorithm?"
-  truth: "No, Heapsort is not stable. The operations on the heap structure can change the relative order of equal elements."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_003
+  topic: algorithms
+  tags:
+  - sorting
+  - heapsort
+  question: Is Heapsort a stable sorting algorithm?
+  truth: No, Heapsort is not stable. The operations on the heap structure can change the relative order of equal elements.
   complexity: 2
-
-- id: "algo_004"
-  topic: "algorithms"
-  tags: ["searching", "binary-search"]
-  question: "What is the recurrence relation for the time complexity of Binary Search?"
-  truth: "T(n) = T(n/2) + O(1), which solves to O(lg n) by the Master Theorem."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_004
+  topic: algorithms
+  tags:
+  - searching
+  - binary-search
+  question: What is the recurrence relation for the time complexity of Binary Search?
+  truth: T(n) = T(n/2) + O(1), which solves to O(lg n) by the Master Theorem.
   complexity: 1
-
-- id: "algo_005"
-  topic: "algorithms"
-  tags: ["graphs", "shortest-path", "dijkstra"]
-  question: "Why does Dijkstra's algorithm fail on graphs with negative edge weights?"
-  truth: "Dijkstra's greedy approach assumes that once a node is visited and its shortest path is determined, it can't be improved. Negative edges can violate this by offering a cheaper path through a previously settled node."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_005
+  topic: algorithms
+  tags:
+  - graphs
+  - shortest-path
+  - dijkstra
+  question: Why does Dijkstra's algorithm fail on graphs with negative edge weights?
+  truth: Dijkstra's greedy approach assumes that once a node is visited and its shortest path is determined, it can't be improved. Negative edges can violate this by offering a cheaper path through a previously settled node.
   complexity: 3
-
-- id: "algo_006"
-  topic: "algorithms"
-  tags: ["graphs", "mst", "kruskal"]
-  question: "What data structure is efficiently used to implement Kruskal's algorithm for finding a Minimum Spanning Tree?"
-  truth: "The Disjoint Set Union (DSU) or Union-Find data structure is used to keep track of connected components and detect cycles."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_006
+  topic: algorithms
+  tags:
+  - graphs
+  - mst
+  - kruskal
+  question: What data structure is efficiently used to implement Kruskal's algorithm for finding a Minimum Spanning Tree?
+  truth: The Disjoint Set Union (DSU) or Union-Find data structure is used to keep track of connected components and detect cycles.
   complexity: 3
-
-- id: "algo_007"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "knapsack"]
-  question: "What is the time complexity of the 0/1 Knapsack problem using dynamic programming with n items and capacity W?"
-  truth: "O(nW). This is pseudo-polynomial time because it depends on the magnitude of W, not just the size of the input."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_007
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - knapsack
+  question: What is the time complexity of the 0/1 Knapsack problem using dynamic programming with n items and capacity W?
+  truth: O(nW). This is pseudo-polynomial time because it depends on the magnitude of W, not just the size of the input.
   complexity: 3
-
-- id: "algo_008"
-  topic: "algorithms"
-  tags: ["trees", "bst"]
-  question: "In a Binary Search Tree (BST), what traversal order yields the keys in sorted order?"
-  truth: "In-order traversal."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_008
+  topic: algorithms
+  tags:
+  - trees
+  - bst
+  question: In a Binary Search Tree (BST), what traversal order yields the keys in sorted order?
+  truth: In-order traversal.
   complexity: 1
-
-- id: "algo_009"
-  topic: "algorithms"
-  tags: ["trees", "red-black-tree"]
-  question: "What is the maximum height of a Red-Black tree with n internal nodes?"
-  truth: "The height is at most 2 lg(n + 1). This ensures that operations like search, insert, and delete take O(lg n) time."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_009
+  topic: algorithms
+  tags:
+  - trees
+  - red-black-tree
+  question: What is the maximum height of a Red-Black tree with n internal nodes?
+  truth: The height is at most 2 lg(n + 1). This ensures that operations like search, insert, and delete take O(lg n) time.
   complexity: 4
-
-- id: "algo_010"
-  topic: "algorithms"
-  tags: ["complexity", "big-o"]
-  question: "If f(n) = O(g(n)), does this imply g(n) = O(f(n))?"
-  truth: "No. For example, if f(n) = n and g(n) = n^2, then n = O(n^2) is true, but n^2 = O(n) is false."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_010
+  topic: algorithms
+  tags:
+  - complexity
+  - big-o
+  question: If f(n) = O(g(n)), does this imply g(n) = O(f(n))?
+  truth: No. For example, if f(n) = n and g(n) = n^2, then n = O(n^2) is true, but n^2 = O(n) is false.
   complexity: 2
-
-- id: "algo_011"
-  topic: "algorithms"
-  tags: ["sorting", "merge-sort"]
-  question: "Does Merge Sort require auxiliary space? If so, how much?"
-  truth: "Yes, standard implementation requires O(n) auxiliary space for the temporary arrays used during the merge step."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_011
+  topic: algorithms
+  tags:
+  - sorting
+  - merge-sort
+  question: Does Merge Sort require auxiliary space? If so, how much?
+  truth: Yes, standard implementation requires O(n) auxiliary space for the temporary arrays used during the merge step.
   complexity: 2
-
-- id: "algo_012"
-  topic: "algorithms"
-  tags: ["graphs", "bfs"]
-  question: "What is the time complexity of Breadth-First Search (BFS) on a graph with V vertices and E edges using an adjacency list?"
-  truth: "O(V + E)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_012
+  topic: algorithms
+  tags:
+  - graphs
+  - bfs
+  question: What is the time complexity of Breadth-First Search (BFS) on a graph with V vertices and E edges using an adjacency list?
+  truth: O(V + E).
   complexity: 2
-
-- id: "algo_013"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "lcs"]
-  question: "What is the recurrence relation for the Longest Common Subsequence (LCS) of two sequences X and Y of lengths m and n?"
-  truth: "If X[i] == Y[j], LCS(i, j) = 1 + LCS(i-1, j-1). If X[i] != Y[j], LCS(i, j) = max(LCS(i-1, j), LCS(i, j-1))."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_013
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - lcs
+  question: What is the recurrence relation for the Longest Common Subsequence (LCS) of two sequences X and Y of lengths m and n?
+  truth: If X[i] == Y[j], LCS(i, j) = 1 + LCS(i-1, j-1). If X[i] != Y[j], LCS(i, j) = max(LCS(i-1, j), LCS(i, j-1)).
   complexity: 3
-
-- id: "algo_014"
-  topic: "algorithms"
-  tags: ["trees", "avl"]
-  question: "What is the balance condition for an AVL tree?"
-  truth: "For every node, the height difference (balance factor) between its left and right subtrees must be at most 1 (-1, 0, or 1)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_014
+  topic: algorithms
+  tags:
+  - trees
+  - avl
+  question: What is the balance condition for an AVL tree?
+  truth: For every node, the height difference (balance factor) between its left and right subtrees must be at most 1 (-1, 0, or 1).
   complexity: 3
-
-- id: "algo_015"
-  topic: "algorithms"
-  tags: ["hashing", "collision-resolution"]
-  question: "Describe Open Addressing in the context of hash tables."
-  truth: "In Open Addressing, all elements are stored within the hash table array itself. When a collision occurs, the algorithm probes for the next empty slot using a sequence (e.g., linear probing, quadratic probing)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_015
+  topic: algorithms
+  tags:
+  - hashing
+  - collision-resolution
+  question: Describe Open Addressing in the context of hash tables.
+  truth: In Open Addressing, all elements are stored within the hash table array itself. When a collision occurs, the algorithm probes for the next empty slot using a sequence (e.g., linear probing, quadratic probing).
   complexity: 3
-
-- id: "algo_016"
-  topic: "algorithms"
-  tags: ["graphs", "topological-sort"]
-  question: "What type of graph is required for a Topological Sort to exist?"
-  truth: "A Directed Acyclic Graph (DAG)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_016
+  topic: algorithms
+  tags:
+  - graphs
+  - topological-sort
+  question: What type of graph is required for a Topological Sort to exist?
+  truth: A Directed Acyclic Graph (DAG).
   complexity: 2
-
-- id: "algo_017"
-  topic: "algorithms"
-  tags: ["sorting", "counting-sort"]
-  question: "Is Counting Sort a comparison-based sort?"
-  truth: "No. It uses key values as indices into an array, allowing it to beat the O(n lg n) lower bound for comparison sorts under specific constraints."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_017
+  topic: algorithms
+  tags:
+  - sorting
+  - counting-sort
+  question: Is Counting Sort a comparison-based sort?
+  truth: No. It uses key values as indices into an array, allowing it to beat the O(n lg n) lower bound for comparison sorts under specific constraints.
   complexity: 2
-
-- id: "algo_018"
-  topic: "algorithms"
-  tags: ["complexity", "master-theorem"]
-  question: "Given T(n) = 2T(n/2) + n^2, what is the complexity using the Master Theorem?"
-  truth: "O(n^2). Here a=2, b=2, f(n)=n^2. n^(log_b a) = n^1 = n. Since f(n) is Omega(n^(1+epsilon)), the third case applies."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_018
+  topic: algorithms
+  tags:
+  - complexity
+  - master-theorem
+  question: Given T(n) = 2T(n/2) + n^2, what is the complexity using the Master Theorem?
+  truth: O(n^2). Here a=2, b=2, f(n)=n^2. n^(log_b a) = n^1 = n. Since f(n) is Omega(n^(1+epsilon)), the third case applies.
   complexity: 4
-
-- id: "algo_019"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "matrix-chain"]
-  question: "What is the goal of the Matrix Chain Multiplication problem?"
-  truth: "To find the most efficient way to parenthesize a chain of matrices for multiplication to minimize the total number of scalar multiplications."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_019
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - matrix-chain
+  question: What is the goal of the Matrix Chain Multiplication problem?
+  truth: To find the most efficient way to parenthesize a chain of matrices for multiplication to minimize the total number of scalar multiplications.
   complexity: 3
-
-- id: "algo_020"
-  topic: "algorithms"
-  tags: ["graphs", "strongly-connected-components"]
-  question: "Which algorithm finds Strongly Connected Components (SCCs) in a directed graph using two DFS passes?"
-  truth: "Kosaraju's algorithm."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_020
+  topic: algorithms
+  tags:
+  - graphs
+  - strongly-connected-components
+  question: Which algorithm finds Strongly Connected Components (SCCs) in a directed graph using two DFS passes?
+  truth: Kosaraju's algorithm.
   complexity: 4
-
-- id: "algo_021"
-  topic: "algorithms"
-  tags: ["trees", "trie"]
-  question: "What is the primary advantage of a Trie over a binary search tree for storing strings?"
-  truth: "Lookups can be done in O(m) time where m is the key length, independent of the number of keys n, often faster than O(m lg n) for BSTs."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_021
+  topic: algorithms
+  tags:
+  - trees
+  - trie
+  question: What is the primary advantage of a Trie over a binary search tree for storing strings?
+  truth: Lookups can be done in O(m) time where m is the key length, independent of the number of keys n, often faster than O(m lg n) for BSTs.
   complexity: 3
-
-- id: "algo_022"
-  topic: "algorithms"
-  tags: ["graphs", "max-flow"]
-  question: "What does the Max-Flow Min-Cut theorem state?"
-  truth: "The maximum amount of flow possible from a source to a sink in a flow network is equal to the capacity of the minimum cut in that network."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_022
+  topic: algorithms
+  tags:
+  - graphs
+  - max-flow
+  question: What does the Max-Flow Min-Cut theorem state?
+  truth: The maximum amount of flow possible from a source to a sink in a flow network is equal to the capacity of the minimum cut in that network.
   complexity: 4
-
-- id: "algo_023"
-  topic: "algorithms"
-  tags: ["searching", "selection"]
-  question: "What is the expected running time of the Randomized Select algorithm to find the ith smallest element?"
-  truth: "O(n)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_023
+  topic: algorithms
+  tags:
+  - searching
+  - selection
+  question: What is the expected running time of the Randomized Select algorithm to find the ith smallest element?
+  truth: O(n).
   complexity: 3
-
-- id: "algo_024"
-  topic: "algorithms"
-  tags: ["sorting", "insertion-sort"]
-  question: "In what scenario is Insertion Sort highly efficient?"
-  truth: "When the input array is already small or nearly sorted (has few inversions)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_024
+  topic: algorithms
+  tags:
+  - sorting
+  - insertion-sort
+  question: In what scenario is Insertion Sort highly efficient?
+  truth: When the input array is already small or nearly sorted (has few inversions).
   complexity: 1
-
-- id: "algo_025"
-  topic: "algorithms"
-  tags: ["np-completeness", "sat"]
-  question: "What was the first problem proven to be NP-Complete?"
-  truth: "The Boolean Satisfiability Problem (SAT), proven by the Cook-Levin theorem."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_025
+  topic: algorithms
+  tags:
+  - np-completeness
+  - sat
+  question: What was the first problem proven to be NP-Complete?
+  truth: The Boolean Satisfiability Problem (SAT), proven by the Cook-Levin theorem.
   complexity: 4
-
-- id: "algo_026"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "edit-distance"]
-  question: "What three operations are typically allowed in the Levenshtein (Edit) Distance problem?"
-  truth: "Insertion, Deletion, and Substitution."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_026
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - edit-distance
+  question: What three operations are typically allowed in the Levenshtein (Edit) Distance problem?
+  truth: Insertion, Deletion, and Substitution.
   complexity: 2
-
-- id: "algo_027"
-  topic: "algorithms"
-  tags: ["trees", "b-tree"]
-  question: "Why are B-Trees widely used in database systems and filesystems?"
-  truth: "They are optimized for systems that read and write large blocks of data. They minimize disk I/O operations by having a high branching factor and shallow height."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_027
+  topic: algorithms
+  tags:
+  - trees
+  - b-tree
+  question: Why are B-Trees widely used in database systems and filesystems?
+  truth: They are optimized for systems that read and write large blocks of data. They minimize disk I/O operations by having a high branching factor and shallow height.
   complexity: 3
-
-- id: "algo_028"
-  topic: "algorithms"
-  tags: ["graphs", "bellman-ford"]
-  question: "What is the main advantage of the Bellman-Ford algorithm over Dijkstra's?"
-  truth: "Bellman-Ford can handle graphs with negative edge weights and can detect negative cycles."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_028
+  topic: algorithms
+  tags:
+  - graphs
+  - bellman-ford
+  question: What is the main advantage of the Bellman-Ford algorithm over Dijkstra's?
+  truth: Bellman-Ford can handle graphs with negative edge weights and can detect negative cycles.
   complexity: 3
-
-- id: "algo_029"
-  topic: "algorithms"
-  tags: ["sorting", "radix-sort"]
-  question: "What constraint on the input is required for Radix Sort to work?"
-  truth: "The elements must be integers or strings (keys that can be represented lexicographically) with a fixed number of digits/characters."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_029
+  topic: algorithms
+  tags:
+  - sorting
+  - radix-sort
+  question: What constraint on the input is required for Radix Sort to work?
+  truth: The elements must be integers or strings (keys that can be represented lexicographically) with a fixed number of digits/characters.
   complexity: 3
-
-- id: "algo_030"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "fibonacci"]
-  question: "What is the time complexity of calculating the nth Fibonacci number using naive recursion vs. memoization?"
-  truth: "Naive recursion is O(2^n) (exponential), while memoization reduces it to O(n) (linear)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_030
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - fibonacci
+  question: What is the time complexity of calculating the nth Fibonacci number using naive recursion vs. memoization?
+  truth: Naive recursion is O(2^n) (exponential), while memoization reduces it to O(n) (linear).
   complexity: 1
-
-- id: "algo_031"
-  topic: "algorithms"
-  tags: ["graphs", "floyd-warshall"]
-  question: "What does the Floyd-Warshall algorithm compute?"
-  truth: "All-pairs shortest paths in a weighted graph."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_031
+  topic: algorithms
+  tags:
+  - graphs
+  - floyd-warshall
+  question: What does the Floyd-Warshall algorithm compute?
+  truth: All-pairs shortest paths in a weighted graph.
   complexity: 3
-
-- id: "algo_032"
-  topic: "algorithms"
-  tags: ["trees", "heap"]
-  question: "In a binary min-heap array representation, where are the children of the node at index i?"
-  truth: "At indices 2i and 2i + 1 (assuming 1-based indexing) or 2i + 1 and 2i + 2 (assuming 0-based indexing)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_032
+  topic: algorithms
+  tags:
+  - trees
+  - heap
+  question: In a binary min-heap array representation, where are the children of the node at index i?
+  truth: At indices 2i and 2i + 1 (assuming 1-based indexing) or 2i + 1 and 2i + 2 (assuming 0-based indexing).
   complexity: 2
-
-- id: "algo_033"
-  topic: "algorithms"
-  tags: ["greedy", "huffman-coding"]
-  question: "What is Huffman Coding used for?"
-  truth: "Lossless data compression. It assigns variable-length binary codes to characters based on their frequencies."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_033
+  topic: algorithms
+  tags:
+  - greedy
+  - huffman-coding
+  question: What is Huffman Coding used for?
+  truth: Lossless data compression. It assigns variable-length binary codes to characters based on their frequencies.
   complexity: 3
-
-- id: "algo_034"
-  topic: "algorithms"
-  tags: ["strings", "kmp"]
-  question: "What is the purpose of the 'failure function' or 'pi array' in the Knuth-Morris-Pratt (KMP) algorithm?"
-  truth: "It stores the length of the longest proper prefix of the pattern that is also a suffix of the pattern ending at that index, allowing the search to skip comparisons."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_034
+  topic: algorithms
+  tags:
+  - strings
+  - kmp
+  question: What is the purpose of the 'failure function' or 'pi array' in the Knuth-Morris-Pratt (KMP) algorithm?
+  truth: It stores the length of the longest proper prefix of the pattern that is also a suffix of the pattern ending at that index, allowing the search to skip comparisons.
   complexity: 5
-
-- id: "algo_035"
-  topic: "algorithms"
-  tags: ["graphs", "bipartite"]
-  question: "How can you test if a graph is bipartite?"
-  truth: "Use BFS or DFS to color the graph with two colors. If you encounter an edge connecting two vertices of the same color, it is not bipartite."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_035
+  topic: algorithms
+  tags:
+  - graphs
+  - bipartite
+  question: How can you test if a graph is bipartite?
+  truth: Use BFS or DFS to color the graph with two colors. If you encounter an edge connecting two vertices of the same color, it is not bipartite.
   complexity: 3
-
-- id: "algo_036"
-  topic: "algorithms"
-  tags: ["complexity", "amortized"]
-  question: "What is the amortized cost of inserting an element into a dynamic array (like ArrayList or std::vector)?"
-  truth: "O(1)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_036
+  topic: algorithms
+  tags:
+  - complexity
+  - amortized
+  question: What is the amortized cost of inserting an element into a dynamic array (like ArrayList or std::vector)?
+  truth: O(1).
   complexity: 3
-
-- id: "algo_037"
-  topic: "algorithms"
-  tags: ["sorting", "bubble-sort"]
-  question: "Why is Bubble Sort generally avoided in practice despite its simplicity?"
-  truth: "It has a worst-case and average-case time complexity of O(n^2) and performs many swaps, making it inefficient compared to O(n lg n) algorithms."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_037
+  topic: algorithms
+  tags:
+  - sorting
+  - bubble-sort
+  question: Why is Bubble Sort generally avoided in practice despite its simplicity?
+  truth: It has a worst-case and average-case time complexity of O(n^2) and performs many swaps, making it inefficient compared to O(n lg n) algorithms.
   complexity: 1
-
-- id: "algo_038"
-  topic: "algorithms"
-  tags: ["data-structures", "bloom-filter"]
-  question: "Can a Bloom Filter produce false negatives?"
-  truth: "No, it can produce false positives but never false negatives."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_038
+  topic: algorithms
+  tags:
+  - data-structures
+  - bloom-filter
+  question: Can a Bloom Filter produce false negatives?
+  truth: No, it can produce false positives but never false negatives.
   complexity: 3
-
-- id: "algo_039"
-  topic: "algorithms"
-  tags: ["graphs", "dag"]
-  question: "What is the longest path problem complexity in a general graph vs. a DAG?"
-  truth: "NP-hard for a general graph, but solvable in linear time O(V+E) for a DAG."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_039
+  topic: algorithms
+  tags:
+  - graphs
+  - dag
+  question: What is the longest path problem complexity in a general graph vs. a DAG?
+  truth: NP-hard for a general graph, but solvable in linear time O(V+E) for a DAG.
   complexity: 4
-
-- id: "algo_040"
-  topic: "algorithms"
-  tags: ["dynamic-programming", "coin-change"]
-  question: "What is the state definition for the Coin Change problem (min coins to make amount S)?"
-  truth: "dp[i] = minimum number of coins needed to make amount i."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_040
+  topic: algorithms
+  tags:
+  - dynamic-programming
+  - coin-change
+  question: What is the state definition for the Coin Change problem (min coins to make amount S)?
+  truth: dp[i] = minimum number of coins needed to make amount i.
   complexity: 3
-
-- id: "algo_041"
-  topic: "algorithms"
-  tags: ["geometry", "convex-hull"]
-  question: "Name an algorithm to find the Convex Hull of a set of points in 2D."
-  truth: "Graham scan or Jarvis march (Gift wrapping)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_041
+  topic: algorithms
+  tags:
+  - geometry
+  - convex-hull
+  question: Name an algorithm to find the Convex Hull of a set of points in 2D.
+  truth: Graham scan or Jarvis march (Gift wrapping).
   complexity: 4
-
-- id: "algo_042"
-  topic: "algorithms"
-  tags: ["graphs", "eulerian-path"]
-  question: "What is the condition for a connected graph to have an Eulerian Circuit?"
-  truth: "Every vertex must have an even degree."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_042
+  topic: algorithms
+  tags:
+  - graphs
+  - eulerian-path
+  question: What is the condition for a connected graph to have an Eulerian Circuit?
+  truth: Every vertex must have an even degree.
   complexity: 3
-
-- id: "algo_043"
-  topic: "algorithms"
-  tags: ["math", "euclidean"]
-  question: "What does the Extended Euclidean Algorithm compute besides the GCD(a, b)?"
-  truth: "It computes integers x and y such that ax + by = GCD(a, b) (Bézout's identity)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_043
+  topic: algorithms
+  tags:
+  - math
+  - euclidean
+  question: What does the Extended Euclidean Algorithm compute besides the GCD(a, b)?
+  truth: It computes integers x and y such that ax + by = GCD(a, b) (Bézout's identity).
   complexity: 3
-
-- id: "algo_044"
-  topic: "algorithms"
-  tags: ["searching", "ternary-search"]
-  question: "When is Ternary Search applicable?"
-  truth: "It is used to find the maximum or minimum of a unimodal function."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_044
+  topic: algorithms
+  tags:
+  - searching
+  - ternary-search
+  question: When is Ternary Search applicable?
+  truth: It is used to find the maximum or minimum of a unimodal function.
   complexity: 3
-
-- id: "algo_045"
-  topic: "algorithms"
-  tags: ["data-structures", "union-find"]
-  question: "What two optimizations are commonly applied to the Union-Find data structure?"
-  truth: "Path compression and Union by rank (or size)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_045
+  topic: algorithms
+  tags:
+  - data-structures
+  - union-find
+  question: What two optimizations are commonly applied to the Union-Find data structure?
+  truth: Path compression and Union by rank (or size).
   complexity: 3
-
-- id: "algo_046"
-  topic: "algorithms"
-  tags: ["trees", "segment-tree"]
-  question: "What is the time complexity to query a range sum in a Segment Tree built on an array of size n?"
-  truth: "O(lg n)."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_046
+  topic: algorithms
+  tags:
+  - trees
+  - segment-tree
+  question: What is the time complexity to query a range sum in a Segment Tree built on an array of size n?
+  truth: O(lg n).
   complexity: 4
-
-- id: "algo_047"
-  topic: "algorithms"
-  tags: ["np-completeness", "p-vs-np"]
-  question: "What does it mean if a problem is in class P?"
-  truth: "It can be solved by a deterministic Turing machine in polynomial time."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_047
+  topic: algorithms
+  tags:
+  - np-completeness
+  - p-vs-np
+  question: What does it mean if a problem is in class P?
+  truth: It can be solved by a deterministic Turing machine in polynomial time.
   complexity: 2
-
-- id: "algo_048"
-  topic: "algorithms"
-  tags: ["sorting", "shell-sort"]
-  question: "How does Shell Sort improve upon Insertion Sort?"
-  truth: "By comparing elements that are far apart (using a gap sequence) to reduce large inversions quickly before doing a final insertion sort with gap 1."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_048
+  topic: algorithms
+  tags:
+  - sorting
+  - shell-sort
+  question: How does Shell Sort improve upon Insertion Sort?
+  truth: By comparing elements that are far apart (using a gap sequence) to reduce large inversions quickly before doing a final insertion sort with gap 1.
   complexity: 3
-
-- id: "algo_049"
-  topic: "algorithms"
-  tags: ["graphs", "articulation-points"]
-  question: "What is an articulation point (or cut vertex) in a graph?"
-  truth: "A vertex whose removal increases the number of connected components in the graph."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_049
+  topic: algorithms
+  tags:
+  - graphs
+  - articulation-points
+  question: What is an articulation point (or cut vertex) in a graph?
+  truth: A vertex whose removal increases the number of connected components in the graph.
   complexity: 3
-
-- id: "algo_050"
-  topic: "algorithms"
-  tags: ["string-matching", "rabin-karp"]
-  question: "What technique does the Rabin-Karp algorithm use to match patterns efficiently?"
-  truth: "Rolling hashes."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_050
+  topic: algorithms
+  tags:
+  - string-matching
+  - rabin-karp
+  question: What technique does the Rabin-Karp algorithm use to match patterns efficiently?
+  truth: Rolling hashes.
   complexity: 4
-
-- id: "algo_051"
-  topic: "algorithms"
-  tags: ["trees", "lca"]
-  question: "What is the Lowest Common Ancestor (LCA) of two nodes u and v in a tree?"
-  truth: "The lowest (deepest) node that has both u and v as descendants."
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/
+- id: algo_051
+  topic: algorithms
+  tags:
+  - trees
+  - lca
+  question: What is the Lowest Common Ancestor (LCA) of two nodes u and v in a tree?
+  truth: The lowest (deepest) node that has both u and v as descendants.
   complexity: 3
+  source: https://mitpress.mit.edu/9780262046305/introduction-to-algorithms/

@@ -1,363 +1,430 @@
-- id: "linux_001"
-  topic: "linux-kernel"
-  tags: ["scheduling", "cfs"]
-  question: "What data structure does the Completely Fair Scheduler (CFS) use to track process execution time?"
-  truth: "CFS uses a time-ordered red-black tree (rbtree) to manage the list of runnable processes."
+- id: linux_001
+  topic: linux-kernel
+  tags:
+  - scheduling
+  - cfs
+  question: What data structure does the Completely Fair Scheduler (CFS) use to track process execution time?
+  truth: CFS uses a time-ordered red-black tree (rbtree) to manage the list of runnable processes.
   complexity: 1
-
-- id: "linux_002"
-  topic: "linux-kernel"
-  tags: ["scheduling", "cfs"]
-  question: "What is 'vruntime' in the context of the Linux CFS scheduler?"
-  truth: "vruntime (virtual runtime) is the weighted runtime of a process. CFS attempts to keep the vruntime of all runnable tasks as close to each other as possible."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_002
+  topic: linux-kernel
+  tags:
+  - scheduling
+  - cfs
+  question: What is 'vruntime' in the context of the Linux CFS scheduler?
+  truth: vruntime (virtual runtime) is the weighted runtime of a process. CFS attempts to keep the vruntime of all runnable tasks as close to each other as possible.
   complexity: 2
-
-- id: "linux_003"
-  topic: "linux-kernel"
-  tags: ["scheduling"]
-  question: "Which scheduling class is used for normal processes in Linux?"
-  truth: "SCHED_NORMAL (formerly SCHED_OTHER) is the default scheduling class for normal processes."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_003
+  topic: linux-kernel
+  tags:
+  - scheduling
+  question: Which scheduling class is used for normal processes in Linux?
+  truth: SCHED_NORMAL (formerly SCHED_OTHER) is the default scheduling class for normal processes.
   complexity: 1
-
-- id: "linux_004"
-  topic: "linux-kernel"
-  tags: ["scheduling", "real-time"]
-  question: "What is the difference between SCHED_FIFO and SCHED_RR?"
-  truth: "SCHED_FIFO runs until the task yields or blocks, whereas SCHED_RR (Round Robin) is similar but assigns a time slice to each task; when the slice expires, the task moves to the end of the priority list."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_004
+  topic: linux-kernel
+  tags:
+  - scheduling
+  - real-time
+  question: What is the difference between SCHED_FIFO and SCHED_RR?
+  truth: SCHED_FIFO runs until the task yields or blocks, whereas SCHED_RR (Round Robin) is similar but assigns a time slice to each task; when the slice expires, the task moves to the end of the priority list.
   complexity: 2
-
-- id: "linux_005"
-  topic: "linux-kernel"
-  tags: ["memory-management", "buddy-system"]
-  question: "What problem does the Buddy System algorithm primarily address in Linux memory management?"
-  truth: "The Buddy System primarily addresses external fragmentation when allocating contiguous physical memory pages."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_005
+  topic: linux-kernel
+  tags:
+  - memory-management
+  - buddy-system
+  question: What problem does the Buddy System algorithm primarily address in Linux memory management?
+  truth: The Buddy System primarily addresses external fragmentation when allocating contiguous physical memory pages.
   complexity: 2
-
-- id: "linux_006"
-  topic: "linux-kernel"
-  tags: ["memory-management", "slab"]
-  question: "What is the primary purpose of the Slab Allocator?"
-  truth: "The Slab Allocator serves as a cache for frequently used kernel objects, reducing internal fragmentation and overhead of allocating/freeing small objects."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_006
+  topic: linux-kernel
+  tags:
+  - memory-management
+  - slab
+  question: What is the primary purpose of the Slab Allocator?
+  truth: The Slab Allocator serves as a cache for frequently used kernel objects, reducing internal fragmentation and overhead of allocating/freeing small objects.
   complexity: 2
-
-- id: "linux_007"
-  topic: "linux-kernel"
-  tags: ["vfs"]
-  question: "What are the four primary object types in the Virtual Filesystem (VFS)?"
-  truth: "The four primary object types are the Superblock, Inode, Dentry (Directory Entry), and File objects."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_007
+  topic: linux-kernel
+  tags:
+  - vfs
+  question: What are the four primary object types in the Virtual Filesystem (VFS)?
+  truth: The four primary object types are the Superblock, Inode, Dentry (Directory Entry), and File objects.
   complexity: 2
-
-- id: "linux_008"
-  topic: "linux-kernel"
-  tags: ["vfs", "inode"]
-  question: "What information is contained in a VFS inode object?"
-  truth: "An inode contains metadata about a specific file, such as permissions, size, timestamps, and pointers to data blocks, but not the filename."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_008
+  topic: linux-kernel
+  tags:
+  - vfs
+  - inode
+  question: What information is contained in a VFS inode object?
+  truth: An inode contains metadata about a specific file, such as permissions, size, timestamps, and pointers to data blocks, but not the filename.
   complexity: 2
-
-- id: "linux_009"
-  topic: "linux-kernel"
-  tags: ["vfs", "dentry"]
-  question: "What is the role of the dentry object in VFS?"
-  truth: "The dentry object represents a directory entry and maps a logical component of a path (filename) to its corresponding inode. It facilitates path lookup."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_009
+  topic: linux-kernel
+  tags:
+  - vfs
+  - dentry
+  question: What is the role of the dentry object in VFS?
+  truth: The dentry object represents a directory entry and maps a logical component of a path (filename) to its corresponding inode. It facilitates path lookup.
   complexity: 2
-
-- id: "linux_010"
-  topic: "linux-kernel"
-  tags: ["interrupts"]
-  question: "Distinguish between the 'top half' and 'bottom half' of interrupt handling."
-  truth: "The top half runs immediately upon interrupt receipt, performs time-critical work, and acknowledges the hardware. The bottom half runs later with interrupts enabled to perform the remaining, less critical work."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_010
+  topic: linux-kernel
+  tags:
+  - interrupts
+  question: Distinguish between the 'top half' and 'bottom half' of interrupt handling.
+  truth: The top half runs immediately upon interrupt receipt, performs time-critical work, and acknowledges the hardware. The bottom half runs later with interrupts enabled to perform the remaining, less critical work.
   complexity: 2
-
-- id: "linux_011"
-  topic: "linux-kernel"
-  tags: ["interrupts", "bottom-halves"]
-  question: "Name three mechanisms used for bottom-half processing in the Linux kernel."
-  truth: "Softirqs, Workqueues, and Threaded IRQs. (Note: **Tasklets** are deprecated in modern Linux kernels and should be avoided in new development)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_011
+  topic: linux-kernel
+  tags:
+  - interrupts
+  - bottom-halves
+  question: Name three mechanisms used for bottom-half processing in the Linux kernel.
+  truth: 'Softirqs, Workqueues, and Threaded IRQs. (Note: **Tasklets** are deprecated in modern Linux kernels and should be avoided in new development).'
   complexity: 2
-
-- id: "linux_012"
-  topic: "linux-kernel"
-  tags: ["synchronization", "spinlocks"]
-  question: "When should a spinlock be used instead of a semaphore?"
-  truth: "A spinlock should be used for very short critical sections where the overhead of sleeping (context switch) is higher than the time spent busy-waiting (spinning)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_012
+  topic: linux-kernel
+  tags:
+  - synchronization
+  - spinlocks
+  question: When should a spinlock be used instead of a semaphore?
+  truth: A spinlock should be used for very short critical sections where the overhead of sleeping (context switch) is higher than the time spent busy-waiting (spinning).
   complexity: 2
-
-- id: "linux_013"
-  topic: "linux-kernel"
-  tags: ["synchronization"]
-  question: "What is the danger of calling a function that can sleep while holding a spinlock?"
-  truth: "It can lead to a deadlock. If the process sleeps holding the lock, other tasks waiting for the lock will spin indefinitely, potentially consuming all CPU if they are higher priority or if preemption is disabled."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_013
+  topic: linux-kernel
+  tags:
+  - synchronization
+  question: What is the danger of calling a function that can sleep while holding a spinlock?
+  truth: It can lead to a deadlock. If the process sleeps holding the lock, other tasks waiting for the lock will spin indefinitely, potentially consuming all CPU if they are higher priority or if preemption is disabled.
   complexity: 3
-
-- id: "linux_014"
-  topic: "linux-kernel"
-  tags: ["synchronization", "rcu"]
-  question: "What does RCU stand for and what is its primary use case?"
-  truth: "RCU stands for Read-Copy-Update. It is optimized for scenarios with frequent reads and rare updates, allowing readers to access data concurrently with writers without locks."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_014
+  topic: linux-kernel
+  tags:
+  - synchronization
+  - rcu
+  question: What does RCU stand for and what is its primary use case?
+  truth: RCU stands for Read-Copy-Update. It is optimized for scenarios with frequent reads and rare updates, allowing readers to access data concurrently with writers without locks.
   complexity: 3
-
-- id: "linux_015"
-  topic: "linux-kernel"
-  tags: ["signals"]
-  question: "Which two signals cannot be caught, blocked, or ignored?"
-  truth: "SIGKILL and SIGSTOP."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_015
+  topic: linux-kernel
+  tags:
+  - signals
+  question: Which two signals cannot be caught, blocked, or ignored?
+  truth: SIGKILL and SIGSTOP.
   complexity: 1
-
-- id: "linux_016"
-  topic: "linux-kernel"
-  tags: ["signals"]
-  question: "When are pending signals delivered to a process?"
-  truth: "Signals are checked and delivered when the process returns from kernel mode to user mode (e.g., returning from a system call or an interrupt)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_016
+  topic: linux-kernel
+  tags:
+  - signals
+  question: When are pending signals delivered to a process?
+  truth: Signals are checked and delivered when the process returns from kernel mode to user mode (e.g., returning from a system call or an interrupt).
   complexity: 2
-
-- id: "linux_017"
-  topic: "linux-kernel"
-  tags: ["memory-management"]
-  question: "What is the difference between kmalloc() and vmalloc()?"
-  truth: "kmalloc() allocates physically contiguous memory, while vmalloc() allocates virtually contiguous memory that may not be physically contiguous."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_017
+  topic: linux-kernel
+  tags:
+  - memory-management
+  question: What is the difference between kmalloc() and vmalloc()?
+  truth: kmalloc() allocates physically contiguous memory, while vmalloc() allocates virtually contiguous memory that may not be physically contiguous.
   complexity: 2
-
-- id: "linux_018"
-  topic: "linux-kernel"
-  tags: ["memory-management", "zones"]
-  question: "What is ZONE_HIGHMEM?"
-  truth: "ZONE_HIGHMEM refers to the range of physical memory that the kernel cannot directly map into its address space (on 32-bit systems typically above 896MB)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_018
+  topic: linux-kernel
+  tags:
+  - memory-management
+  - zones
+  question: What is ZONE_HIGHMEM?
+  truth: ZONE_HIGHMEM refers to the range of physical memory that the kernel cannot directly map into its address space (on 32-bit systems typically above 896MB).
   complexity: 2
-
-- id: "linux_019"
-  topic: "linux-kernel"
-  tags: ["process-management"]
-  question: "What is process state TASK_INTERRUPTIBLE?"
-  truth: "It is a state where a process is sleeping (blocked), waiting for a condition to exist or a signal to arrive. It can be woken up by a signal."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_019
+  topic: linux-kernel
+  tags:
+  - process-management
+  question: What is process state TASK_INTERRUPTIBLE?
+  truth: It is a state where a process is sleeping (blocked), waiting for a condition to exist or a signal to arrive. It can be woken up by a signal.
   complexity: 1
-
-- id: "linux_020"
-  topic: "linux-kernel"
-  tags: ["process-management"]
-  question: "What macro is used to get a pointer to the task_struct of the currently executing process?"
-  truth: "The `current` macro."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_020
+  topic: linux-kernel
+  tags:
+  - process-management
+  question: What macro is used to get a pointer to the task_struct of the currently executing process?
+  truth: The `current` macro.
   complexity: 1
-
-- id: "linux_021"
-  topic: "linux-kernel"
-  tags: ["scheduling"]
-  question: "What is the purpose of the 'nice' value?"
-  truth: "The nice value is a user-space priority hint that influences the weight of a process's vruntime calculation in CFS. Lower values indicate higher priority."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_021
+  topic: linux-kernel
+  tags:
+  - scheduling
+  question: What is the purpose of the 'nice' value?
+  truth: The nice value is a user-space priority hint that influences the weight of a process's vruntime calculation in CFS. Lower values indicate higher priority.
   complexity: 1
-
-- id: "linux_022"
-  topic: "linux-kernel"
-  tags: ["interrupts"]
-  question: "Can a softirq running on one CPU be preempted by another softirq?"
-  truth: "No, a softirq cannot preempt another softirq. However, it can be interrupted by a hardware interrupt handler."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_022
+  topic: linux-kernel
+  tags:
+  - interrupts
+  question: Can a softirq running on one CPU be preempted by another softirq?
+  truth: No, a softirq cannot preempt another softirq. However, it can be interrupted by a hardware interrupt handler.
   complexity: 3
-
-- id: "linux_023"
-  topic: "linux-kernel"
-  tags: ["interrupts", "workqueues"]
-  question: "In which context do Workqueues run?"
-  truth: "Workqueues run in process context, which implies they can sleep/block, unlike softirqs and tasklets."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_023
+  topic: linux-kernel
+  tags:
+  - interrupts
+  - workqueues
+  question: In which context do Workqueues run?
+  truth: Workqueues run in process context, which implies they can sleep/block, unlike softirqs and tasklets.
   complexity: 2
-
-- id: "linux_024"
-  topic: "linux-kernel"
-  tags: ["synchronization", "mutex"]
-  question: "What happens if a thread tries to acquire a mutex that is already locked?"
-  truth: "The thread is put to sleep (blocked) until the mutex becomes available."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_024
+  topic: linux-kernel
+  tags:
+  - synchronization
+  - mutex
+  question: What happens if a thread tries to acquire a mutex that is already locked?
+  truth: The thread is put to sleep (blocked) until the mutex becomes available.
   complexity: 1
-
-- id: "linux_025"
-  topic: "linux-kernel"
-  tags: ["vfs"]
-  question: "What is a Superblock in VFS?"
-  truth: "A Superblock object represents a specific mounted filesystem and contains information such as the filesystem type, block size, and pointers to filesystem operations."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_025
+  topic: linux-kernel
+  tags:
+  - vfs
+  question: What is a Superblock in VFS?
+  truth: A Superblock object represents a specific mounted filesystem and contains information such as the filesystem type, block size, and pointers to filesystem operations.
   complexity: 2
-
-- id: "linux_026"
-  topic: "linux-kernel"
-  tags: ["memory-management"]
-  question: "What is a Page Frame?"
-  truth: "A Page Frame is a physical block of main memory, typically 4KB in size (on x86), managed by the kernel."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_026
+  topic: linux-kernel
+  tags:
+  - memory-management
+  question: What is a Page Frame?
+  truth: A Page Frame is a physical block of main memory, typically 4KB in size (on x86), managed by the kernel.
   complexity: 1
-
-- id: "linux_027"
-  topic: "linux-kernel"
-  tags: ["memory-management", "slab"]
-  question: "What is a 'slab' in the context of the Slab Allocator?"
-  truth: "A slab is a contiguous piece of memory (composed of one or more pages) divided into equal-sized chunks for storing objects of a specific type."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_027
+  topic: linux-kernel
+  tags:
+  - memory-management
+  - slab
+  question: What is a 'slab' in the context of the Slab Allocator?
+  truth: A slab is a contiguous piece of memory (composed of one or more pages) divided into equal-sized chunks for storing objects of a specific type.
   complexity: 2
-
-- id: "linux_028"
-  topic: "linux-kernel"
-  tags: ["system-calls"]
-  question: "How are system call numbers passed to the kernel on x86-64 architecture?"
-  truth: "The system call number is passed via the rax register."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_028
+  topic: linux-kernel
+  tags:
+  - system-calls
+  question: How are system call numbers passed to the kernel on x86-64 architecture?
+  truth: The system call number is passed via the rax register.
   complexity: 2
-
-- id: "linux_029"
-  topic: "linux-kernel"
-  tags: ["concurrency"]
-  question: "What is a 'memory barrier'?"
-  truth: "A memory barrier is an instruction that enforces an ordering constraint on memory operations, ensuring that operations before the barrier are committed before those after it."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_029
+  topic: linux-kernel
+  tags:
+  - concurrency
+  question: What is a 'memory barrier'?
+  truth: A memory barrier is an instruction that enforces an ordering constraint on memory operations, ensuring that operations before the barrier are committed before those after it.
   complexity: 3
-
-- id: "linux_030"
-  topic: "linux-kernel"
-  tags: ["process-management"]
-  question: "What function is used to create a new kernel thread?"
-  truth: "`kthread_create()` or `kthread_run()`."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_030
+  topic: linux-kernel
+  tags:
+  - process-management
+  question: What function is used to create a new kernel thread?
+  truth: '`kthread_create()` or `kthread_run()`.'
   complexity: 2
-
-- id: "linux_031"
-  topic: "linux-kernel"
-  tags: ["scheduling"]
-  question: "What is 'load balancing' in the context of Multiprocessor Scheduling?"
-  truth: "Load balancing is the process of redistributing tasks across available CPUs to ensure fair utilization and performance."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_031
+  topic: linux-kernel
+  tags:
+  - scheduling
+  question: What is 'load balancing' in the context of Multiprocessor Scheduling?
+  truth: Load balancing is the process of redistributing tasks across available CPUs to ensure fair utilization and performance.
   complexity: 2
-
-- id: "linux_032"
-  topic: "linux-kernel"
-  tags: ["vfs"]
-  question: "Does the VFS require a file system to physical disk mapping?"
-  truth: "No, VFS supports pseudo-filesystems like procfs and sysfs which reside purely in memory."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_032
+  topic: linux-kernel
+  tags:
+  - vfs
+  question: Does the VFS require a file system to physical disk mapping?
+  truth: No, VFS supports pseudo-filesystems like procfs and sysfs which reside purely in memory.
   complexity: 2
-
-- id: "linux_033"
-  topic: "linux-kernel"
-  tags: ["signals"]
-  question: "What is the purpose of the sigaction structure?"
-  truth: "The sigaction structure describes how a process should handle a specific signal, including the handler function and flags."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_033
+  topic: linux-kernel
+  tags:
+  - signals
+  question: What is the purpose of the sigaction structure?
+  truth: The sigaction structure describes how a process should handle a specific signal, including the handler function and flags.
   complexity: 2
-
-- id: "linux_034"
-  topic: "linux-kernel"
-  tags: ["interrupts"]
-  question: "What is the IDT (Interrupt Descriptor Table)?"
-  truth: "The IDT is a data structure used by x86 architecture to implement an interrupt vector table, mapping interrupt vectors to their handlers."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_034
+  topic: linux-kernel
+  tags:
+  - interrupts
+  question: What is the IDT (Interrupt Descriptor Table)?
+  truth: The IDT is a data structure used by x86 architecture to implement an interrupt vector table, mapping interrupt vectors to their handlers.
   complexity: 2
-
-- id: "linux_035"
-  topic: "linux-kernel"
-  tags: ["synchronization"]
-  question: "What is an atomic_t?"
-  truth: "It is an opaque type used to represent an integer that can be modified atomically (indivisibly) to prevent race conditions."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_035
+  topic: linux-kernel
+  tags:
+  - synchronization
+  question: What is an atomic_t?
+  truth: It is an opaque type used to represent an integer that can be modified atomically (indivisibly) to prevent race conditions.
   complexity: 1
-
-- id: "linux_036"
-  topic: "linux-kernel"
-  tags: ["memory-management"]
-  question: "What is the purpose of kswapd?"
-  truth: "kswapd is a background kernel thread responsible for reclaiming memory (swapping out pages) when free memory falls below a certain threshold."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_036
+  topic: linux-kernel
+  tags:
+  - memory-management
+  question: What is the purpose of kswapd?
+  truth: kswapd is a background kernel thread responsible for reclaiming memory (swapping out pages) when free memory falls below a certain threshold.
   complexity: 2
-
-- id: "linux_037"
-  topic: "linux-kernel"
-  tags: ["modules"]
-  question: "What system call is used to load a kernel module?"
-  truth: "`init_module` (or `finit_module` in modern kernels)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_037
+  topic: linux-kernel
+  tags:
+  - modules
+  question: What system call is used to load a kernel module?
+  truth: '`init_module` (or `finit_module` in modern kernels).'
   complexity: 2
-
-- id: "linux_038"
-  topic: "linux-kernel"
-  tags: ["interrupts"]
-  question: "Why can't interrupt handlers sleep?"
-  truth: "Interrupt handlers run in interrupt context, which is not associated with a specific process. If they sleep, the kernel cannot reschedule them, leading to a system freeze."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_038
+  topic: linux-kernel
+  tags:
+  - interrupts
+  question: Why can't interrupt handlers sleep?
+  truth: Interrupt handlers run in interrupt context, which is not associated with a specific process. If they sleep, the kernel cannot reschedule them, leading to a system freeze.
   complexity: 3
-
-- id: "linux_039"
-  topic: "linux-kernel"
-  tags: ["scheduling"]
-  question: "What is process affinity?"
-  truth: "Process affinity determines which CPUs a process is allowed to run on."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_039
+  topic: linux-kernel
+  tags:
+  - scheduling
+  question: What is process affinity?
+  truth: Process affinity determines which CPUs a process is allowed to run on.
   complexity: 2
-
-- id: "linux_040"
-  topic: "linux-kernel"
-  tags: ["vfs"]
-  question: "What is a 'file object' in VFS?"
-  truth: "A file object represents a file opened by a process. It contains the current position (offset) and the file mode (read/write)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_040
+  topic: linux-kernel
+  tags:
+  - vfs
+  question: What is a 'file object' in VFS?
+  truth: A file object represents a file opened by a process. It contains the current position (offset) and the file mode (read/write).
   complexity: 2
-
-- id: "linux_041"
-  topic: "linux-kernel"
-  tags: ["memory-management"]
-  question: "What is Copy-on-Write (CoW)?"
-  truth: "CoW is an optimization where a child process shares the parent's physical pages after fork(). A private copy is made only when one of them attempts to write to a page."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_041
+  topic: linux-kernel
+  tags:
+  - memory-management
+  question: What is Copy-on-Write (CoW)?
+  truth: CoW is an optimization where a child process shares the parent's physical pages after fork(). A private copy is made only when one of them attempts to write to a page.
   complexity: 2
-
-- id: "linux_042"
-  topic: "linux-kernel"
-  tags: ["synchronization"]
-  question: "What is a reader-writer spinlock?"
-  truth: "A lock that allows multiple concurrent readers but only a single writer. Writers require exclusive access."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_042
+  topic: linux-kernel
+  tags:
+  - synchronization
+  question: What is a reader-writer spinlock?
+  truth: A lock that allows multiple concurrent readers but only a single writer. Writers require exclusive access.
   complexity: 2
-
-- id: "linux_043"
-  topic: "linux-kernel"
-  tags: ["time-management"]
-  question: "What is a 'jiffy'?"
-  truth: "A jiffy is the time unit between two successive timer interrupts. Its duration depends on the HZ constant."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_043
+  topic: linux-kernel
+  tags:
+  - time-management
+  question: What is a 'jiffy'?
+  truth: A jiffy is the time unit between two successive timer interrupts. Its duration depends on the HZ constant.
   complexity: 1
-
-- id: "linux_044"
-  topic: "linux-kernel"
-  tags: ["memory-management"]
-  question: "What is the Translation Lookaside Buffer (TLB)?"
-  truth: "A hardware cache used to reduce the time taken to access a user memory location. It stores recent translations of virtual memory to physical memory."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_044
+  topic: linux-kernel
+  tags:
+  - memory-management
+  question: What is the Translation Lookaside Buffer (TLB)?
+  truth: A hardware cache used to reduce the time taken to access a user memory location. It stores recent translations of virtual memory to physical memory.
   complexity: 2
-
-- id: "linux_045"
-  topic: "linux-kernel"
-  tags: ["interrupts"]
-  question: "How do Tasklets differ from Softirqs?"
-  truth: "Tasklets are built on top of softirqs. Two different tasklets can run concurrently on different CPUs, but two of the *same* tasklet cannot run simultaneously."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_045
+  topic: linux-kernel
+  tags:
+  - interrupts
+  question: How do Tasklets differ from Softirqs?
+  truth: Tasklets are built on top of softirqs. Two different tasklets can run concurrently on different CPUs, but two of the *same* tasklet cannot run simultaneously.
   complexity: 3
-
-- id: "linux_046"
-  topic: "linux-kernel"
-  tags: ["architecture"]
-  question: "Is the Linux kernel a monolithic kernel or a microkernel?"
-  truth: "Linux is a monolithic kernel, meaning the entire operating system runs in kernel space as a single binary."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_046
+  topic: linux-kernel
+  tags:
+  - architecture
+  question: Is the Linux kernel a monolithic kernel or a microkernel?
+  truth: Linux is a monolithic kernel, meaning the entire operating system runs in kernel space as a single binary.
   complexity: 1
-
-- id: "linux_047"
-  topic: "linux-kernel"
-  tags: ["vfs"]
-  question: "What is the dentry cache (dcache)?"
-  truth: "A cache that stores dentry objects to speed up the translation of file paths to inodes."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_047
+  topic: linux-kernel
+  tags:
+  - vfs
+  question: What is the dentry cache (dcache)?
+  truth: A cache that stores dentry objects to speed up the translation of file paths to inodes.
   complexity: 2
-
-- id: "linux_048"
-  topic: "linux-kernel"
-  tags: ["synchronization"]
-  question: "What is the 'Big Kernel Lock' (BKL) status in modern Linux?"
-  truth: "The Big Kernel Lock has been completely removed from the modern Linux kernel (since version 2.6.39)."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_048
+  topic: linux-kernel
+  tags:
+  - synchronization
+  question: What is the 'Big Kernel Lock' (BKL) status in modern Linux?
+  truth: The Big Kernel Lock has been completely removed from the modern Linux kernel (since version 2.6.39).
   complexity: 2
-
-- id: "linux_049"
-  topic: "linux-kernel"
-  tags: ["debugging"]
-  question: "What is 'oops' in Linux kernel?"
-  truth: "An oops is a deviation from correct behavior that is not fatal enough to crash the system (panic), but kills the offending process and prints a stack trace."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_049
+  topic: linux-kernel
+  tags:
+  - debugging
+  question: What is 'oops' in Linux kernel?
+  truth: An oops is a deviation from correct behavior that is not fatal enough to crash the system (panic), but kills the offending process and prints a stack trace.
   complexity: 2
-
-- id: "linux_050"
-  topic: "linux-kernel"
-  tags: ["io"]
-  question: "What is the Bio structure?"
-  truth: "The bio structure is the basic container for block I/O operations, representing an ongoing I/O request."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_050
+  topic: linux-kernel
+  tags:
+  - io
+  question: What is the Bio structure?
+  truth: The bio structure is the basic container for block I/O operations, representing an ongoing I/O request.
   complexity: 3
-
-- id: "linux_051"
-  topic: "linux-kernel"
-  tags: ["filesystems"]
-  question: "What is the difference between a hard link and a soft link at the VFS level?"
-  truth: "A hard link points to the same inode as the original file. A soft (symbolic) link is a separate file containing the path to the target file."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_051
+  topic: linux-kernel
+  tags:
+  - filesystems
+  question: What is the difference between a hard link and a soft link at the VFS level?
+  truth: A hard link points to the same inode as the original file. A soft (symbolic) link is a separate file containing the path to the target file.
   complexity: 2
-
-- id: "linux_052"
-  topic: "linux-kernel"
-  tags: ["scheduling"]
-  question: "What does 'sleeping' mean for a process?"
-  truth: "Sleeping means a process voluntarily relinquishes the CPU to wait for an event, changing its state to TASK_INTERRUPTIBLE or TASK_UNINTERRUPTIBLE."
+  source: https://www.kernel.org/doc/html/latest/
+- id: linux_052
+  topic: linux-kernel
+  tags:
+  - scheduling
+  question: What does 'sleeping' mean for a process?
+  truth: Sleeping means a process voluntarily relinquishes the CPU to wait for an event, changing its state to TASK_INTERRUPTIBLE or TASK_UNINTERRUPTIBLE.
   complexity: 1
+  source: https://www.kernel.org/doc/html/latest/

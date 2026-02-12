@@ -1,0 +1,399 @@
+- id: "db_001"
+  topic: "database-basics"
+  tags: ["acid", "transaction"]
+  question: "What does Atomicity guarantee in the context of ACID transactions?"
+  truth: "Atomicity guarantees that a transaction is treated as a single, indivisible unit. Either all of its operations are applied, or none of them are. If any part of the transaction fails, the entire transaction is rolled back."
+  complexity: 1
+  source: "https://dataintensive.net/"
+
+- id: "db_002"
+  topic: "database-basics"
+  tags: ["acid", "transaction"]
+  question: "Describe the 'Consistency' property in ACID."
+  truth: "Consistency ensures that a transaction brings the database from one valid state to another, maintaining all defined database invariants (constraints, cascades, triggers)."
+  complexity: 1
+  source: "https://dataintensive.net/"
+
+- id: "db_003"
+  topic: "database-basics"
+  tags: ["acid", "transaction"]
+  question: "What is 'Isolation' in ACID properties?"
+  truth: "Isolation ensures that concurrent execution of transactions leaves the database in the same state that would have been obtained if the transactions were executed sequentially."
+  complexity: 1
+  source: "https://www.postgresql.org/docs/current/transaction-iso.html"
+
+- id: "db_004"
+  topic: "database-basics"
+  tags: ["acid", "transaction"]
+  question: "What does 'Durability' ensure in a database system?"
+  truth: "Durability guarantees that once a transaction has been committed, it will remain committed even in the case of a system failure (e.g., power outage or crash), typically using write-ahead logs."
+  complexity: 1
+  source: "https://dataintensive.net/"
+
+- id: "db_005"
+  topic: "database-basics"
+  tags: ["acid", "isolation-levels"]
+  question: "What is the 'Read Committed' isolation level?"
+  truth: "Read Committed is an isolation level where a query sees only data committed before the query began. It prevents dirty reads but allows non-repeatable reads and phantom reads."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/transaction-iso.html"
+
+- id: "db_006"
+  topic: "database-basics"
+  tags: ["cap-theorem", "distributed-systems"]
+  question: "What does the CAP theorem state?"
+  truth: "The CAP theorem states that a distributed data store can effectively provide only two of the following three guarantees: Consistency, Availability, and Partition Tolerance."
+  complexity: 2
+  source: "https://dataintensive.net/"
+
+- id: "db_007"
+  topic: "database-basics"
+  tags: ["cap-theorem"]
+  question: "What does 'Partition Tolerance' mean in the CAP theorem?"
+  truth: "Partition Tolerance means the system continues to operate despite an arbitrary number of messages being dropped or delayed by the network between nodes."
+  complexity: 2
+  source: "https://dataintensive.net/"
+
+- id: "db_008"
+  topic: "database-basics"
+  tags: ["cap-theorem"]
+  question: "In the context of CAP, what is an AP system?"
+  truth: "An AP system prioritizes Availability and Partition tolerance. When a network partition occurs, the system accepts writes and reads even if nodes cannot communicate, potentially leading to inconsistent data."
+  complexity: 2
+  source: "https://dataintensive.net/"
+
+- id: "db_009"
+  topic: "database-basics"
+  tags: ["cap-theorem"]
+  question: "What is the difference between Strong Consistency and Eventual Consistency?"
+  truth: "Strong Consistency ensures that a read returns the most recent write. Eventual Consistency guarantees that if no new updates are made, all accesses will eventually return the last updated value."
+  complexity: 2
+  source: "https://www.mongodb.com/docs/manual/core/read-preference/"
+
+- id: "db_010"
+  topic: "database-basics"
+  tags: ["nosql", "sql"]
+  question: "What is the primary difference in scaling between SQL and NoSQL databases?"
+  truth: "SQL databases traditionally scale vertically (bigger hardware), while NoSQL is designed for horizontal scaling (sharding across servers). Note: Modern 'NewSQL' databases (e.g., CockroachDB) allow SQL to scale horizontally."
+  complexity: 1
+  source: "https://www.mongodb.com/nosql-explained"
+
+- id: "db_011"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "What is Database Normalization?"
+  truth: "Normalization is the process of organizing data in a database to reduce redundancy and improve data integrity, typically by dividing larger tables into smaller ones and linking them using relationships."
+  complexity: 1
+  source: "https://dev.mysql.com/doc/refman/8.0/en/normalization.html"
+
+- id: "db_012"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "What are the requirements for First Normal Form (1NF)?"
+  truth: "1NF requires that a table has a primary key and that all attributes contain atomic values (no repeating groups or arrays)."
+  complexity: 1
+  source: "https://dev.mysql.com/doc/refman/8.0/en/normalization.html"
+
+- id: "db_013"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "What condition must be met for Second Normal Form (2NF)?"
+  truth: "A table is in 2NF if it is in 1NF and all non-key attributes are fully functionally dependent on the primary key (no partial dependencies)."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/normalization.html"
+
+- id: "db_014"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "Define Third Normal Form (3NF)."
+  truth: "A table is in 3NF if it is in 2NF and has no transitive dependencies; that is, non-key attributes must rely only on the primary key, not on other non-key attributes."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/normalization.html"
+
+- id: "db_015"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "What is Boyce-Codd Normal Form (BCNF)?"
+  truth: "BCNF is a slightly stronger version of 3NF. A table is in BCNF if for every functional dependency X -> Y, X is a superkey."
+  complexity: 3
+  source: "https://dataintensive.net/"
+
+- id: "db_016"
+  topic: "database-basics"
+  tags: ["normalization"]
+  question: "What is Denormalization?"
+  truth: "Denormalization is the strategy of adding redundant data to a database (usually to optimize read performance) at the cost of write performance and potential anomalies."
+  complexity: 2
+  source: "https://dataintensive.net/"
+
+- id: "db_017"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "How does a B-Tree index work?"
+  truth: "A B-Tree index maintains a balanced tree structure where data is sorted. It allows for logarithmic time complexity O(log n) for search, insertions, and deletions."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/indexes-types.html"
+
+- id: "db_018"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is the difference between a Clustered and a Non-Clustered index?"
+  truth: "A Clustered index determines the physical order of data in a table (only one per table). A Non-Clustered index stores a separate structure with pointers to the data rows."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/innodb-index-types.html"
+
+- id: "db_019"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is a Hash Index and when is it best used?"
+  truth: "A Hash Index uses a hash table to store entries. It is extremely fast for equality comparisons (=) but does not support range queries (<, >)."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/indexes-types.html"
+
+- id: "db_020"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is a Composite Index?"
+  truth: "A Composite Index is an index on two or more columns of a table. It is effective for queries that filter on multiple columns used in the index definition."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/multiple-column-indexes.html"
+
+- id: "db_021"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "Explain the 'Leftmost Prefix' rule in composite indices."
+  truth: "The Leftmost Prefix rule states that a composite index on (A, B, C) can be used for queries on (A), (A, B), or (A, B, C), but not efficiently for queries on just (B) or (C)."
+  complexity: 3
+  source: "https://dev.mysql.com/doc/refman/8.0/en/multiple-column-indexes.html"
+
+- id: "db_022"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is a Covering Index?"
+  truth: "A Covering Index is an index that contains all the fields required by a query, allowing the database to satisfy the query purely from the index structure without looking up the actual table rows."
+  complexity: 3
+  source: "https://www.postgresql.org/docs/current/indexes-index-only-scans.html"
+
+- id: "db_023"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is a GIN index in PostgreSQL typically used for?"
+  truth: "GIN (Generalized Inverted Index) is designed for handling composite values like arrays and JSONB documents, allowing for efficient search of elements within those structures."
+  complexity: 3
+  source: "https://www.postgresql.org/docs/current/gin-intro.html"
+
+- id: "db_024"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is an LSM Tree (Log-Structured Merge-tree)?"
+  truth: "An LSM Tree is a data structure used in many NoSQL databases (like Cassandra, RocksDB) optimized for high write throughput by buffering writes in memory and merging them to disk in sorted runs."
+  complexity: 3
+  source: "https://dataintensive.net/"
+
+- id: "db_025"
+  topic: "database-basics"
+  tags: ["sharding"]
+  question: "What is Database Sharding?"
+  truth: "Sharding is a method of horizontal partitioning where data is distributed across multiple servers (shards) to spread the load and storage requirements."
+  complexity: 2
+  source: "https://www.mongodb.com/features/database-sharding-explained"
+
+- id: "db_026"
+  topic: "database-basics"
+  tags: ["sharding"]
+  question: "What is a Shard Key?"
+  truth: "A Shard Key is a field or set of fields chosen to determine how data is distributed across shards. The choice of shard key critically affects performance and data balance."
+  complexity: 2
+  source: "https://www.mongodb.com/docs/manual/core/sharding-shard-key/"
+
+- id: "db_027"
+  topic: "database-basics"
+  tags: ["sharding"]
+  question: "What is the problem of 'Hotspots' in sharding?"
+  truth: "Hotspots occur when a poor choice of shard key causes a disproportionate amount of read/write traffic to be directed to a single shard, creating a bottleneck."
+  complexity: 2
+  source: "https://www.mongodb.com/docs/manual/core/sharding-shard-key/"
+
+- id: "db_028"
+  topic: "database-basics"
+  tags: ["replication"]
+  question: "What is Write-Ahead Logging (WAL)?"
+  truth: "WAL is a standard method for ensuring data integrity. Modifications are written to a log file before they are applied to the main database files, allowing recovery after a crash."
+  complexity: 3
+  source: "https://www.postgresql.org/docs/current/wal-intro.html"
+
+- id: "db_029"
+  topic: "database-basics"
+  tags: ["sql", "performance"]
+  question: "What is the purpose of the EXPLAIN command in SQL?"
+  truth: "EXPLAIN provides the execution plan for a SQL query, showing how the database intends to execute it, including which indices will be used and the estimated cost."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/using-explain.html"
+
+- id: "db_030"
+  topic: "database-basics"
+  tags: ["acid", "isolation"]
+  question: "What is a 'Dirty Read'?"
+  truth: "A Dirty Read occurs when a transaction reads data that has been written by another concurrent transaction but not yet committed."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/glossary.html"
+
+- id: "db_031"
+  topic: "database-basics"
+  tags: ["acid", "isolation"]
+  question: "What is a 'Phantom Read'?"
+  truth: "A Phantom Read occurs when a transaction re-executes a query returning a set of rows that satisfy a search condition and finds that the set of rows has changed due to another committed transaction inserting new rows."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/glossary.html"
+
+- id: "db_032"
+  topic: "database-basics"
+  tags: ["nosql"]
+  question: "What is a Document Store database?"
+  truth: "A Document Store (e.g., MongoDB) stores data in semi-structured formats like JSON or BSON, allowing for nested structures and flexible schemas."
+  complexity: 1
+  source: "https://www.mongodb.com/document-databases"
+
+- id: "db_033"
+  topic: "database-basics"
+  tags: ["nosql"]
+  question: "What is a Key-Value Store?"
+  truth: "A Key-Value store (e.g., Redis) is a simple NoSQL database that uses a hash table where a specific key points to a specific value, optimized for speed and simplicity."
+  complexity: 1
+  source: "https://aws.amazon.com/nosql/key-value/"
+
+- id: "db_034"
+  topic: "database-basics"
+  tags: ["nosql", "column-family"]
+  question: "What is a Wide-Column Store (Column-Family Store)?"
+  truth: "A Wide-Column Store (e.g., Cassandra) stores data in columns rather than rows, optimizing for queries over large datasets and aggregation of specific columns."
+  complexity: 2
+  source: "https://cassandra.apache.org/doc/latest/"
+
+- id: "db_035"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is a Foreign Key?"
+  truth: "A Foreign Key is a field (or collection of fields) in one table that refers to the Primary Key in another table, enforcing referential integrity between the two."
+  complexity: 1
+  source: "https://dev.mysql.com/doc/refman/8.0/en/create-table-foreign-keys.html"
+
+- id: "db_036"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is the difference between TRUNCATE and DELETE?"
+  truth: "DELETE removes rows one by one and records each deletion in the transaction log (can have WHERE clause). TRUNCATE deallocates the data pages to remove all rows, which is faster but cannot be rolled back in some systems (and has no WHERE clause)."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/truncate-table.html"
+
+- id: "db_037"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is Index Selectivity?"
+  truth: "Index Selectivity is the ratio of distinct values to the total number of records. High selectivity (closer to 1) means the index is very effective at filtering rows."
+  complexity: 3
+  source: "https://dev.mysql.com/doc/refman/8.0/en/mysql-indexes.html"
+
+- id: "db_038"
+  topic: "database-basics"
+  tags: ["database-design"]
+  question: "What is a Surrogate Key?"
+  truth: "A Surrogate Key is a system-generated unique identifier (like an auto-incrementing integer or UUID) used as a primary key, which has no business meaning."
+  complexity: 2
+  source: "https://dataintensive.net/"
+
+- id: "db_039"
+  topic: "database-basics"
+  tags: ["concurrency"]
+  question: "What is Optimistic Locking?"
+  truth: "Optimistic Locking allows multiple transactions to complete without locking resources, checking for conflicts only before committing (often using version numbers)."
+  complexity: 3
+  source: "https://www.postgresql.org/docs/current/mvcc-intro.html"
+
+- id: "db_040"
+  topic: "database-basics"
+  tags: ["concurrency"]
+  question: "What is Pessimistic Locking?"
+  truth: "Pessimistic Locking locks resources (rows or tables) as soon as they are accessed by a transaction, preventing other transactions from modifying them until the lock is released."
+  complexity: 3
+  source: "https://dev.mysql.com/doc/refman/8.0/en/innodb-locking.html"
+
+- id: "db_041"
+  topic: "database-basics"
+  tags: ["replication"]
+  question: "What is Master-Slave Replication?"
+  truth: "In Master-Slave Replication, one node (Master) handles all write operations and replicates them to one or more nodes (Slaves), which usually handle read-only operations."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/replication.html"
+
+- id: "db_042"
+  topic: "database-basics"
+  tags: ["replication"]
+  question: "What is Multi-Master Replication?"
+  truth: "Multi-Master Replication allows multiple nodes to accept write operations, propagating changes to other masters. It offers high availability for writes but complicates conflict resolution."
+  complexity: 3
+  source: "https://www.postgresql.org/docs/current/warm-standby.html"
+
+- id: "db_043"
+  topic: "database-basics"
+  tags: ["sharding"]
+  question: "What is Consistent Hashing?"
+  truth: "Consistent Hashing is a distribution scheme that minimizes the reorganization of data when nodes are added or removed, commonly used in sharding to map keys to nodes."
+  complexity: 3
+  source: "https://dataintensive.net/"
+
+- id: "db_044"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is a View in SQL?"
+  truth: "A View is a virtual table based on the result-set of an SQL statement. It contains no data itself but presents data from underlying tables in a specific format."
+  complexity: 1
+  source: "https://dev.mysql.com/doc/refman/8.0/en/views.html"
+
+- id: "db_045"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is a Materialized View?"
+  truth: "A Materialized View is a database object that stores the results of a query physically. Unlike a standard view, it does not re-run the query each time it is accessed but needs to be refreshed to stay up-to-date."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/rules-materializedviews.html"
+
+- id: "db_046"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is a Stored Procedure?"
+  truth: "A Stored Procedure is a set of SQL statements with an assigned name, stored in the database in compiled form, which can be executed by applications to perform complex logic."
+  complexity: 2
+  source: "https://dev.mysql.com/doc/refman/8.0/en/stored-procedures.html"
+
+- id: "db_047"
+  topic: "database-basics"
+  tags: ["sql"]
+  question: "What is a Trigger in a database?"
+  truth: "A Trigger is a procedural code that is automatically executed in response to certain events on a particular table or view (e.g., INSERT, UPDATE, DELETE)."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/triggers.html"
+
+- id: "db_048"
+  topic: "database-basics"
+  tags: ["indices"]
+  question: "What is a Spatial Index?"
+  truth: "A Spatial Index (like R-Tree) is optimized for querying spatial data (coordinates, geometries), enabling efficient 'nearest neighbor' or 'within box' searches."
+  complexity: 3
+  source: "https://postgis.net/workshops/postgis-intro/indexing.html"
+
+- id: "db_049"
+  topic: "database-basics"
+  tags: ["nosql", "graph"]
+  question: "What is a Graph Database?"
+  truth: "A Graph Database (e.g., Neo4j) uses graph structures with nodes, edges, and properties to represent and store data, optimized for traversing highly connected data."
+  complexity: 2
+  source: "https://neo4j.com/developer/graph-database/"
+
+- id: "db_050"
+  topic: "database-basics"
+  tags: ["maintenance"]
+  question: "What is Vacuuming in PostgreSQL?"
+  truth: "Vacuuming is a maintenance process in PostgreSQL that reclaims storage occupied by dead tuples (deleted or obsolete rows) and updates visibility maps."
+  complexity: 2
+  source: "https://www.postgresql.org/docs/current/routine-vacuuming.html"

@@ -1,0 +1,399 @@
+- id: "unix_001"
+  topic: "unix-systems"
+  tags: ["commands", "file-management"]
+  question: "What command is used to change the modification timestamp of a file to the current time, or create an empty file if it doesn't exist?"
+  truth: "touch"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/touch.1.html"
+
+- id: "unix_002"
+  topic: "unix-systems"
+  tags: ["permissions"]
+  question: "Which permission bit, when set on a directory, prevents users from deleting files within that directory unless they own the file or the directory?"
+  truth: "The sticky bit (t)"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/chmod.1.html"
+
+- id: "unix_003"
+  topic: "unix-systems"
+  tags: ["bash", "io-redirection"]
+  question: "In Bash, how do you redirect both standard output (stdout) and standard error (stderr) to the same file 'output.log'?"
+  truth: "command > output.log 2>&1"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Redirections.html"
+
+- id: "unix_004"
+  topic: "unix-systems"
+  tags: ["linker", "shared-libraries"]
+  question: "Which environment variable can be used to load a specific shared library before any other library, often used for hooking or debugging?"
+  truth: "LD_PRELOAD"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man8/ld.so.8.html"
+
+- id: "unix_005"
+  topic: "unix-systems"
+  tags: ["commands", "networking"]
+  question: "What command displays the current network connections, routing tables, and interface statistics?"
+  truth: "netstat (deprecated) or ss (socket statistics). 'ss' is the modern, faster replacement preferred on recent Linux distributions."
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man8/netstat.8.html"
+
+- id: "unix_006"
+  topic: "unix-systems"
+  tags: ["bash", "scripting"]
+  question: "What is the special variable in Bash that holds the exit status of the last executed command?"
+  truth: "$?"
+  complexity: 1
+  source: "https://www.gnu.org/software/bash/manual/html_node/Special-Parameters.html"
+
+- id: "unix_007"
+  topic: "unix-systems"
+  tags: ["commands", "text-processing"]
+  question: "Which command is a stream editor used for performing basic text transformations on an input stream?"
+  truth: "sed"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/sed.1.html"
+
+- id: "unix_008"
+  topic: "unix-systems"
+  tags: ["pipes", "inter-process-communication"]
+  question: "What command creates a FIFO (First In, First Out) special file, also known as a named pipe?"
+  truth: "mkfifo"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/mkfifo.1.html"
+
+- id: "unix_009"
+  topic: "unix-systems"
+  tags: ["permissions", "security"]
+  question: "What command is used to change the user owner and group owner of a file?"
+  truth: "chown"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/chown.1.html"
+
+- id: "unix_010"
+  topic: "unix-systems"
+  tags: ["commands", "search"]
+  question: "Which command searches for files in a directory hierarchy based on criteria like name, size, or time?"
+  truth: "find"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/find.1.html"
+
+- id: "unix_011"
+  topic: "unix-systems"
+  tags: ["bash", "scripting"]
+  question: "In a Bash script, how do you refer to all arguments passed to the script as a single word?"
+  truth: "$* (when quoted as \"$*\"). Note: \"$@\" expands to separate arguments, which is usually preferred for passing arguments to another command."
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Special-Parameters.html"
+
+- id: "unix_012"
+  topic: "unix-systems"
+  tags: ["linker", "shared-libraries"]
+  question: "What is the name of the dynamic linker/loader program on Linux systems, typically invoked implicitly when running dynamically linked programs?"
+  truth: "ld.so (or ld-linux.so)"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man8/ld.so.8.html"
+
+- id: "unix_013"
+  topic: "unix-systems"
+  tags: ["commands", "processes"]
+  question: "Which command sends a signal to a process, often used to terminate it?"
+  truth: "kill"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/kill.1.html"
+
+- id: "unix_014"
+  topic: "unix-systems"
+  tags: ["permissions"]
+  question: "What does the permission string '-rwxr-xr--' translate to in octal notation?"
+  truth: "754"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/chmod.1.html"
+
+- id: "unix_015"
+  topic: "unix-systems"
+  tags: ["bash", "history"]
+  question: "Which Bash builtin command is used to search backward in the command history?"
+  truth: "history (often accessed via Ctrl+R)"
+  complexity: 1
+  source: "https://www.gnu.org/software/bash/manual/html_node/Bash-History-Builtins.html"
+
+- id: "unix_016"
+  topic: "unix-systems"
+  tags: ["commands", "disk-usage"]
+  question: "What command displays the amount of disk space used by files and directories?"
+  truth: "du"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/du.1.html"
+
+- id: "unix_017"
+  topic: "unix-systems"
+  tags: ["bash", "job-control"]
+  question: "What command brings a background job to the foreground?"
+  truth: "fg"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Job-Control-Builtins.html"
+
+- id: "unix_018"
+  topic: "unix-systems"
+  tags: ["linker", "symbols"]
+  question: "Which command lists symbols from object files, useful for debugging linking errors?"
+  truth: "nm"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man1/nm.1.html"
+
+- id: "unix_019"
+  topic: "unix-systems"
+  tags: ["commands", "text-processing"]
+  question: "Which command allows you to search for patterns in files using regular expressions?"
+  truth: "grep"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/grep.1.html"
+
+- id: "unix_020"
+  topic: "unix-systems"
+  tags: ["bash", "scripting"]
+  question: "What is the purpose of 'set -e' in a Bash script?"
+  truth: "It causes the script to exit immediately if any command returns a non-zero exit status."
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html"
+
+- id: "unix_021"
+  topic: "unix-systems"
+  tags: ["permissions", "security"]
+  question: "What bit, when set on an executable file, allows the file to be executed with the permissions of the file owner rather than the user running it?"
+  truth: "Setuid (Set User ID)"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/chmod.1.html"
+
+- id: "unix_022"
+  topic: "unix-systems"
+  tags: ["commands", "archiving"]
+  question: "Which command is used to archive multiple files into a single file, often compressed with gzip or bzip2?"
+  truth: "tar"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/tar.1.html"
+
+- id: "unix_023"
+  topic: "unix-systems"
+  tags: ["pipes", "io"]
+  question: "What command reads from standard input and writes to both standard output and files simultaneously?"
+  truth: "tee"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/tee.1.html"
+
+- id: "unix_024"
+  topic: "unix-systems"
+  tags: ["linker", "libraries"]
+  question: "What flag is passed to 'gcc' or 'ld' to specify a non-standard directory to search for libraries?"
+  truth: "-L"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/ld.1.html"
+
+- id: "unix_025"
+  topic: "unix-systems"
+  tags: ["commands", "file-content"]
+  question: "Which command outputs the first 10 lines of a file by default?"
+  truth: "head"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/head.1.html"
+
+- id: "unix_026"
+  topic: "unix-systems"
+  tags: ["bash", "expansion"]
+  question: "What is the term for the process where Bash replaces '{a,b}' with 'a b'?"
+  truth: "Brace Expansion"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Brace-Expansion.html"
+
+- id: "unix_027"
+  topic: "unix-systems"
+  tags: ["commands", "network"]
+  question: "Which command is used to test the reachability of a host on an Internet Protocol (IP) network?"
+  truth: "ping"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man8/ping.8.html"
+
+- id: "unix_028"
+  topic: "unix-systems"
+  tags: ["linker", "runtime"]
+  question: "What command is used to configure dynamic linker run-time bindings, creating the cache file /etc/ld.so.cache?"
+  truth: "ldconfig"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man8/ldconfig.8.html"
+
+- id: "unix_029"
+  topic: "unix-systems"
+  tags: ["commands", "system-info"]
+  question: "Which command displays the system's kernel release, network node hostname, and other system information?"
+  truth: "uname"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/uname.1.html"
+
+- id: "unix_030"
+  topic: "unix-systems"
+  tags: ["bash", "variables"]
+  question: "How do you check if a variable is unset or null in Bash using parameter expansion?"
+  truth: "${parameter:-word} (Use default values) or ${parameter:?word} (Display error if unset/null)"
+  complexity: 3
+  source: "https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html"
+
+- id: "unix_031"
+  topic: "unix-systems"
+  tags: ["permissions"]
+  question: "What is the umask value that results in new files having permissions 644 (rw-r--r--) and directories 755 (rwxr-xr-x)?"
+  truth: "022"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man2/umask.2.html"
+
+- id: "unix_032"
+  topic: "unix-systems"
+  tags: ["commands", "processes"]
+  question: "Which command provides a dynamic, real-time view of running processes?"
+  truth: "top"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/top.1.html"
+
+- id: "unix_033"
+  topic: "unix-systems"
+  tags: ["bash", "loops"]
+  question: "Which keyword finishes a 'case' statement in Bash?"
+  truth: "esac"
+  complexity: 1
+  source: "https://www.gnu.org/software/bash/manual/html_node/Conditional-Constructs.html"
+
+- id: "unix_034"
+  topic: "unix-systems"
+  tags: ["linker", "elf"]
+  question: "Which command displays information about the contents of ELF format files?"
+  truth: "readelf"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man1/readelf.1.html"
+
+- id: "unix_035"
+  topic: "unix-systems"
+  tags: ["commands", "file-transfer"]
+  question: "Which secure command is used to copy files between hosts on a network?"
+  truth: "scp"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/scp.1.html"
+
+- id: "unix_036"
+  topic: "unix-systems"
+  tags: ["bash", "aliases"]
+  question: "How do you define a shortcut command in Bash, for example, making 'll' run 'ls -l'?"
+  truth: "alias ll='ls -l'"
+  complexity: 1
+  source: "https://www.gnu.org/software/bash/manual/html_node/Aliases.html"
+
+- id: "unix_037"
+  topic: "unix-systems"
+  tags: ["pipes", "text-processing"]
+  question: "Which command is often used with pipes to sort lines of text files?"
+  truth: "sort"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/sort.1.html"
+
+- id: "unix_038"
+  topic: "unix-systems"
+  tags: ["linker", "shared-libraries"]
+  question: "What command lists the dynamic dependencies (shared libraries) of an executable or shared object?"
+  truth: "ldd"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/ldd.1.html"
+
+- id: "unix_039"
+  topic: "unix-systems"
+  tags: ["permissions"]
+  question: "What is the command to create a symbolic link?"
+  truth: "ln -s"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/ln.1.html"
+
+- id: "unix_040"
+  topic: "unix-systems"
+  tags: ["bash", "scripting"]
+  question: "How can you perform integer arithmetic in Bash?"
+  truth: "$((expression))"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Shell-Arithmetic.html"
+
+- id: "unix_041"
+  topic: "unix-systems"
+  tags: ["commands", "file-comparison"]
+  question: "Which command compares files line by line?"
+  truth: "diff"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/diff.1.html"
+
+- id: "unix_042"
+  topic: "unix-systems"
+  tags: ["linker", "rpath"]
+  question: "What linker option sets the runtime search path for shared libraries directly into the executable?"
+  truth: "-rpath"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man1/ld.1.html"
+
+- id: "unix_043"
+  topic: "unix-systems"
+  tags: ["commands", "user-management"]
+  question: "Which command is used to create a new user account?"
+  truth: "useradd (or adduser)"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man8/useradd.8.html"
+
+- id: "unix_044"
+  topic: "unix-systems"
+  tags: ["bash", "subshells"]
+  question: "How do you run a group of commands in a subshell?"
+  truth: "(command1; command2)"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Command-Grouping.html"
+
+- id: "unix_045"
+  topic: "unix-systems"
+  tags: ["pipes", "text-processing"]
+  question: "Which command reports or omits repeated lines?"
+  truth: "uniq"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/uniq.1.html"
+
+- id: "unix_046"
+  topic: "unix-systems"
+  tags: ["permissions", "attributes"]
+  question: "Which command changes file attributes on a Linux file system, such as making a file immutable?"
+  truth: "chattr"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man1/chattr.1.html"
+
+- id: "unix_047"
+  topic: "unix-systems"
+  tags: ["commands", "networking"]
+  question: "Which tool is commonly used to transfer data from or to a server using various protocols like HTTP, HTTPS, FTP, etc.?"
+  truth: "curl"
+  complexity: 1
+  source: "https://man7.org/linux/man-pages/man1/curl.1.html"
+
+- id: "unix_048"
+  topic: "unix-systems"
+  tags: ["bash", "input"]
+  question: "Which builtin command reads a line from the standard input and splits it into fields?"
+  truth: "read"
+  complexity: 2
+  source: "https://www.gnu.org/software/bash/manual/html_node/Bash-Builtins.html"
+
+- id: "unix_049"
+  topic: "unix-systems"
+  tags: ["linker", "sections"]
+  question: "In an ELF file, which section typically holds the executable instructions?"
+  truth: ".text"
+  complexity: 3
+  source: "https://man7.org/linux/man-pages/man5/elf.5.html"
+
+- id: "unix_050"
+  topic: "unix-systems"
+  tags: ["commands", "environment"]
+  question: "Which command is used to run a command with a modified environment?"
+  truth: "env"
+  complexity: 2
+  source: "https://man7.org/linux/man-pages/man1/env.1.html"

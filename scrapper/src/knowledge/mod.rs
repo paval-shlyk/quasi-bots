@@ -1,4 +1,5 @@
 mod affinity;
+mod entries;
 mod model;
 pub mod reviews;
 mod routes;
@@ -210,7 +211,7 @@ impl Database {
                         e.affinity_days as "affinity_days: Option<u32>"
                     FROM entry as e
                     JOIN topic as t ON e.topic_id = t.id
-                    WHERE t.id = ? AND e.is_reviewed IS FALSE
+                    WHERE t.id = ? AND e.is_reviewed = FALSE
                     ORDER BY RANDOM()
                     LIMIT 1
                 "#,
@@ -225,6 +226,10 @@ impl Database {
         let entry = match fetch_entry(&self.pool, topic_id).await? {
             Some(entry) => entry,
             None => {
+                tracing::info!(
+                    "No unrevised entry found for topic_id {}, resetting review status and trying again",
+                    topic_id
+                );
                 // No unrevised entry, reset review status and try again
                 sqlx::query!(
                     r#"
@@ -243,6 +248,7 @@ impl Database {
             }
         };
 
+        //also invoke trigger to create recent review
         sqlx::query!(
             r#"
                 UPDATE entry

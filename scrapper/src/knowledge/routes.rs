@@ -25,6 +25,11 @@ pub struct Affinity {
 }
 
 #[derive(Debug, serde::Deserialize)]
+pub struct ReviewAttempts {
+    pub attempts: u32,
+}
+
+#[derive(Debug, serde::Deserialize)]
 pub struct ReviewQuery {
     pub days: Option<u32>,
 }
@@ -37,14 +42,14 @@ pub async fn post_new_knowledge(
 }
 
 pub async fn post_topic_affinity(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Path(topic_id): Path<u64>,
     Json(body): Json<Affinity>,
 ) -> impl IntoResponse {
     knowledge::set_topic_affinity(
         topic_id,
         body.days,
-        &_state.knowledge_database.pool,
+        &state.knowledge_database.pool,
     )
     .await
     .map(|()| StatusCode::OK)
@@ -94,8 +99,18 @@ pub async fn get_recent_reviews(
 
 pub async fn post_entry_review(
     State(state): State<Arc<AppState>>,
-    Path(name): Path<u64>,
+    Path(entry_name): Path<String>,
+    Json(body): Json<ReviewAttempts>,
 ) -> impl IntoResponse {
+    knowledge::update_review(&state.pool, entry_name, body.attempts as i32)
+        .await
+        .map(|()| StatusCode::OK)
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to update review: {}", e),
+            )
+        })
 }
 
 pub async fn get_all_topics(

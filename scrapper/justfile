@@ -13,7 +13,7 @@ search:
 next-quote:
     #!/bin/bash
     for i in {1..5}; do \
-        curl -s -L "http://localhost:8080/quotes-bank/next" | jq
+        curl -X POST -s -L "http://localhost:8080/quotes-bank/next" | jq
     done
 
 fetch_market:
@@ -21,6 +21,9 @@ fetch_market:
     # curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,BTC-USD,GC=F" | jq
     # curl -s -L "http://localhost:8080/market-tracker/report?asset=TSLA"
     curl -s -L "http://localhost:8080/market-tracker/recommendations"
+
+next-knowledge:
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/next"
 
 lint:
     cargo fmt --all --check

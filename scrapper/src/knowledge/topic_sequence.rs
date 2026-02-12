@@ -6,7 +6,7 @@ use crate::knowledge::Topic;
 pub struct TopicSequence {
     topics: Vec<Topic>,
     ///index to start
-    pub next_topic: usize,
+    next_topic: usize,
 }
 
 impl TopicSequence {
@@ -57,6 +57,10 @@ impl TopicSequence {
     /// Total count of topics
     pub fn len(&self) -> usize {
         self.topics.len()
+    }
+
+    pub fn to_vec(&self) -> Vec<Topic> {
+        self.topics.clone()
     }
 }
 

@@ -11,7 +11,7 @@ pub struct RssSource {
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct KnowledgeConfig {
     /// Where yaml configuration files are loaded
-    pub knowledge_file: PathBuf,
+    pub database_file: PathBuf,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]

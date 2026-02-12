@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use scrapper::knowledge;
 use tokio::sync::Notify;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -24,10 +25,16 @@ pub async fn main() {
     let config: scrapper::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
+    let knowledge_database =
+        knowledge::Database::connect(&config, pool.clone())
+            .await
+            .expect("Failed to connect knowledge database");
+
     let state = Arc::new(scrapper::AppState {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(Notify::new()),
+        knowledge_database: knowledge_database.into(),
     });
 
     let app = scrapper::routes::create_routes(state);

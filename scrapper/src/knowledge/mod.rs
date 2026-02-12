@@ -11,25 +11,25 @@ use topic_sequence::TopicSequence;
 pub type Topic = String;
 
 #[derive(Debug)]
-pub struct DataBase {
-    entries: Vec<KnowledgeEntry>,
-    topics: TopicSequence,
+pub struct Database {
+    entries: Vec<Entry>,
+    pub topics: TopicSequence,
     pool: sqlx::SqlitePool,
 }
 
-impl DataBase {
-    pub async fn load(
+impl Database {
+    pub async fn connect(
         config: &crate::Config,
         pool: sqlx::SqlitePool,
     ) -> anyhow::Result<Self> {
         let raw_entries =
-            tokio::fs::read_to_string(&config.knowledge.knowledge_file)
+            tokio::fs::read_to_string(&config.knowledge.database_file)
                 .await
                 .expect("Failed to load knowledge file");
 
         //todo: drop tables somehow
 
-        let entries: Vec<KnowledgeEntry> = serde_yaml::from_str(&raw_entries)
+        let entries: Vec<Entry> = serde_yaml::from_str(&raw_entries)
             .expect("Invalid YAML format for knowledge file");
 
         // for entry in entries.iter() {
@@ -72,7 +72,7 @@ impl DataBase {
     }
 
     /// Fetch new knowledge and mutate internal state
-    pub fn next_knowledge(&mut self) -> anyhow::Result<KnowledgeEntry> {
+    pub fn next_knowledge(&mut self) -> anyhow::Result<Entry> {
         assert!(self.topics.len() > 0);
 
         let topic = {

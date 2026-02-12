@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
-pub struct KnowledgeEntry {
+pub struct Entry {
     /// Unique question identifier
     pub id: String,
     pub topic: String,

@@ -1,10 +1,8 @@
 mod model;
 mod routes;
-mod topic_sequence;
 
 pub use model::*;
 pub use routes::*;
-use topic_sequence::TopicSequence;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Topic {
@@ -21,29 +19,71 @@ pub struct TopicWithStatistics {
 
 #[derive(Debug)]
 pub struct Database {
-    topics: TopicSequence,
     pool: sqlx::SqlitePool,
+}
+
+async fn next_topic(pool: &sqlx::SqlitePool) -> anyhow::Result<Topic> {
+    let count = sqlx::query!(
+        r#"
+            SELECT COUNT(id) as count
+            FROM topic
+        "#
+    )
+    .fetch_one(pool)
+    .await?
+    .count;
+
+    if count == 0 {
+        return Err(anyhow::anyhow!("No topics are available"));
+    }
+
+    let maybe_topic = sqlx::query_as!(
+        Topic,
+        r#"
+            SELECT id as "id: u64", name
+            FROM topic
+            WHERE is_used = FALSE
+            ORDER BY RANDOM()
+            LIMIT 1
+        "#
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    match maybe_topic {
+        Some(topic) => return Ok(topic),
+        None => {
+            sqlx::query!(
+                r#"
+                    UPDATE topic
+                    SET is_used = FALSE;
+                "#
+            )
+            .execute(pool)
+            .await?;
+
+            let topic = sqlx::query_as!(
+                Topic,
+                r#"
+                    SELECT id as "id: u64", name
+                    FROM topic
+                    WHERE is_used = FALSE
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                "#
+            )
+            .fetch_one(pool)
+            .await?;
+
+            Ok(topic)
+        }
+    }
 }
 
 impl Database {
     //by default, database is only connected to sqlite file
     pub async fn connect(pool: sqlx::SqlitePool) -> anyhow::Result<Self> {
-        //todo: drop tables somehow
-
-        let topics: Vec<Topic> = sqlx::query_as!(
-            Topic,
-            r#"
-                SELECT id as "id: u64", name
-                FROM topic
-            "#
-        )
-        .fetch_all(&pool)
-        .await?;
-
-        Ok(Self {
-            topics: TopicSequence::new(&topics),
-            pool,
-        })
+        Ok(Self { pool })
     }
 
     pub async fn refresh_from_file(
@@ -124,37 +164,12 @@ impl Database {
             }
         }
 
-        let topics: Vec<Topic> = sqlx::query_as!(
-            Topic,
-            r#"
-                SELECT id as "id: u64", name
-                FROM topic
-            "#
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        self.topics = TopicSequence::new(&topics);
-
         Ok(())
     }
 
     /// Fetch new knowledge and mutate internal state
     pub async fn next_knowledge(&mut self) -> anyhow::Result<Entry> {
-        if self.topics.is_empty() {
-            return Err(anyhow::anyhow!("No topics available"));
-        }
-
-        let topic = {
-            match self.topics.next() {
-                Some(topic) => topic,
-                None => {
-                    self.topics.reset();
-
-                    self.topics.next().expect("Sequence is reset")
-                }
-            }
-        };
+        let topic = next_topic(&self.pool).await?;
 
         let topic_id = topic.id as i64;
 
@@ -166,6 +181,7 @@ impl Database {
             pub question: String,
             pub truth: String,
         }
+
         async fn fetch_entry(
             pool: &sqlx::SqlitePool,
             topic_id: i64,

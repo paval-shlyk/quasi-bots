@@ -1,11 +1,7 @@
 CREATE TABLE IF NOT EXISTS topic (
 	id INTEGER PRIMARY KEY,
-	name VARCHAR(100) NOT NULL UNIQUE
-);
-
--- table to store state for topic sequence struct between application runs  
-CREATE TABLE IF NOT EXISTS topic_seq (
-	next_id INTEGER NOT NULL
+	name VARCHAR(100) NOT NULL UNIQUE,
+	is_used BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TABLE IF NOT EXISTS entry (

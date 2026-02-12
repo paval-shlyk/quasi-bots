@@ -1,0 +1,349 @@
+- id: "phys_001"
+  topic: "physics"
+  tags: ["mechanics", "newtonian"]
+  question: "What is the physical significance of the Principle of Least Action in classical mechanics?"
+  truth: "The Principle of Least Action states that the path taken by a particle between two points in a given time is the one for which the action integral (the integral of the Lagrangian over time) is stationary (usually a minimum). This fundamental principle underlies Newtonian, Lagrangian, and Hamiltonian mechanics."
+  complexity: 2
+
+- id: "phys_002"
+  topic: "physics"
+  tags: ["mechanics", "conservation"]
+  question: "Under what conditions is angular momentum conserved in a system?"
+  truth: "Angular momentum is conserved in a system if the net external torque acting on the system is zero. In Lagrangian mechanics, this corresponds to the Lagrangian being invariant under rotational transformations (isotropy of space)."
+  complexity: 1
+
+- id: "phys_003"
+  topic: "physics"
+  tags: ["mechanics", "fluid dynamics"]
+  question: "Explain Bernoulli's principle for an inviscid, incompressible fluid."
+  truth: "Bernoulli's principle states that for an inviscid, incompressible fluid flowing in a streamline, an increase in the speed of the fluid occurs simultaneously with a decrease in static pressure or a decrease in the fluid's potential energy. Mathematically, P + 0.5*rho*v^2 + rho*g*h = constant."
+  complexity: 1
+
+- id: "phys_004"
+  topic: "physics"
+  tags: ["mechanics", "oscillations"]
+  question: "What characterizes a damped harmonic oscillator?"
+  truth: "A damped harmonic oscillator is a system where the restoring force is proportional to displacement (Hooke's Law) and a resistive force is proportional to velocity (damping). This leads to a gradual decay in the amplitude of oscillation over time."
+  complexity: 1
+
+- id: "phys_005"
+  topic: "physics"
+  tags: ["mechanics", "coriolis"]
+  question: "What is the Coriolis force and when does it arise?"
+  truth: "The Coriolis force is a fictitious or inertial force that acts on objects that are in motion within a frame of reference that rotates with respect to an inertial frame. It acts perpendicular to the direction of motion and the axis of rotation."
+  complexity: 2
+
+- id: "phys_006"
+  topic: "physics"
+  tags: ["mechanics", "lagrangian"]
+  question: "Define the Lagrangian of a mechanical system."
+  truth: "The Lagrangian (L) of a system is defined as the difference between its kinetic energy (T) and its potential energy (V): L = T - V. It is the core quantity used in Lagrangian mechanics to derive the equations of motion."
+  complexity: 2
+
+- id: "phys_007"
+  topic: "physics"
+  tags: ["mechanics", "hamiltonian"]
+  question: "How does the Hamiltonian relate to the total energy of a system?"
+  truth: "For a system where the potential energy depends only on coordinates and the transformation equations to generalized coordinates do not depend explicitly on time, the Hamiltonian (H) represents the total mechanical energy of the system, H = T + V."
+  complexity: 2
+
+- id: "phys_008"
+  topic: "physics"
+  tags: ["mechanics", "rigid body"]
+  question: "What is the moment of inertia?"
+  truth: "The moment of inertia is a tensor quantity that determines the torque needed for a desired angular acceleration about a rotational axis, similar to how mass determines the force needed for acceleration. It depends on the mass distribution relative to the axis of rotation."
+  complexity: 1
+
+- id: "phys_009"
+  topic: "physics"
+  tags: ["mechanics", "gravity"]
+  question: "State Kepler's Second Law of planetary motion."
+  truth: "Kepler's Second Law states that a line segment joining a planet and the Sun sweeps out equal areas during equal intervals of time. This is a direct consequence of the conservation of angular momentum."
+  complexity: 1
+
+- id: "phys_010"
+  topic: "physics"
+  tags: ["mechanics", "relativity"]
+  question: "What is the Galilean transformation?"
+  truth: "The Galilean transformation is a set of equations in classical physics that relate the space and time coordinates of two systems moving at a constant velocity relative to each other, assuming time is absolute and universal."
+  complexity: 1
+
+- id: "phys_011"
+  topic: "physics"
+  tags: ["electromagnetism", "maxwell"]
+  question: "What does Gauss's Law for magnetism imply about magnetic monopoles?"
+  truth: "Gauss's Law for magnetism (div B = 0) implies that there are no isolated magnetic charges (magnetic monopoles); magnetic field lines are always closed loops, meaning every north pole is accompanied by a south pole."
+  complexity: 1
+
+- id: "phys_012"
+  topic: "physics"
+  tags: ["electromagnetism", "maxwell"]
+  question: "Describe the physical meaning of the displacement current in Maxwell's equations."
+  truth: "The displacement current represents the rate of change of the electric field (or electric displacement field) and explains how a changing electric field can generate a magnetic field, just as a conduction current does. It was introduced by Maxwell to satisfy the conservation of charge."
+  complexity: 2
+
+- id: "phys_013"
+  topic: "physics"
+  tags: ["electromagnetism", "potential"]
+  question: "What is the relationship between electric field and electric potential?"
+  truth: "The electric field is the negative gradient of the electric potential (E = -grad V). This means the electric field points in the direction of the steepest decrease in potential."
+  complexity: 1
+
+- id: "phys_014"
+  topic: "physics"
+  tags: ["electromagnetism", "waves"]
+  question: "What is the Poynting vector?"
+  truth: "The Poynting vector (S) represents the directional energy flux (the rate of energy transfer per unit area) of an electromagnetic field. It is defined as the cross product of the electric field and the magnetic field (S = E x H)."
+  complexity: 2
+
+- id: "phys_015"
+  topic: "physics"
+  tags: ["electromagnetism", "induction"]
+  question: "State Lenz's Law."
+  truth: "Lenz's Law states that the direction of an induced electromotive force (EMF) and the resulting current in a closed loop is such that it creates a magnetic field that opposes the change in magnetic flux that produced it."
+  complexity: 1
+
+- id: "phys_016"
+  topic: "physics"
+  tags: ["electromagnetism", "optics"]
+  question: "What is the phenomenon of total internal reflection?"
+  truth: "Total internal reflection occurs when a light wave travels from a medium with a higher refractive index to one with a lower refractive index at an angle of incidence greater than the critical angle, causing all light to be reflected back into the denser medium."
+  complexity: 1
+
+- id: "phys_017"
+  topic: "physics"
+  tags: ["electromagnetism", "gauge"]
+  question: "What is Gauge Invariance in electromagnetism?"
+  truth: "Gauge invariance is the property that the electric and magnetic fields (observables) remain unchanged if the scalar potential V and vector potential A are transformed simultaneously by specific relations involving an arbitrary scalar function. It implies potentials are not unique."
+  complexity: 3
+
+- id: "phys_018"
+  topic: "physics"
+  tags: ["electromagnetism", "lorentz force"]
+  question: "Write the expression for the Lorentz force on a charged particle."
+  truth: "The Lorentz force F on a particle of charge q moving with velocity v in an electric field E and magnetic field B is given by F = q(E + v x B)."
+  complexity: 1
+
+- id: "phys_019"
+  topic: "physics"
+  tags: ["electromagnetism", "radiation"]
+  question: "Why do accelerating charges radiate energy?"
+  truth: "Accelerating charges cause a disturbance in the electromagnetic field that propagates outward at the speed of light. This propagating disturbance carries energy away from the charge, observed as electromagnetic radiation (Larmor formula)."
+  complexity: 2
+
+- id: "phys_020"
+  topic: "physics"
+  tags: ["electromagnetism", "capacitance"]
+  question: "How does a dielectric material affect a capacitor?"
+  truth: "Inserting a dielectric material between the plates of a capacitor increases its capacitance. The dielectric reduces the effective electric field between the plates due to polarization, allowing the capacitor to store more charge for the same potential difference."
+  complexity: 1
+
+- id: "phys_021"
+  topic: "physics"
+  tags: ["thermodynamics", "entropy"]
+  question: "State the Second Law of Thermodynamics in terms of entropy."
+  truth: "The Second Law states that the total entropy of an isolated system can never decrease over time; it remains constant for reversible processes and increases for irreversible processes, ultimately reaching a maximum at thermodynamic equilibrium."
+  complexity: 1
+
+- id: "phys_022"
+  topic: "physics"
+  tags: ["thermodynamics", "laws"]
+  question: "What is the Zeroth Law of Thermodynamics?"
+  truth: "The Zeroth Law states that if two systems are each in thermal equilibrium with a third system, then they are in thermal equilibrium with each other. This defines temperature as a measurable and valid physical property."
+  complexity: 1
+
+- id: "phys_023"
+  topic: "physics"
+  tags: ["thermodynamics", "statistical"]
+  question: "What is the Boltzmann distribution?"
+  truth: "The Boltzmann distribution describes the probability distribution of particles in a system over various possible energy states for a system in thermal equilibrium. The probability is proportional to exp(-E/kT), where E is energy, k is Boltzmann's constant, and T is temperature."
+  complexity: 2
+
+- id: "phys_024"
+  topic: "physics"
+  tags: ["thermodynamics", "cycles"]
+  question: "Why is the Carnot cycle important?"
+  truth: "The Carnot cycle is a theoretical thermodynamic cycle that provides the upper limit on the efficiency that any classical thermodynamic engine can achieve during the conversion of heat into work between two thermal reservoirs."
+  complexity: 1
+
+- id: "phys_025"
+  topic: "physics"
+  tags: ["thermodynamics", "potential"]
+  question: "Define Helmholtz Free Energy."
+  truth: "Helmholtz Free Energy (F) is a thermodynamic potential defined as F = U - TS, where U is internal energy, T is temperature, and S is entropy. It measures the useful work obtainable from a closed thermodynamic system at a constant temperature and volume."
+  complexity: 2
+
+- id: "phys_026"
+  topic: "physics"
+  tags: ["thermodynamics", "phase transition"]
+  question: "What characterizes a first-order phase transition?"
+  truth: "A first-order phase transition is characterized by a discontinuity in the first derivative of the free energy with respect to a thermodynamic variable (like volume or entropy). This manifests as the absorption or release of latent heat."
+  complexity: 2
+
+- id: "phys_027"
+  topic: "physics"
+  tags: ["thermodynamics", "equipartition"]
+  question: "What is the Equipartition Theorem?"
+  truth: "The Equipartition Theorem states that in thermal equilibrium, energy is shared equally among all of its active quadratic degrees of freedom, with each degree of freedom contributing an average energy of (1/2)kT."
+  complexity: 2
+
+- id: "phys_028"
+  topic: "physics"
+  tags: ["thermodynamics", "blackbody"]
+  question: "What is the Ultraviolet Catastrophe?"
+  truth: "The Ultraviolet Catastrophe was the prediction of classical physics (Rayleigh-Jeans law) that an ideal black body at thermal equilibrium would emit radiation with infinite power at high frequencies (UV range). It was resolved by Planck's quantization of energy."
+  complexity: 2
+
+- id: "phys_029"
+  topic: "physics"
+  tags: ["thermodynamics", "maxwell relations"]
+  question: "What are Maxwell relations in thermodynamics?"
+  truth: "Maxwell relations are a set of equations derived from the symmetry of second derivatives and the definitions of thermodynamic potentials. They relate partial derivatives of properties like pressure, volume, temperature, and entropy, making it easier to measure quantities that are hard to experiment on directly."
+  complexity: 3
+
+- id: "phys_030"
+  topic: "physics"
+  tags: ["thermodynamics", "fermi-dirac"]
+  question: "How does Fermi-Dirac statistics differ from Bose-Einstein statistics?"
+  truth: "Fermi-Dirac statistics applies to fermions (particles with half-integer spin) which obey the Pauli Exclusion Principle (no two particles in the same state). Bose-Einstein statistics applies to bosons (integer spin) which can occupy the same quantum state in unlimited numbers."
+  complexity: 2
+
+- id: "phys_031"
+  topic: "physics"
+  tags: ["quantum", "uncertainty"]
+  question: "State the Heisenberg Uncertainty Principle."
+  truth: "The Heisenberg Uncertainty Principle states that certain pairs of physical properties, like position and momentum, cannot be simultaneously known to arbitrary precision. The product of their uncertainties is at least h-bar/2."
+  complexity: 1
+
+- id: "phys_032"
+  topic: "physics"
+  tags: ["quantum", "wavefunction"]
+  question: "What is the physical interpretation of the wave function (psi)?"
+  truth: "According to the Born rule, the wave function itself has no physical meaning, but its squared modulus |psi|^2 represents the probability density of finding the particle at a specific position and time."
+  complexity: 1
+
+- id: "phys_033"
+  topic: "physics"
+  tags: ["quantum", "tunneling"]
+  question: "What is quantum tunneling?"
+  truth: "Quantum tunneling is a phenomenon where a particle passes through a potential energy barrier that it classically could not surmount because its total energy is lower than the potential of the barrier. It arises from the wave-like nature of particles."
+  complexity: 1
+
+- id: "phys_034"
+  topic: "physics"
+  tags: ["quantum", "operators"]
+  question: "What is an eigenstate in quantum mechanics?"
+  truth: "An eigenstate of an operator is a state vector that, when acted upon by that operator, yields the same state vector multiplied by a scalar constant (the eigenvalue). If a system is in an eigenstate of an observable, a measurement of that observable will yield the eigenvalue with 100% certainty."
+  complexity: 2
+
+- id: "phys_035"
+  topic: "physics"
+  tags: ["quantum", "schrodinger"]
+  question: "Difference between time-dependent and time-independent Schrödinger equations."
+  truth: "The time-dependent equation describes how the wave function evolves over time. The time-independent equation is an eigenvalue equation used to find the stationary states (energy levels) of a system where the potential does not change with time."
+  complexity: 2
+
+- id: "phys_036"
+  topic: "physics"
+  tags: ["quantum", "spin"]
+  question: "What is the Stern-Gerlach experiment?"
+  truth: "The Stern-Gerlach experiment demonstrated that the spatial orientation of angular momentum is quantized. By passing silver atoms through an inhomogeneous magnetic field, it showed that particles possess an intrinsic angular momentum called spin."
+  complexity: 2
+
+- id: "phys_037"
+  topic: "physics"
+  tags: ["quantum", "entanglement"]
+  question: "Define quantum entanglement."
+  truth: "Quantum entanglement is a phenomenon where the quantum states of two or more particles become linked such that the state of one cannot be described independently of the others, even when separated by large distances. Measurement of one instantly correlates with the measurement of the other."
+  complexity: 2
+
+- id: "phys_038"
+  topic: "physics"
+  tags: ["quantum", "perturbation"]
+  question: "What is the purpose of Perturbation Theory in quantum mechanics?"
+  truth: "Perturbation Theory is a mathematical method used to find an approximate solution to a problem that cannot be solved exactly, by starting with the exact solution of a related, simpler problem (unperturbed Hamiltonian) and adding a 'small' term (perturbation)."
+  complexity: 3
+
+- id: "phys_039"
+  topic: "physics"
+  tags: ["quantum", "hydrogen"]
+  question: "Why are the energy levels of the hydrogen atom discrete?"
+  truth: "The energy levels are discrete because the electron is confined within the electrostatic potential well of the nucleus (Coulomb potential). The boundary conditions on the electron's wave function (it must go to zero at infinity) allow only specific standing wave solutions."
+  complexity: 2
+
+- id: "phys_040"
+  topic: "physics"
+  tags: ["quantum", "collapse"]
+  question: "What is meant by wavefunction collapse?"
+  truth: "Wavefunction collapse is the mechanism in the Copenhagen interpretation by which a wavefunction, initially in a superposition of several eigenstates, reduces to a single eigenstate due to interaction with the external world (measurement)."
+  complexity: 2
+
+- id: "phys_041"
+  topic: "physics"
+  tags: ["relativity", "dilation"]
+  question: "Explain Time Dilation in Special Relativity."
+  truth: "Time dilation is the difference in the elapsed time measured by two clocks. A clock that is moving relative to an observer will be measured to tick slower than a clock that is at rest in the observer's frame. It is described by the factor gamma."
+  complexity: 1
+
+- id: "phys_042"
+  topic: "physics"
+  tags: ["relativity", "simultaneity"]
+  question: "What is the relativity of simultaneity?"
+  truth: "Relativity of simultaneity is the concept that simultaneity is not absolute; two events that appear simultaneous to an observer in one inertial reference frame may not appear simultaneous to an observer in a different inertial frame moving relative to the first."
+  complexity: 2
+
+- id: "phys_043"
+  topic: "physics"
+  tags: ["relativity", "invariant"]
+  question: "What is the spacetime interval?"
+  truth: "The spacetime interval is a quantity (s^2 = (ct)^2 - x^2 - y^2 - z^2) that remains invariant (unchanged) under Lorentz transformations between different inertial frames. It defines the causal relationship between two events."
+  complexity: 2
+
+- id: "phys_044"
+  topic: "physics"
+  tags: ["relativity", "equivalence"]
+  question: "State the Equivalence Principle of General Relativity."
+  truth: "The Equivalence Principle states that the local effects of a gravitational field are indistinguishable from the effects of being in an accelerated frame of reference without gravity. This led Einstein to conclude that gravity is the curvature of spacetime."
+  complexity: 2
+
+- id: "phys_045"
+  topic: "physics"
+  tags: ["relativity", "mass-energy"]
+  question: "Explain the meaning of E=mc^2."
+  truth: "The equation represents mass-energy equivalence, stating that mass is a form of energy. A small amount of mass can be converted into a large amount of energy, and energy possesses an effective mass."
+  complexity: 1
+
+- id: "phys_046"
+  topic: "physics"
+  tags: ["relativity", "light"]
+  question: "Why is the speed of light constant in all inertial frames?"
+  truth: "The constancy of the speed of light in vacuum is a fundamental postulate of Special Relativity. It arises because the laws of electromagnetism (Maxwell's equations) must be valid in all inertial frames, requiring c to be invariant."
+  complexity: 2
+
+- id: "phys_047"
+  topic: "physics"
+  tags: ["relativity", "tensors"]
+  question: "What is the role of the Metric Tensor in General Relativity?"
+  truth: "The Metric Tensor describes the geometry of spacetime. It defines distances, angles, and volumes in curved spacetime and is the fundamental field variable in Einstein's field equations, relating curvature to matter and energy."
+  complexity: 3
+
+- id: "phys_048"
+  topic: "physics"
+  tags: ["relativity", "twin paradox"]
+  question: "Briefly explain the resolution of the Twin Paradox."
+  truth: "The Twin Paradox involves one twin traveling to a star and back at high speed while the other stays on Earth. The traveling twin ages less. The symmetry is broken because the traveling twin undergoes acceleration (changing frames) to return, making their frame non-inertial."
+  complexity: 2
+
+- id: "phys_049"
+  topic: "physics"
+  tags: ["relativity", "black holes"]
+  question: "What is an Event Horizon?"
+  truth: "An Event Horizon is a boundary in spacetime beyond which events cannot affect an outside observer. In the context of a black hole, it is the radius at which the escape velocity equals the speed of light."
+  complexity: 1
+
+- id: "phys_050"
+  topic: "physics"
+  tags: ["relativity", "lorentz"]
+  question: "What are Lorentz Transformations?"
+  truth: "Lorentz transformations are coordinate transformations between two coordinate frames that move at constant velocity relative to each other. They replace Galilean transformations at high speeds, preserving the speed of light and mixing space and time coordinates."
+  complexity: 2

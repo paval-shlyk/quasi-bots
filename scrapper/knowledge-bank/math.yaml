@@ -1,0 +1,349 @@
+- id: "math_001"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the closed form for the sum of the first n integers, denoted as S_n = sum_{k=1}^n k?"
+  truth: "The closed form is n(n+1)/2."
+  complexity: 1
+
+- id: "math_002"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the recurrence relation for the Tower of Hanoi problem with n disks?"
+  truth: "T_n = 2T_{n-1} + 1, with T_0 = 0."
+  complexity: 1
+
+- id: "math_003"
+  topic: "math"
+  tags: ["analysis", "rudin", "topology"]
+  question: "Define a metric space."
+  truth: "A metric space is a set X, associated with a function d (the metric) such that for all x, y, z in X: d(x,y) >= 0; d(x,y) = 0 iff x=y; d(x,y) = d(y,x); and d(x,y) <= d(x,z) + d(z,y)."
+  complexity: 1
+
+- id: "math_004"
+  topic: "math"
+  tags: ["analysis", "rudin", "topology"]
+  question: "What is a limit point of a set E?"
+  truth: "A point p is a limit point of the set E if every neighborhood of p contains a point q != p such that q is in E."
+  complexity: 2
+
+- id: "math_005"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What condition must be met for a matrix A to be invertible?"
+  truth: "The determinant of A must be non-zero (det(A) != 0)."
+  complexity: 1
+
+- id: "math_006"
+  topic: "math"
+  tags: ["probability"]
+  question: "State Bayes' Theorem."
+  truth: "P(A|B) = (P(B|A) * P(A)) / P(B), provided P(B) > 0."
+  complexity: 1
+
+- id: "math_007"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the value of sum_{k=0}^n binom(n, k)?"
+  truth: "2^n."
+  complexity: 1
+
+- id: "math_008"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "State the Bolzano-Weierstrass theorem for R^k."
+  truth: "Every bounded infinite subset of R^k has a limit point in R^k."
+  complexity: 2
+
+- id: "math_009"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is an eigenvalue of a matrix A?"
+  truth: "A scalar lambda is an eigenvalue of A if there exists a non-zero vector v such that Av = lambda * v."
+  complexity: 1
+
+- id: "math_010"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the expectation of a geometric distribution with probability of success p?"
+  truth: "1/p."
+  complexity: 2
+
+- id: "math_011"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the generating function for the sequence <1, 1, 1, ...>?"
+  truth: "1 / (1 - z)."
+  complexity: 2
+
+- id: "math_012"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "What does it mean for a set to be compact?"
+  truth: "A set K is compact if every open cover of K contains a finite subcover."
+  complexity: 2
+
+- id: "math_013"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "Is the set of rational numbers Q countable or uncountable?"
+  truth: "Countable."
+  complexity: 1
+
+- id: "math_014"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "Define the rank of a matrix."
+  truth: "The rank is the maximum number of linearly independent column vectors (or row vectors) in the matrix."
+  complexity: 1
+
+- id: "math_015"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the recurrence for the Fibonacci numbers?"
+  truth: "F_n = F_{n-1} + F_{n-2}, with F_0 = 0, F_1 = 1."
+  complexity: 1
+
+- id: "math_016"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the variance of a Poisson distribution with parameter lambda?"
+  truth: "lambda."
+  complexity: 2
+
+- id: "math_017"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "Define a Cauchy sequence."
+  truth: "A sequence {p_n} is Cauchy if for every epsilon > 0 there is an integer N such that d(p_n, p_m) < epsilon for all n, m >= N."
+  complexity: 2
+
+- id: "math_018"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is the trace of a matrix?"
+  truth: "The sum of the diagonal elements of the matrix."
+  complexity: 1
+
+- id: "math_019"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the closed form of the sum of squares: sum_{k=1}^n k^2?"
+  truth: "n(n+1)(2n+1)/6."
+  complexity: 2
+
+- id: "math_020"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the Probability Mass Function (PMF) of a Binomial distribution B(n, p)?"
+  truth: "P(X=k) = binom(n, k) * p^k * (1-p)^(n-k)."
+  complexity: 2
+
+- id: "math_021"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "State the Heine-Borel theorem."
+  truth: "A subset E of R^k is compact if and only if it is closed and bounded."
+  complexity: 2
+
+- id: "math_022"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "When are two vectors orthogonal?"
+  truth: "When their dot product is zero."
+  complexity: 1
+
+- id: "math_023"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is Vandermonde's Identity?"
+  truth: "binom(r+s, n) = sum_k binom(r, k) * binom(s, n-k)."
+  complexity: 3
+
+- id: "math_024"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "Define a connected set."
+  truth: "A set E is connected if it cannot be represented as the union of two separated sets."
+  complexity: 2
+
+- id: "math_025"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is a symmetric matrix?"
+  truth: "A matrix A is symmetric if A = A^T (equal to its transpose)."
+  complexity: 1
+
+- id: "math_026"
+  topic: "math"
+  tags: ["probability"]
+  question: "State the Law of Total Probability."
+  truth: "P(A) = sum_n P(A|B_n)P(B_n) where {B_n} is a partition of the sample space."
+  complexity: 2
+
+- id: "math_027"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What are Stirling numbers of the second kind, S(n, k), used for?"
+  truth: "Counting the number of ways to partition a set of n elements into k non-empty subsets."
+  complexity: 3
+
+- id: "math_028"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "Is the union of an infinite number of closed sets always closed?"
+  truth: "No. Consider the union of [1/n, 1-1/n] for n=3,4,... which is (0, 1), an open set."
+  complexity: 2
+
+- id: "math_029"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is the dimension of the vector space R^n?"
+  truth: "n."
+  complexity: 1
+
+- id: "math_030"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the standard deviation of a standard normal distribution?"
+  truth: "1."
+  complexity: 1
+
+- id: "math_031"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the harmonic number H_n?"
+  truth: "H_n = sum_{k=1}^n 1/k."
+  complexity: 2
+
+- id: "math_032"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "What is the supremum of a set E?"
+  truth: "The least upper bound of E."
+  complexity: 1
+
+- id: "math_033"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is the kernel of a linear transformation T?"
+  truth: "The set of all vectors v such that T(v) = 0."
+  complexity: 2
+
+- id: "math_034"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the Principle of Inclusion-Exclusion for two sets A and B?"
+  truth: "|A union B| = |A| + |B| - |A intersect B|."
+  complexity: 1
+
+- id: "math_035"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "If a function f is differentiable at a point x, is it continuous at x?"
+  truth: "Yes, differentiability implies continuity."
+  complexity: 2
+
+- id: "math_036"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is an orthogonal matrix?"
+  truth: "A square matrix Q whose columns and rows are orthogonal unit vectors (i.e., Q^T Q = I)."
+  complexity: 2
+
+- id: "math_037"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the Central Limit Theorem?"
+  truth: "The distribution of the sum (or average) of a large number of independent, identically distributed variables approaches a normal distribution."
+  complexity: 3
+
+- id: "math_038"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the coefficient of x^k in the expansion of (1+x)^n?"
+  truth: "binom(n, k)."
+  complexity: 1
+
+- id: "math_039"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "State the Mean Value Theorem."
+  truth: "If f is continuous on [a,b] and differentiable on (a,b), there exists c in (a,b) such that f'(c) = (f(b) - f(a)) / (b - a)."
+  complexity: 2
+
+- id: "math_040"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is the characteristic equation of a matrix A?"
+  truth: "det(A - lambda * I) = 0."
+  complexity: 2
+
+- id: "math_041"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the recurrence for Eulerian numbers E(n, k)?"
+  truth: "E(n, k) = (k+1)E(n-1, k) + (n-k)E(n-1, k-1)."
+  complexity: 3
+
+- id: "math_042"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "What is a Riemann integral?"
+  truth: "The limit of Riemann sums as the partition size approaches zero, if it exists."
+  complexity: 2
+
+- id: "math_043"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "If A is a 3x3 matrix and det(A) = 5, what is det(2A)?"
+  truth: "40 (since det(cA) = c^n * det(A) for an nxn matrix, so 2^3 * 5 = 40)."
+  complexity: 2
+
+- id: "math_044"
+  topic: "math"
+  tags: ["probability"]
+  question: "What is the expected value of rolling a fair six-sided die?"
+  truth: "3.5."
+  complexity: 1
+
+- id: "math_045"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What does the floor function floor(x) represent?"
+  truth: "The greatest integer less than or equal to x."
+  complexity: 1
+
+- id: "math_046"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "Is every continuous function on a compact set uniformly continuous?"
+  truth: "Yes."
+  complexity: 3
+
+- id: "math_047"
+  topic: "math"
+  tags: ["linear-algebra"]
+  question: "What is the relationship between the determinant and the eigenvalues of a matrix?"
+  truth: "The determinant is the product of the eigenvalues."
+  complexity: 2
+
+- id: "math_048"
+  topic: "math"
+  tags: ["probability"]
+  question: "Are disjoint events independent?"
+  truth: "Generally no, unless one has probability zero. If A and B are disjoint and P(A)>0, P(B)>0, knowing A occurred means B cannot, so P(B|A)=0 != P(B)."
+  complexity: 3
+
+- id: "math_049"
+  topic: "math"
+  tags: ["combinatorics", "concrete-mathematics"]
+  question: "What is the value of sum_{k=0}^n (-1)^k binom(n, k)?"
+  truth: "0 (for n > 0)."
+  complexity: 2
+
+- id: "math_050"
+  topic: "math"
+  tags: ["analysis", "rudin"]
+  question: "What is the Weierstrass Approximation Theorem?"
+  truth: "Every continuous function defined on an interval [a, b] can be uniformly approximated as closely as desired by a polynomial function."
+  complexity: 3

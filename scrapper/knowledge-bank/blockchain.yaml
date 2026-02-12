@@ -1,0 +1,349 @@
+- id: "blockchain_001"
+  topic: "blockchain"
+  tags: ["bitcoin", "consensus", "pow"]
+  question: "What is the primary purpose of Proof-of-Work (PoW) in the Bitcoin network?"
+  truth: "The primary purpose of Proof-of-Work in Bitcoin is to facilitate distributed consensus by solving a computational puzzle that is hard to produce but easy to verify. It secures the network against Sybil attacks and double-spending by requiring energy expenditure to propose valid blocks."
+  complexity: 1
+
+- id: "blockchain_002"
+  topic: "blockchain"
+  tags: ["ethereum", "evm", "smart-contracts"]
+  question: "What is the Ethereum Virtual Machine (EVM)?"
+  truth: "The EVM is a quasi-Turing-complete state machine that executes smart contracts and updates the Ethereum state. It operates as a stack-based virtual machine with a specific instruction set (opcodes), ensuring that code runs deterministically across all nodes in the network."
+  complexity: 2
+
+- id: "blockchain_003"
+  topic: "blockchain"
+  tags: ["consensus", "pos"]
+  question: "How does Proof-of-Stake (PoS) differ from Proof-of-Work (PoW) regarding block proposal?"
+  truth: "In PoS, block validators are chosen deterministically based on the amount of native tokens they have staked (locked up) as collateral, rather than by solving energy-intensive cryptographic puzzles. This significantly reduces energy consumption compared to PoW."
+  complexity: 2
+
+- id: "blockchain_004"
+  topic: "blockchain"
+  tags: ["transactions", "utxo"]
+  question: "Explain the Unspent Transaction Output (UTXO) model."
+  truth: "In the UTXO model, there are no accounts or balances at the protocol level. Instead, users own 'unspent outputs' from previous transactions. A transaction consumes one or more existing UTXOs as inputs and creates new UTXOs as outputs. The sum of inputs must equal the sum of outputs plus transaction fees."
+  complexity: 2
+
+- id: "blockchain_005"
+  topic: "blockchain"
+  tags: ["blocks", "merkle-tree"]
+  question: "What is a Merkle Tree and why is it used in blockchain blocks?"
+  truth: "A Merkle Tree is a binary hash tree where every leaf node is a hash of a data block (like a transaction) and every non-leaf node is a hash of its children. It allows for efficient and secure verification of large data structures; a node can verify inclusion of a transaction in a block using only the Merkle Root and a logarithmic number of hashes (the Merkle path)."
+  complexity: 2
+
+- id: "blockchain_006"
+  topic: "blockchain"
+  tags: ["smart-contracts", "solidity"]
+  question: "What is a 'reentrancy attack' in the context of smart contracts?"
+  truth: "A reentrancy attack occurs when an external contract call acts maliciously by calling back into the calling contract before the first execution is finished. This can allow the attacker to manipulate state (like balances) repeatedly before the original function updates the state to reflect the initial withdrawal."
+  complexity: 3
+
+- id: "blockchain_007"
+  topic: "blockchain"
+  tags: ["ethereum", "gas"]
+  question: "What is 'Gas' in Ethereum?"
+  truth: "Gas is a unit that measures the computational effort required to execute specific operations on the Ethereum network. Users pay gas fees (in Ether) to miners/validators to incentivize them to include transactions in blocks. It prevents infinite loops and resource spamming."
+  complexity: 1
+
+- id: "blockchain_008"
+  topic: "blockchain"
+  tags: ["bitcoin", "halving"]
+  question: "What is the Bitcoin Halving?"
+  truth: "The Bitcoin Halving is a pre-programmed event that occurs approximately every four years (or every 210,000 blocks), where the block reward given to miners for processing transactions is cut in half. This mechanism controls the issuance rate of new bitcoins, simulating deflationary scarcity."
+  complexity: 1
+
+- id: "blockchain_009"
+  topic: "blockchain"
+  tags: ["p2p", "network"]
+  question: "What role do full nodes play in a blockchain network?"
+  truth: "Full nodes maintain a complete copy of the blockchain ledger and independently verify all transactions and blocks against the network's consensus rules. They ensure the integrity of the network by rejecting invalid blocks or transactions, even if a majority of miners support them."
+  complexity: 2
+
+- id: "blockchain_010"
+  topic: "blockchain"
+  tags: ["cryptography", "keys"]
+  question: "What is the relationship between a private key and a public key in blockchain?"
+  truth: "A private key is a randomly generated secret number used to sign transactions. A public key is mathematically derived from the private key (usually via Elliptic Curve Multiplication). While the public key can be shared to receive funds, the private key must remain secret to prove ownership and authorize spending."
+  complexity: 1
+
+- id: "blockchain_011"
+  topic: "blockchain"
+  tags: ["ethereum", "account-model"]
+  question: "How does the Account model in Ethereum differ from Bitcoin's UTXO model?"
+  truth: "In Ethereum's Account model, the state is stored as a mapping of addresses to account information (nonce, balance, code, storage). Transactions explicitly update these balances, similar to a bank database, rather than consuming and creating discrete outputs like in the UTXO model."
+  complexity: 2
+
+- id: "blockchain_012"
+  topic: "blockchain"
+  tags: ["consensus", "byzantine-generals"]
+  question: "What is the Byzantine Generals Problem?"
+  truth: "The Byzantine Generals Problem describes the difficulty decentralized parties face in arriving at a consensus without a trusted central party, especially when some participants may be malicious or unreliable. Blockchains solve this via consensus mechanisms like PoW or PoS."
+  complexity: 3
+
+- id: "blockchain_013"
+  topic: "blockchain"
+  tags: ["blocks", "structure"]
+  question: "What are the two main parts of a Bitcoin block?"
+  truth: "A Bitcoin block consists of the Block Header and the Transaction Data (payload). The header contains metadata like the version, previous block hash, merkle root, timestamp, difficulty target, and nonce. The payload contains the list of transactions."
+  complexity: 1
+
+- id: "blockchain_014"
+  topic: "blockchain"
+  tags: ["smart-contracts", "oracle"]
+  question: "What is a blockchain oracle?"
+  truth: "A blockchain oracle is a third-party service that connects smart contracts with the outside world. It feeds external data (like price feeds, weather data) to the blockchain, allowing smart contracts to execute based on real-world events."
+  complexity: 2
+
+- id: "blockchain_015"
+  topic: "blockchain"
+  tags: ["transactions", "nonce"]
+  question: "What is the purpose of a 'nonce' in an Ethereum transaction?"
+  truth: "In Ethereum, a nonce is a counter indicating the number of transactions sent from an address. It ensures transactions are processed in a specific order and prevents replay attacks, where a transaction could otherwise be broadcast and executed multiple times."
+  complexity: 2
+
+- id: "blockchain_016"
+  topic: "blockchain"
+  tags: ["consensus", "difficulty"]
+  question: "How does Bitcoin adjust its mining difficulty?"
+  truth: "Bitcoin adjusts its mining difficulty every 2,016 blocks (approx. 2 weeks) to ensure the average block time remains around 10 minutes. If blocks are mined too quickly, difficulty increases; if too slowly, it decreases."
+  complexity: 2
+
+- id: "blockchain_017"
+  topic: "blockchain"
+  tags: ["ethereum", "turing-complete"]
+  question: "What does it mean for Ethereum to be Turing-complete?"
+  truth: "It means the Ethereum Virtual Machine (EVM) can ostensibly solve any computational problem, given enough resources (time and memory). It supports loops and complex logic, unlike Bitcoin's limited Script language, though in practice it is bounded by the gas limit."
+  complexity: 2
+
+- id: "blockchain_018"
+  topic: "blockchain"
+  tags: ["cryptography", "hash"]
+  question: "What properties make a cryptographic hash function suitable for blockchain?"
+  truth: "Key properties include collision resistance (hard to find two inputs with same output), preimage resistance (hard to reverse), determinism (same input always gives same output), and the avalanche effect (small input change drastically changes output)."
+  complexity: 2
+
+- id: "blockchain_019"
+  topic: "blockchain"
+  tags: ["consensus", "forks"]
+  question: "What is a 'hard fork'?"
+  truth: "A hard fork is a radical change to a network's protocol that makes previously invalid blocks/transactions valid (or vice-versa). It requires all nodes or users to upgrade to the latest version of the protocol software. Nodes running the old version will not accept the new chain."
+  complexity: 2
+
+- id: "blockchain_020"
+  topic: "blockchain"
+  tags: ["consensus", "forks"]
+  question: "What is a 'soft fork'?"
+  truth: "A soft fork is a backward-compatible upgrade to the protocol where previously valid blocks become invalid. Old nodes will still recognize the new blocks as valid, meaning not all participants need to upgrade immediately for the network to maintain consensus."
+  complexity: 2
+
+- id: "blockchain_021"
+  topic: "blockchain"
+  tags: ["p2p", "gossip"]
+  question: "How do transactions propagate through a blockchain network?"
+  truth: "Transactions propagate via a 'gossip protocol' or 'flooding'. A node verifies a transaction and, if valid, forwards it to its connected peers. This continues until the transaction reaches the entire network and is picked up by miners/validators."
+  complexity: 1
+
+- id: "blockchain_022"
+  topic: "blockchain"
+  tags: ["smart-contracts", "events"]
+  question: "What are 'events' in Solidity?"
+  truth: "Events are convenience interfaces with the EVM logging facilities. When emitted, they store arguments in the transaction's log, which are accessible to external applications (dApps) but not to smart contracts themselves. They are crucial for frontend updates."
+  complexity: 2
+
+- id: "blockchain_023"
+  topic: "blockchain"
+  tags: ["bitcoin", "segwit"]
+  question: "What is Segregated Witness (SegWit)?"
+  truth: "SegWit is a protocol upgrade for Bitcoin that separates (segregates) signature data (witness) from transaction data. This fixes transaction malleability and increases effective block capacity by allowing more transactions to fit in a block."
+  complexity: 3
+
+- id: "blockchain_024"
+  topic: "blockchain"
+  tags: ["ethereum", "storage"]
+  question: "What is the difference between 'memory' and 'storage' in Solidity?"
+  truth: "Storage is persistent data stored on the blockchain (expensive to use). Memory is temporary data storage that exists only during the execution of a function (cheaper). Stack is a small local variable area."
+  complexity: 2
+
+- id: "blockchain_025"
+  topic: "blockchain"
+  tags: ["consensus", "51-attack"]
+  question: "What is a 51% attack?"
+  truth: "A 51% attack occurs when a single entity controls more than 50% of the network's mining hash rate or staked value. This allows them to double-spend coins, prevent transactions from confirming, and reorganize recent blocks."
+  complexity: 2
+
+- id: "blockchain_026"
+  topic: "blockchain"
+  tags: ["transactions", "mempool"]
+  question: "What is the 'mempool'?"
+  truth: "The mempool (memory pool) is a waiting area on a node where unconfirmed transactions sit before they are included in a block by a miner. Each node maintains its own version of the mempool."
+  complexity: 1
+
+- id: "blockchain_027"
+  topic: "blockchain"
+  tags: ["evm", "delegatecall"]
+  question: "What does 'delegatecall' do in the EVM?"
+  truth: "Delegatecall executes code from a target contract in the context of the calling contract. This means storage, msg.sender, and msg.value remain unchanged. It is the primitive used to implement upgradeable proxy patterns."
+  complexity: 3
+
+- id: "blockchain_028"
+  topic: "blockchain"
+  tags: ["security", "sybil"]
+  question: "What is a Sybil Attack?"
+  truth: "A Sybil attack is when a single adversary controls multiple fake identities (nodes) on a peer-to-peer network to gain disproportionate influence. Blockchains mitigate this via PoW or PoS, making identity creation costly."
+  complexity: 2
+
+- id: "blockchain_029"
+  topic: "blockchain"
+  tags: ["ethereum", "erc20"]
+  question: "What is the ERC-20 standard?"
+  truth: "ERC-20 is a technical standard for fungible tokens on Ethereum. It defines a common set of rules (functions like transfer, balanceOf, approve) that allow tokens to be predicted and handled uniformly by wallets and exchanges."
+  complexity: 1
+
+- id: "blockchain_030"
+  topic: "blockchain"
+  tags: ["bitcoin", "script"]
+  question: "What is Bitcoin Script?"
+  truth: "Bitcoin Script is a stack-based, forth-like, non-Turing-complete programming language used to define the conditions under which bitcoins can be spent (locking and unlocking scripts)."
+  complexity: 2
+
+- id: "blockchain_031"
+  topic: "blockchain"
+  tags: ["transactions", "coinbase"]
+  question: "What is a coinbase transaction?"
+  truth: "The coinbase transaction is the first transaction in every block. It is created by the miner and includes the block reward (newly generated coins) plus the sum of all transaction fees in that block."
+  complexity: 1
+
+- id: "blockchain_032"
+  topic: "blockchain"
+  tags: ["p2p", "bloom-filter"]
+  question: "What are Bloom Filters used for in SPV (Simplified Payment Verification) wallets?"
+  truth: "SPV wallets use Bloom Filters to request relevant transactions from full nodes without revealing their exact addresses. It is a probabilistic data structure that efficiently tests whether an element is in a set, allowing for privacy-preserving light client syncing."
+  complexity: 3
+
+- id: "blockchain_033"
+  topic: "blockchain"
+  tags: ["ethereum", "trie"]
+  question: "What is the Patricia Merkle Trie?"
+  truth: "It is the data structure used in Ethereum to store state, transactions, and receipts. It combines the efficiency of a Merkle Tree with the path-compression of a Patricia Trie (Radix Tree), allowing for efficient storage and cryptographic verification of key-value pairs."
+  complexity: 3
+
+- id: "blockchain_034"
+  topic: "blockchain"
+  tags: ["consensus", "finality"]
+  question: "What is probabilistic finality in Bitcoin?"
+  truth: "In Bitcoin, blocks are never theoretically 'final'. Finality is probabilistic; the deeper a block is buried under new blocks, the exponentially lower the probability becomes that it will be reorganized (reversed). 6 confirmations is the standard for 'secure'."
+  complexity: 2
+
+- id: "blockchain_035"
+  topic: "blockchain"
+  tags: ["smart-contracts", "creation"]
+  question: "How is a smart contract address determined in Ethereum?"
+  truth: "A smart contract address is deterministically computed from the creator's address (sender) and their nonce at the time of creation. Specifically: keccak256(rlp_encode([sender, nonce]))[12:]."
+  complexity: 3
+
+- id: "blockchain_036"
+  topic: "blockchain"
+  tags: ["ethereum", "wei"]
+  question: "What is Wei?"
+  truth: "Wei is the smallest denomination of Ether. 1 Ether = 10^18 Wei. It is named after Wei Dai, a cryptography pioneer."
+  complexity: 1
+
+- id: "blockchain_037"
+  topic: "blockchain"
+  tags: ["consensus", "longest-chain"]
+  question: "What is the 'Longest Chain Rule'?"
+  truth: "It is the consensus rule used by nodes to resolve forks. Nodes always consider the chain with the most accumulated Proof-of-Work (often called the longest chain or heaviest chain) as the valid truth."
+  complexity: 2
+
+- id: "blockchain_038"
+  topic: "blockchain"
+  tags: ["cryptography", "digital-signature"]
+  question: "What does verifying a digital signature prove?"
+  truth: "Verifying a digital signature proves that the message was created by the owner of the private key corresponding to the public key, and that the message has not been altered since it was signed."
+  complexity: 1
+
+- id: "blockchain_039"
+  topic: "blockchain"
+  tags: ["ethereum", "fallback"]
+  question: "What is a 'fallback' function in Solidity?"
+  truth: "A fallback function is a special function executed if a transaction is sent to the contract without data, or if the data doesn't match any function signature. It is often used to receive Ether."
+  complexity: 2
+
+- id: "blockchain_040"
+  topic: "blockchain"
+  tags: ["ethereum", "eoa"]
+  question: "What is an Externally Owned Account (EOA) in Ethereum?"
+  truth: "An EOA is an account controlled by a private key (human users), as opposed to a Contract Account controlled by code. Only EOAs can initiate transactions."
+  complexity: 1
+
+- id: "blockchain_041"
+  topic: "blockchain"
+  tags: ["smart-contracts", "selfdestruct"]
+  question: "What happens when the 'selfdestruct' opcode is called in a smart contract?"
+  truth: "The contract is removed from the state blockchain, and any remaining Ether balance in the contract is sent to a specified target address. Code and storage are removed."
+  complexity: 2
+
+- id: "blockchain_042"
+  topic: "blockchain"
+  tags: ["bitcoin", "op-return"]
+  question: "What is OP_RETURN in Bitcoin?"
+  truth: "OP_RETURN is a script opcode used to mark a transaction output as invalid. It is commonly used to embed arbitrary data (up to 80 bytes) into the blockchain without creating a UTXO."
+  complexity: 2
+
+- id: "blockchain_043"
+  topic: "blockchain"
+  tags: ["ethereum", "erc721"]
+  question: "What distinguishes ERC-721 from ERC-20?"
+  truth: "ERC-721 is a standard for Non-Fungible Tokens (NFTs), where each token is unique and distinct (has a unique ID). ERC-20 is for fungible tokens, where all tokens are identical in value and interchangeable."
+  complexity: 1
+
+- id: "blockchain_044"
+  topic: "blockchain"
+  tags: ["evm", "deployment"]
+  question: "What is the difference between 'init code' and 'runtime code' in EVM deployment?"
+  truth: "Init code is the bytecode executed during contract creation (constructor logic) which returns the Runtime code. Runtime code is what is actually stored on the blockchain and executed for future calls."
+  complexity: 3
+
+- id: "blockchain_045"
+  topic: "blockchain"
+  tags: ["consensus", "slashing"]
+  question: "What is 'slashing' in Proof-of-Stake?"
+  truth: "Slashing is a penalty mechanism in PoS where a validator loses a portion or all of their staked funds for malicious behavior, such as double-signing blocks or prolonged downtime."
+  complexity: 2
+
+- id: "blockchain_046"
+  topic: "blockchain"
+  tags: ["blocks", "orphan"]
+  question: "What is an Orphan Block (or Stale Block)?"
+  truth: "An orphan block is a valid block that was mined but not included in the main chain, usually because another block at the same height was propagated faster or had more proof-of-work. In Ethereum, these are called Uncles (or Ommers)."
+  complexity: 2
+
+- id: "blockchain_047"
+  topic: "blockchain"
+  tags: ["security", "front-running"]
+  question: "What is Front-Running in DeFi?"
+  truth: "Front-running involves a bot or miner observing a pending transaction in the mempool and submitting their own transaction with a higher gas fee to get it mined first, profiting from the anticipated price impact of the original transaction."
+  complexity: 2
+
+- id: "blockchain_048"
+  topic: "blockchain"
+  tags: ["transactions", "signing"]
+  question: "What does it mean to sign a transaction 'offline'?"
+  truth: "Offline signing involves generating the transaction and signing it with a private key on a device not connected to the internet (cold storage), then moving the signed data to an online device to broadcast it. This protects the private key from malware."
+  complexity: 1
+
+- id: "blockchain_049"
+  topic: "blockchain"
+  tags: ["ethereum", "eip"]
+  question: "What is an EIP?"
+  truth: "EIP stands for Ethereum Improvement Proposal. It is a formal design document describing a new feature, process, or standard for the Ethereum community and network (e.g., EIP-1559)."
+  complexity: 1
+
+- id: "blockchain_050"
+  topic: "blockchain"
+  tags: ["consensus", "checkpoint"]
+  question: "What is a checkpoint in blockchain syncing?"
+  truth: "Checkpoints are hardcoded hashes of blocks at specific heights in the blockchain software. They prevent nodes from accepting an alternative chain that starts before the checkpoint, protecting against deep reorganizations."
+  complexity: 2

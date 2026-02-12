@@ -4,8 +4,7 @@ use axum::{extract::State, response::IntoResponse};
 
 use crate::AppState;
 
-pub struct NewKnowledge {
-}
+pub struct NewKnowledge {}
 
 /// Add new knowledge entry where you can add this
 pub async fn post_new_knowledge(

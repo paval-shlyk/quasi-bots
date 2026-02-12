@@ -1,13 +1,64 @@
 mod model;
 mod routes;
 
+use std::collections::HashSet;
+
+pub use model::*;
 pub use routes::*;
 
 pub type Topic = String;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct DataBase {
-    pub entries: Vec<KnowledgeEntry>, // pub entries: dashmap::DashMap<Topic, KnowledgeEntry>,
+    pub entries: Vec<KnowledgeEntry>,
+    pub topics: TopicSequence,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub struct TopicSequence {
+    topics: Vec<Topic>,
+    ///index to start
+    next_topic: usize,
+}
+
+impl TopicSequence {
+    pub fn from_slice(topics: &[Topic]) -> Self {
+        let set = HashSet::<Topic>::from_iter(topics.iter().cloned());
+
+        assert_eq!(set.len(), topics.len(), "Duplicated topics are detected");
+
+        Self {
+            topics: topics.to_vec(),
+            next_topic: 0,
+        }
+    }
+
+    pub fn next(&mut self) -> Option<Topic> {
+        if self.next_topic >= self.topics.len() {
+            return None;
+        }
+
+        let unused_topics = &self.topics[self.next_topic..];
+        let idx = rand::random_range(0..unused_topics.len());
+
+        let topic = unused_topics[idx].clone();
+
+        self.topics.swap(self.next_topic, idx + self.next_topic);
+        self.next_topic += 1;
+
+        Some(topic)
+    }
+
+    pub fn try_push(&mut self, topic: Topic) -> anyhow::Result<()> {
+        let is_duplicate =
+            self.topics.iter().find(|old| **old == topic).is_some();
+
+        if is_duplicate {
+            return Err(anyhow::anyhow!("Duplicated topic"));
+        }
+
+        Ok(())
+    }
 }
 
 impl DataBase {
@@ -20,29 +71,21 @@ impl DataBase {
         let entries: Vec<KnowledgeEntry> = serde_yaml::from_str(&raw_entries)
             .expect("Invalid YAML format for knowledge file");
 
-        Self { entries }
+        let topics = {
+            let topics =
+                entries.iter().map(|e| &e.topic).collect::<HashSet<_>>();
+
+            let topics = topics.into_iter().cloned().collect::<Vec<_>>();
+
+            TopicSequence::from_slice(&topics)
+        };
+
+        Self { entries, topics }
     }
-}
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct KnowledgeEntry {
-    /// Unique question identifier
-    pub id: String,
-    pub topic: String,
-    pub tags: Vec<String>,
+    pub fn update(&mut self) {
 
-    /// Question itself
-    pub question: String,
-
-    pub truth: String,
-
-    pub added_at: chrono::DateTime<chrono::Utc>,
-    pub last_review: Option<chrono::DateTime<chrono::Utc>>,
-
-    // alternative for SuperMemo-2
-    pub hardness_factor: f64,
-    // good point about when to review)
-    pub next_review: Option<chrono::DateTime<chrono::Utc>>,
+    }
 }
 
 // fn serialize_entries<S>(

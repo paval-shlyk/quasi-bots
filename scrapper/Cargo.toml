@@ -28,6 +28,7 @@ futures = "0.3.31"
 html2text = "0.16.7"
 mediatype = "=0.19"
 polars = "0.51.0"
+rand = "0.10.0"
 reqwest = { version = "0.13.2", features = ["json"] }
 sanitize-filename = "0.6.0"
 serde = { version = "1.0.228", features = ["derive"] }

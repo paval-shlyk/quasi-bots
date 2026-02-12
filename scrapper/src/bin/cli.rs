@@ -25,7 +25,7 @@ pub async fn main() {
     let config: scrapper::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
-    let mut knowledge_database = knowledge::Database::connect(pool.clone())
+    let knowledge_database = knowledge::Database::connect(pool.clone())
         .await
         .expect("Failed to connect knowledge database");
 

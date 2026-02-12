@@ -80,6 +80,11 @@ async fn next_topic(pool: &sqlx::SqlitePool) -> anyhow::Result<Topic> {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum KnowledgeMode {
+    WithTag { tag: String },
+    Random,
+}
 impl Database {
     //by default, database is only connected to sqlite file
     pub async fn connect(pool: sqlx::SqlitePool) -> anyhow::Result<Self> {
@@ -87,7 +92,7 @@ impl Database {
     }
 
     pub async fn refresh_from_file(
-        &mut self,
+        &self,
         file: &std::path::Path,
     ) -> anyhow::Result<()> {
         let raw_entries = tokio::fs::read_to_string(file)
@@ -168,7 +173,7 @@ impl Database {
     }
 
     /// Fetch new knowledge and mutate internal state
-    pub async fn next_knowledge(&mut self) -> anyhow::Result<Entry> {
+    pub async fn next_knowledge(&self) -> anyhow::Result<Entry> {
         let topic = next_topic(&self.pool).await?;
 
         let topic_id = topic.id as i64;
@@ -186,22 +191,22 @@ impl Database {
             pool: &sqlx::SqlitePool,
             topic_id: i64,
         ) -> anyhow::Result<Option<EntryWithoutTags>> {
-            let maybe_entry = sqlx::query_as!(
+            let entry = sqlx::query_as!(
                 EntryWithoutTags,
                 r#"
-                SELECT e.id, e.name, t.name as topic, e.question, e.truth
-                FROM entry as e
-                JOIN topic as t ON e.topic_id = t.id
-                WHERE t.id = ? AND e.reviewed_at IS NULL
-                ORDER BY RANDOM()
-                LIMIT 1
-            "#,
+                    SELECT e.id, e.name, t.name as topic, e.question, e.truth
+                    FROM entry as e
+                    JOIN topic as t ON e.topic_id = t.id
+                    WHERE t.id = ? AND e.reviewed_at IS NULL
+                    ORDER BY RANDOM()
+                    LIMIT 1
+                "#,
                 topic_id
             )
             .fetch_optional(pool)
             .await?;
 
-            Ok(maybe_entry)
+            Ok(entry)
         }
 
         let entry = match fetch_entry(&self.pool, topic_id).await? {
@@ -269,5 +274,21 @@ impl Database {
         .await?;
 
         Ok(topics)
+    }
+
+    pub async fn fetch_tags(&self) -> anyhow::Result<Vec<String>> {
+        let tags = sqlx::query!(
+            r#"
+                SELECT name 
+                FROM tag
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?
+        .into_iter()
+        .map(|r| r.name)
+        .collect::<Vec<_>>();
+
+        Ok(tags)
     }
 }

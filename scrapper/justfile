@@ -31,6 +31,7 @@ next-knowledge:
 
 fetch_topics:
     curl -s -L "http://localhost:8080/knowledge-bank/topics" | jq
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

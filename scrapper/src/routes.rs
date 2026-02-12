@@ -29,7 +29,17 @@ pub fn create_routes(state: Arc<AppState>) -> Router {
 
         .route("/knowledge-bank/next", post(knowledge::post_next_daily_question))
         .route("/knowledge-bank/topics", get(knowledge::get_all_topics))
+        .route(
+            "/knowledge-bank/topics/{topic_id}/affinity",
+            post(knowledge::post_topic_affinity)
+        )
         .route("/knowledge-bank/entries", post(knowledge::post_new_knowledge))
+        .route("/knowledge-bank/entries/{entry_id}/affinity", 
+            post(knowledge::post_entry_affinity)
+        )
+        .route("/knowledge-bank/entries/{entry_id}/reviews", post(knowledge::post_entry_review))
+        .route("/knowledge-bank/reviews", post(knowledge::get_recent_reviews))
+
 
         .route("/market-tracker/report", get(finance::get_report))
         .route(

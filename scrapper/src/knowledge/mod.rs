@@ -1,7 +1,11 @@
+mod affinity;
 mod model;
+pub mod reviews;
 mod routes;
 
+pub use affinity::*;
 pub use model::*;
+pub use reviews::*;
 pub use routes::*;
 
 #[derive(Debug, Clone, sqlx::FromRow)]
@@ -15,6 +19,7 @@ pub struct TopicWithStatistics {
     pub id: u64,
     pub name: String,
     pub questions_count: u64,
+    pub disabled_until: Option<chrono::DateTime<chrono::Utc>>,
 }
 
 #[derive(Debug)]
@@ -85,6 +90,7 @@ pub enum KnowledgeMode {
     WithTag { tag: String },
     Random,
 }
+
 impl Database {
     //by default, database is only connected to sqlite file
     pub async fn connect(pool: sqlx::SqlitePool) -> anyhow::Result<Self> {
@@ -99,7 +105,7 @@ impl Database {
             .await
             .expect("Failed to load knowledge file");
 
-        let entries: Vec<Entry> = serde_yaml::from_str(&raw_entries)
+        let entries: Vec<HumanEntry> = serde_yaml::from_str(&raw_entries)
             .expect("Invalid YAML format for knowledge file");
 
         sqlx::query!(
@@ -173,7 +179,7 @@ impl Database {
     }
 
     /// Fetch new knowledge and mutate internal state
-    pub async fn next_knowledge(&self) -> anyhow::Result<Entry> {
+    pub async fn next_knowledge(&self) -> anyhow::Result<HumanEntry> {
         let topic = next_topic(&self.pool).await?;
 
         let topic_id = topic.id as i64;
@@ -185,6 +191,7 @@ impl Database {
             pub topic: String,
             pub question: String,
             pub truth: String,
+            pub affinity_days: Option<u32>,
         }
 
         async fn fetch_entry(
@@ -194,10 +201,16 @@ impl Database {
             let entry = sqlx::query_as!(
                 EntryWithoutTags,
                 r#"
-                    SELECT e.id, e.name, t.name as topic, e.question, e.truth
+                    SELECT 
+                        e.id,
+                        e.name,
+                        t.name as topic,
+                        e.question,
+                        e.truth,
+                        e.affinity_days as "affinity_days: Option<u32>"
                     FROM entry as e
                     JOIN topic as t ON e.topic_id = t.id
-                    WHERE t.id = ? AND e.reviewed_at IS NULL
+                    WHERE t.id = ? AND e.is_reviewed IS FALSE
                     ORDER BY RANDOM()
                     LIMIT 1
                 "#,
@@ -216,7 +229,7 @@ impl Database {
                 sqlx::query!(
                     r#"
                         UPDATE entry
-                        SET reviewed_at = NULL
+                        SET is_reviewed = FALSE
                         WHERE topic_id = ?
                     "#,
                     topic_id
@@ -229,6 +242,17 @@ impl Database {
                 })?
             }
         };
+
+        sqlx::query!(
+            r#"
+                UPDATE entry
+                SET is_reviewed = TRUE
+                WHERE id = ?
+            "#,
+            entry.id
+        )
+        .execute(&self.pool)
+        .await?;
 
         let tags = sqlx::query!(
             r#"
@@ -245,12 +269,13 @@ impl Database {
         .map(|record| record.name)
         .collect::<Vec<String>>();
 
-        Ok(Entry {
+        Ok(HumanEntry {
             id: entry.name,
             topic: entry.topic,
             tags,
             question: entry.question,
             truth: entry.truth,
+            affinity_days: entry.affinity_days,
         })
     }
 
@@ -260,9 +285,13 @@ impl Database {
         let topics: Vec<TopicWithStatistics> = sqlx::query_as!(
             TopicWithStatistics,
             r#"
-            SELECT id as "id: u64", name, questions_count as "questions_count: u64"
+            SELECT 
+                id as "id: u64",
+                name,
+                questions_count as "questions_count: u64",
+                disabled_until as "disabled_until: chrono::DateTime<chrono::Utc>"
             FROM (
-                SELECT t.id as id, t.name, COUNT(e.id) as questions_count
+                SELECT t.id as id, t.name, COUNT(e.id) as questions_count, t.disabled_until
                 FROM topic as t
                 LEFT JOIN entry as e ON e.topic_id = t.id
                 GROUP BY t.id

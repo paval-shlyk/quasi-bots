@@ -1,15 +1,100 @@
 use std::sync::Arc;
 
-use axum::{Json, extract::State, response::IntoResponse};
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    response::IntoResponse,
+};
 use reqwest::StatusCode;
 
-use crate::AppState;
+use crate::{AppState, knowledge};
 
-pub struct NewKnowledge {}
+#[derive(Debug, serde::Deserialize)]
+pub struct NewKnowledge {
+    pub topic_id: u64,
+    pub question: String,
+    pub truth: String,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct Affinity {
+    /// Number of days until the next review, if the user has an affinity for this topic/entry,
+    /// otherwise None
+    pub days: u32,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ReviewQuery {
+    pub days: Option<u32>,
+}
 
 /// Add new knowledge entry where you can add this
 pub async fn post_new_knowledge(
     State(_state): State<Arc<AppState>>,
+    Json(_body): Json<NewKnowledge>,
+) -> impl IntoResponse {
+}
+
+pub async fn post_topic_affinity(
+    State(_state): State<Arc<AppState>>,
+    Path(topic_id): Path<u64>,
+    Json(body): Json<Affinity>,
+) -> impl IntoResponse {
+    knowledge::set_topic_affinity(
+        topic_id,
+        body.days,
+        &_state.knowledge_database.pool,
+    )
+    .await
+    .map(|()| StatusCode::OK)
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to set topic affinity: {}", e),
+        )
+    })
+}
+
+pub async fn post_entry_affinity(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<String>,
+    Json(body): Json<Affinity>,
+) -> impl IntoResponse {
+    knowledge::set_entry_affinity(
+        name,
+        body.days,
+        &state.knowledge_database.pool,
+    )
+    .await
+    .map(|()| StatusCode::OK)
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to set entry affinity: {}", e),
+        )
+    })
+}
+
+pub async fn get_recent_reviews(
+    State(state): State<Arc<AppState>>,
+    query: Query<ReviewQuery>,
+) -> impl IntoResponse {
+    knowledge::fetch_recent_reviews(&state.pool, query.days)
+        .await
+        .map(|reviews| (StatusCode::OK, Json(reviews)).into_response())
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Failed to fetch recent reviews: {}", e),
+            )
+                .into_response()
+        })
+}
+
+pub async fn post_entry_review(
+    State(state): State<Arc<AppState>>,
+    Path(name): Path<u64>,
 ) -> impl IntoResponse {
 }
 

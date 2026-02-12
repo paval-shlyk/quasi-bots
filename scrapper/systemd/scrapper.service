@@ -1,0 +1,13 @@
+[Unit]
+Description=Scrapper Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/scrapper
+Restart=on-failure
+# User=scrapper
+# WorkingDirectory=/var/lib/scrapper
+
+[Install]
+WantedBy=multi-user.target

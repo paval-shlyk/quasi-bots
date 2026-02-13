@@ -146,7 +146,7 @@ pub async fn add_new_entry(
     truth: String,
     tags: Vec<String>,
 ) -> anyhow::Result<()> {
-    let name = format!("custom_{}", uuid::Uuid::new_v4().to_string());
+    let name = format!("custom_{}", uuid::Uuid::new_v4());
 
     let topic_id = topic_id as i64;
 

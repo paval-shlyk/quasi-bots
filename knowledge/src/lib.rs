@@ -26,8 +26,8 @@ pub async fn connect(pool: sqlx::SqlitePool) -> anyhow::Result<KnowledgeState> {
 /// # Arguments
 /// * `state` - The current knowledge state, which includes the database connection pool.
 /// * `files` - The path to the YAML file containing the knowledge entries.
-/// That's also possible to provide a directory, in that case all YAML files in the directory will
-/// be loaded and merged into the database.
+///   That's also possible to provide a directory, in that case all YAML files in the directory will
+///   be loaded and merged into the database.
 pub async fn refresh_from_files(
     state: &KnowledgeState,
     files: &std::path::Path,
@@ -63,7 +63,7 @@ pub async fn refresh_from_files(
         .filter(|e| {
             e.path()
                 .extension()
-                .map_or(false, |ext| ext == "yaml" || ext == "yml")
+                .is_some_and(|ext| ext == "yaml" || ext == "yml")
         });
 
     let entries = {

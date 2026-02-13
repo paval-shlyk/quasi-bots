@@ -1,5 +1,5 @@
-///! When affinity is set to 0, it means the user has no affinity for this topic/entry, and it will
-///! be treated as if affinity is not set at all
+/// When affinity is set to 0, it means the user has no affinity for this topic/entry, and it will
+/// be treated as if affinity is not set at all
 mod routes;
 
 pub use routes::*;

@@ -2,6 +2,7 @@
 name = "skill-master"
 version = "0.1.0"
 edition = "2024"
+license = "GPL-2.0-only"
 
 [[bin]]
 name = "skill-master"
@@ -52,8 +53,8 @@ yfinance-rs = "0.7.2"
 proptest = "1.10.0"
 
 [package.metadata.deb]
-maintainer = "quasibots <bot@quasi.bot>"
-copyright = "2024, quasibots"
+maintainer = "Paval Shlyk <paval.shlyk@quasi.su>"
+copyright = "2026, quasi.su"
 depends = "$auto, ca-certificates, openssl"
 systemd-units = { enable = true }
 assets = [

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                r.id,\n                e.name AS entry_name,\n                r.reviewed_at as \"reviewed_at: chrono::DateTime<chrono::Utc>\",\n                r.attempts\n            FROM review as r\n            JOIN entry as e ON r.entry_id = e.id\n            WHERE r.reviewed_at > datetime('now', '-' || ? || ' days')\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "entry_name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "reviewed_at: chrono::DateTime<chrono::Utc>",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "attempts",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ae4c969973ed47d2cee63b79266bc21d194b5ee6268cf02e9be96f8c68d5f158"
+}

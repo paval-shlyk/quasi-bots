@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                        UPDATE entry\n                        SET is_reviewed = FALSE\n                        WHERE topic_id = ?\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "53096ae19936cb2b0d4787eb9f959087ac08910d72cfb7bd4ad4a54f9c9f30df"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id as \"id: u64\",\n                name,\n                questions_count as \"questions_count: u64\",\n                disabled_until as \"disabled_until: chrono::DateTime<chrono::Utc>\"\n            FROM (\n                SELECT t.id as id, t.name, COUNT(e.id) as questions_count, t.disabled_until\n                FROM topic as t\n                LEFT JOIN entry as e ON e.topic_id = t.id\n                GROUP BY t.id\n            )\n            ORDER BY questions_count DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: u64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "questions_count: u64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "disabled_until: chrono::DateTime<chrono::Utc>",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ccde2774193b7eb7ecd7d2470966ff7f4febf68d83f7f71ce7b387d203db1c29"
+}

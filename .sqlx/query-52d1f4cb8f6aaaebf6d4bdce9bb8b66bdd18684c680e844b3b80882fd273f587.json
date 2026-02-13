@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE topic\n            SET affinity_days = ?\n            WHERE id = ?\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "52d1f4cb8f6aaaebf6d4bdce9bb8b66bdd18684c680e844b3b80882fd273f587"
+}

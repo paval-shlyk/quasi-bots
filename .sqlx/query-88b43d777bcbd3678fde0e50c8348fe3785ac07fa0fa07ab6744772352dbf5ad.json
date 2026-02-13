@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                DELETE FROM m2m_entry_tag;\n                DELETE FROM entry;\n                DELETE FROM tag;\n                DELETE FROM topic;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "88b43d777bcbd3678fde0e50c8348fe3785ac07fa0fa07ab6744772352dbf5ad"
+}

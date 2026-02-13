@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    SELECT id as \"id: u64\", name\n                    FROM topic\n                    WHERE is_used = FALSE\n                    ORDER BY RANDOM()\n                    LIMIT 1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: u64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "6312a0f257baac59456fbcb74f088a01bd204e7d9da722ac439779ae827d4dca"
+}

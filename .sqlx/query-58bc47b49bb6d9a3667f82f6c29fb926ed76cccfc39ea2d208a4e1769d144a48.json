@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                        INSERT INTO m2m_entry_tag (entry_id, tag_id)\n                        VALUES (?, ?)\n                    ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "58bc47b49bb6d9a3667f82f6c29fb926ed76cccfc39ea2d208a4e1769d144a48"
+}

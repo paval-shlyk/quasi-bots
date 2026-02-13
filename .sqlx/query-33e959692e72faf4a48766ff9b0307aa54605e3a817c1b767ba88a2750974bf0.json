@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT tag.name\n                FROM m2m_entry_tag as mt\n                JOIN tag ON mt.tag_id = tag.id\n                WHERE mt.entry_id = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "33e959692e72faf4a48766ff9b0307aa54605e3a817c1b767ba88a2750974bf0"
+}

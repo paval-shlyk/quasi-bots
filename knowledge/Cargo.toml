@@ -1,0 +1,17 @@
+[package]
+name = "knowledge"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.101"
+axum = "0.8.8"
+chrono = "0.4.43"
+rand = "0.10.0"
+reqwest = "0.13.2"
+serde = "1.0.228"
+serde_yaml = "0.9.34"
+sqlx = { version = "0.8.6", features = ["sqlite"] }
+tokio = { version = "1.49.0", features = ["sync", "fs"] }
+tracing = "0.1.44"
+walkdir = "2.5.0"

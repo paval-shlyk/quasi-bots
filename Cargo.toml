@@ -1,3 +1,3 @@
 [workspace]
-members = ["monitor","scrapper"]
+members = ["knowledge", "monitor", "skill-master"]
 resolver = "3"

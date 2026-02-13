@@ -40,7 +40,7 @@ pub async fn fetch_random_topic(
         r#"
             SELECT id as "id: u64", name
             FROM topic
-            WHERE is_used = FALSE
+            WHERE is_used = FALSE AND (disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP)
             ORDER BY RANDOM()
             LIMIT 1
         "#

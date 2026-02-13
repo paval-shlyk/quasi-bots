@@ -41,6 +41,9 @@ fr:
 set_attempt:
     curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"attempts": 1}' 
 
+set_affinity:
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"days" 3}'
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

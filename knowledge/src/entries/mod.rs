@@ -72,7 +72,7 @@ pub async fn fetch_random_entry(
         Some(entry) => entry,
         None => {
             tracing::info!(
-                "No unrevised entry found for topic_id {}, resetting review status and trying again",
+                "All entries for topic_id {} are used, resetting review status and trying again",
                 topic_id
             );
             // No unrevised entry, reset review status and try again

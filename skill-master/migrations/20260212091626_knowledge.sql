@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS topic (
 	is_used BOOLEAN NOT NULL DEFAULT FALSE,
 	disabled_until DATETIME DEFAULT NULL,
 
-	affinity_days INTEGER DEFAULT NULL
+	affinity_days INTEGER DEFAULT NULL CHECK (affinity_days > 0)
 );
 
 CREATE TABLE IF NOT EXISTS entry (
@@ -49,10 +49,28 @@ CREATE TABLE IF NOT EXISTS review (
 	FOREIGN KEY(entry_id) REFERENCES entry(id)
 );
 
-CREATE TRIGGER IF NOT EXISTS trg_mark_entry_reviewed
+CREATE TRIGGER trg_mark_entry_reviewed
 AFTER UPDATE OF is_reviewed ON entry
 WHEN OLD.is_reviewed = FALSE AND NEW.is_reviewed = TRUE
 BEGIN
     DELETE FROM review WHERE entry_id = NEW.id; --ensure only one review record per entry
     INSERT INTO review (entry_id, attempts) VALUES (NEW.id, 0);
+END;
+
+CREATE TRIGGER trg_mark_topic_disabled
+AFTER UPDATE OF is_used ON topic
+WHEN OLD.is_used = FALSE AND NEW.is_used = TRUE AND NEW.affinity_days IS NOT NULL
+BEGIN
+    UPDATE topic
+    SET disabled_until = datetime('now', '+' || NEW.affinity_days || ' days')
+    WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER trg_mark_topic_enabled
+AFTER UPDATE OF affinity_days ON topic
+WHEN OLD.affinity_days IS NOT NULL AND NEW.affinity_days IS NULL AND NEW.disabled_until IS NOT NULL
+BEGIN
+    UPDATE topic
+    SET disabled_until = NULL
+    WHERE id = NEW.id;
 END;

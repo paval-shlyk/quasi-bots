@@ -1,3 +1,5 @@
+///! When affinity is set to 0, it means the user has no affinity for this topic/entry, and it will
+///! be treated as if affinity is not set at all
 mod routes;
 
 pub use routes::*;
@@ -7,7 +9,7 @@ pub async fn set_topic_affinity(
     days: u32,
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<()> {
-    let days = days as i64;
+    let days = if days == 0 { None } else { Some(days as i64) };
     let topic_id = topic_id as i64;
 
     sqlx::query!(
@@ -30,7 +32,7 @@ pub async fn set_entry_affinity(
     days: u32,
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<()> {
-    let days = days as i64;
+    let days = if days == 0 { None } else { Some(days as i64) };
 
     sqlx::query!(
         r#"

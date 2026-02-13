@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT COUNT(id) as count\n            FROM topic\n        ",
+  "query": "\n            SELECT COUNT(id) as count\n            FROM topic\n            WHERE disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP\n        ",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "d20aa4ff13752a023d47c2571e94c9edad91a5669f00044ea677db6668e07556"
+  "hash": "37418d1886055de78025b4de829f97c07d687af0e3b8bca652eaeb45f1944d68"
 }

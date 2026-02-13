@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2024"
 license = "GPL-2.0-only"
 
+
+[[example]]
+name = "logger"
+path = "examples/logger.rs"
+
 [dependencies]
 smartctl-rs = "0.2.0"
 sysinfo = "0.38.1"

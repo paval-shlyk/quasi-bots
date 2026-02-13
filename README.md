@@ -6,7 +6,7 @@
 
 ## Members
 
-- **scrapper**: Data collection and processing service.
+- **skill-master**: Data collection and processing service.
 - **monitor**: Monitoring service.
 
 ## Prerequisites
@@ -21,6 +21,25 @@ This workspace requires some system dependencies to be installed before you can 
 ```bash
 sudo apt-get update
 sudo apt-get install -y protobuf-compiler libsqlite3-dev
+```
+
+### Cross-compilation Toolchain (AArch64)
+
+To cross-compile for ARM64, you need the GNU toolchain:
+
+**Ubuntu / Debian:**
+```bash
+sudo apt-get install gcc-aarch64-linux-gnu
+```
+
+**Fedora:**
+```bash
+sudo dnf install gcc-aarch64-linux-gnu sysroot-aarch64-fc42-glibc
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S aarch64-linux-gnu-gcc
 ```
 
 **Fedora:**

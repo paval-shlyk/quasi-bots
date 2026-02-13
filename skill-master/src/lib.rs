@@ -13,9 +13,13 @@ use std::sync::Arc;
 pub use config::*;
 pub use state::*;
 
-pub async fn connect_db(db_url: &str) -> sqlx::SqlitePool {
+pub async fn connect_db(db_file: &str) -> sqlx::SqlitePool {
+    let db_url = format!("sqlite://{}?mode=rwc", db_file);
+
+    tracing::info!("Connecting to database at {}", db_file);
+
     sqlx::sqlite::SqlitePoolOptions::new()
-        .connect(db_url)
+        .connect(&db_url)
         .await
         .expect("Failed to connect to database")
 }

@@ -1,0 +1,26 @@
+.TH SKILL-MASTER 1 "February 2026" "0.1.0" "Quasi Bots Manual"
+.SH NAME
+skill-master \- Knowledge and skills aggregator service for openclaw bot
+.SH SYNOPSIS
+.B skill-master
+[\fIOPTIONS\fR]
+.SH DESCRIPTION
+.B skill-master
+is a daemon service responsible for aggregating knowledge, tracking RSS feeds, and serving the Quasi Bots skill API.
+.SH OPTIONS
+.TP
+.BR \-c ", " \-\-config " \fIFILE\fP"
+Sets the configuration file to use. Default is \fIconfig.toml\fP.
+.TP
+.BR \-p ", " \-\-port " \fIPORT\fP"
+Sets the port to listen on. Default is \fI8080\fP.
+.TP
+.BR \-h ", " \-\-help
+Print help information.
+.TP
+.BR \-V ", " \-\-version
+Print version information.
+.SH CONFIGURATION
+The default configuration file is expected at \fI/etc/skill-master/config.toml\fP when running as a system service.
+.SH AUTHOR
+Paval Shlyk <paval.shlyk@quasi.su>

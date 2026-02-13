@@ -114,6 +114,9 @@ jobs:
           name: skill-master-deb
           path: artifacts
 
+      - name: Generate Date
+        run: echo "DATE=$(date -u)" >> $GITHUB_ENV
+
       - name: Update Release
         uses: softprops/action-gh-release@v1
         with:
@@ -123,4 +126,4 @@ jobs:
           name: ${{ needs.build-deb.outputs.release_tag }}
           body: |
             Rolling release for branch ${{ github.ref_name }}.
-            Build Date: $(date -u)
+            Build Date: ${{ env.DATE }}

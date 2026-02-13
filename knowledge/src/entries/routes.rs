@@ -1,9 +1,10 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
+use crate::entries::HumanEntry;
 use crate::{KnowledgeState, entries};
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 pub struct NewKnowledge {
     pub topic_id: u64,
     pub question: String,
@@ -11,7 +12,15 @@ pub struct NewKnowledge {
     pub tags: Vec<String>,
 }
 
-/// Add new knowledge entry where you can add this
+#[utoipa::path(
+    post,
+    path = "/knowledge-bank/entries",
+    request_body = NewKnowledge,
+    responses(
+        (status = 201, description = "Knowledge entry added successfully"),
+        (status = 500, description = "Internal server error")
+    ),
+)]
 pub async fn post_new_knowledge(
     State(state): State<KnowledgeState>,
     Json(body): Json<NewKnowledge>,
@@ -33,11 +42,19 @@ pub async fn post_new_knowledge(
     })
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 pub struct QuestionBody {
     pub tag: Option<String>,
 }
 
+#[utoipa::path(
+    post,
+    path = "/knowledge-bank/next",
+    responses(
+        (status = 200, description = "Next daily question retrieved successfully", body = HumanEntry),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn post_next_daily_question(
     State(state): State<KnowledgeState>,
 ) -> impl IntoResponse {

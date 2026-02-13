@@ -23,6 +23,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler libsqlite3-dev
+          cargo install sqlx-cli
+          cargo sqlx prepare --workspace
       - name: Lint
         run: just lint
 

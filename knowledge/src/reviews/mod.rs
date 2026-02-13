@@ -2,7 +2,7 @@ mod routes;
 
 pub use routes::*;
 
-#[derive(Debug, sqlx::FromRow, serde::Serialize)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize, utoipa::ToSchema)]
 pub struct Review {
     pub id: i64,
     pub entry_name: String,

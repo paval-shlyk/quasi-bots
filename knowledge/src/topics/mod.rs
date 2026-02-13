@@ -8,7 +8,7 @@ pub struct Topic {
     pub name: String,
 }
 
-#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 pub struct TopicWithStatistics {
     pub id: u64,
     pub name: String,

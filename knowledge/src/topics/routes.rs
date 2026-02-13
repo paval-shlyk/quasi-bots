@@ -2,7 +2,16 @@ use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
 use crate::{KnowledgeState, topics};
+use crate::topics::TopicWithStatistics;
 
+#[utoipa::path(
+    get,
+    path = "/knowledge-bank/topics",
+    responses(
+        (status = 200, description = "All topics retrieved successfully", body = Vec<TopicWithStatistics>),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_all_topics(
     State(state): State<KnowledgeState>,
 ) -> impl IntoResponse {

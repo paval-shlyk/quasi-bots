@@ -6,17 +6,29 @@ use axum::{
 use reqwest::StatusCode;
 
 use crate::{KnowledgeState, reviews};
+use crate::reviews::Review;
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 pub struct ReviewAttempts {
     pub attempts: u32,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, serde::Deserialize, utoipa::IntoParams)]
 pub struct ReviewQuery {
     pub days: Option<u32>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/knowledge-bank/reviews",
+    params(
+        ReviewQuery
+    ),
+    responses(
+        (status = 200, description = "Recent reviews retrieved successfully", body = Vec<Review>),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_recent_reviews(
     State(state): State<KnowledgeState>,
     query: Query<ReviewQuery>,
@@ -33,6 +45,18 @@ pub async fn get_recent_reviews(
         })
 }
 
+#[utoipa::path(
+    post,
+    path = "/knowledge-bank/entries/{entry_id}/reviews",
+    params(
+        ("entry_id" = String, Path, description = "Entry Name/ID")
+    ),
+    request_body = ReviewAttempts,
+    responses(
+        (status = 200, description = "Review updated successfully"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn post_entry_review(
     State(state): State<KnowledgeState>,
     Path(entry_name): Path<String>,

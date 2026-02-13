@@ -4014,6 +4014,7 @@ dependencies = [
  "feed-rs",
  "html2text",
  "knowledge",
+ "libsqlite3-sys",
  "mediatype",
  "polars",
  "proptest",

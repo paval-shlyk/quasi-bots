@@ -17,7 +17,14 @@ pub async fn main() {
     let config: skill_master::Config =
         toml::from_str(&raw_config).expect("Failed to parse config");
 
+    let start = std::time::Instant::now();
+
     let state = skill_master::app_state(config.clone()).await;
+
+    tracing::info!(
+        "App state initialized in {:.2?} ms",
+        start.elapsed().as_millis()
+    );
 
     let app = skill_master::routes::create_routes(state);
 

@@ -223,24 +223,6 @@
   truth: A CDN is a geographically distributed network of proxy servers. It improves performance by serving static content (images, CSS, JS) from a server (Edge Location) physically closer to the user, reducing latency and offloading traffic from the origin server.
   complexity: 1
   source: https://dataintensive.net/
-- id: sys_026
-  topic: system-design
-  tags:
-  - databases
-  - transactions
-  question: What is Optimistic Locking?
-  truth: Optimistic locking assumes conflicts are rare. It reads a record along with a version number. When updating, it checks if the version number has changed. If it has, the transaction fails and must retry. It avoids database-level locks.
-  complexity: 2
-  source: https://dataintensive.net/
-- id: sys_027
-  topic: system-design
-  tags:
-  - databases
-  - transactions
-  question: What is Pessimistic Locking?
-  truth: Pessimistic locking assumes conflicts are likely. It locks the record in the database as soon as it is read, preventing others from modifying it until the transaction is committed or rolled back.
-  complexity: 2
-  source: https://dataintensive.net/
 - id: sys_028
   topic: system-design
   tags:
@@ -431,15 +413,6 @@
   complexity: 2
   source: https://dataintensive.net/
 - id: sys_049
-  topic: system-design
-  tags:
-  - databases
-  - normalization
-  question: What is Database Normalization?
-  truth: The process of organizing data to reduce redundancy and improve data integrity (e.g., ensuring a customer's address is stored in only one place). It usually involves splitting tables and using foreign keys.
-  complexity: 1
-  source: https://dataintensive.net/
-- id: sys_050
   topic: system-design
   tags:
   - databases

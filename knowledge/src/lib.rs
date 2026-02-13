@@ -6,6 +6,7 @@ mod tags;
 mod topics;
 
 pub use affinity::*;
+use anyhow::Context;
 pub use entries::*;
 pub use reviews::*;
 pub use state::*;
@@ -22,16 +23,66 @@ pub async fn connect(pool: sqlx::SqlitePool) -> anyhow::Result<KnowledgeState> {
     Ok(KnowledgeState { pool })
 }
 
+/// # Arguments
+/// * `state` - The current knowledge state, which includes the database connection pool.
+/// * `files` - The path to the YAML file containing the knowledge entries.
+/// That's also possible to provide a directory, in that case all YAML files in the directory will
+/// be loaded and merged into the database.
 pub async fn refresh_from_files(
     state: &KnowledgeState,
-    file: &std::path::Path,
+    files: &std::path::Path,
 ) -> anyhow::Result<()> {
-    let raw_entries = tokio::fs::read_to_string(file)
-        .await
-        .expect("Failed to load knowledge file");
+    async fn load_file(
+        path: &std::path::Path,
+    ) -> anyhow::Result<Vec<HumanEntry>> {
+        let raw_entries =
+            tokio::fs::read_to_string(path).await.inspect_err(|e| {
+                tracing::warn!(
+                    "Failed to load knowledge file {}: {}",
+                    path.display(),
+                    e
+                )
+            })?;
 
-    let entries: Vec<HumanEntry> = serde_yaml::from_str(&raw_entries)
-        .expect("Invalid YAML format for knowledge file");
+        let entries: Vec<HumanEntry> = serde_yaml::from_str(&raw_entries)
+            .inspect_err(|e| {
+                tracing::warn!(
+                    "Invalid YAML format for knowledge file {}: {}",
+                    path.display(),
+                    e
+                )
+            })?;
+
+        Ok(entries)
+    }
+
+    let file_iter = walkdir::WalkDir::new(files)
+        .into_iter()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| {
+            e.path()
+                .extension()
+                .map_or(false, |ext| ext == "yaml" || ext == "yml")
+        });
+
+    let entries = {
+        let mut entries = Vec::new();
+
+        for file in file_iter {
+            let Ok(entries_from_file) = load_file(file.path()).await else {
+                tracing::warn!(
+                    "Skipping file {} due to previous errors",
+                    file.path().display()
+                );
+                continue;
+            };
+
+            entries.extend(entries_from_file);
+        }
+
+        entries
+    };
 
     sqlx::query!(
         r#"
@@ -44,6 +95,8 @@ pub async fn refresh_from_files(
     .execute(&state.pool)
     .await?;
 
+    let mut tx = state.pool.begin().await?;
+
     for entry in entries.iter() {
         let topic_id: i64 = sqlx::query!(
             r#"
@@ -54,7 +107,7 @@ pub async fn refresh_from_files(
                     "#,
             entry.topic
         )
-        .fetch_one(&state.pool)
+        .fetch_one(tx.as_mut())
         .await?
         .id;
 
@@ -69,8 +122,11 @@ pub async fn refresh_from_files(
             entry.question,
             entry.truth
         )
-        .fetch_one(&state.pool)
-        .await?
+        .fetch_one(tx.as_mut())
+        .await
+        .with_context(|| {
+            format!("Failed to insert entry '{}' into the database", entry.id)
+        })?
         .id;
 
         for tag in entry.tags.iter() {
@@ -83,7 +139,7 @@ pub async fn refresh_from_files(
                             "#,
                         tag
                     )
-                    .fetch_one(&state.pool)
+                    .fetch_one(tx.as_mut())
                     .await?
                     .id;
 
@@ -95,10 +151,12 @@ pub async fn refresh_from_files(
                 entry_id,
                 tag_id
             )
-            .execute(&state.pool)
+            .execute(tx.as_mut())
             .await?;
         }
     }
+
+    tx.commit().await?;
 
     Ok(())
 }

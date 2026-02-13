@@ -1,0 +1,67 @@
+db_file = "/var/lib/skill-master/skills.db"
+serp_api_key = "" # REPLACE_WITH_YOUR_KEY
+
+[knowledge]
+database_file = "/var/lib/skill-master/knowledge-bank"
+
+investment_rss_sources = [
+	"https://finance.yahoo.com/news/rssindex",
+	"https://www.investing.com/rss/news.rss",
+]
+
+
+[[rss_source]]
+topic = "Rust, Linux & System Programming"
+urls = [
+	"https://blog.rust-lang.org/feed.xml",
+	"https://this-week-in-rust.org/rss.xml",
+	"https://www.reddit.com/r/rust/top/.rss?t=day",
+	"https://www.phoronix.com/rss.php",
+	"https://fedoramagazine.org/feed/",
+	"https://ubuntu.com/blog/feed",
+	"https://archlinux.org/feeds/news/",
+	"https://store.steampowered.com/feeds/news/app/1675200/?l=english",
+	"https://github.com/hyprwm/Hyprland/releases.atom",
+]
+
+[[rss_source]]
+topic = "Big Tech & IT Infrastructure"
+urls = [
+	"https://azurecomcdn.azureedge.net/en-us/blog/feed/",
+	"https://devblogs.microsoft.com/feed/",
+	"https://netflixtechblog.com/feed",
+	"https://cloud.google.com/feeds/blog.xml",
+	"https://research.google/blog/rss/",
+	"https://techcrunch.com/category/enterprise/feed/",
+	"https://github.blog/feed/",
+]
+
+[[rss_source]]
+topic = "Geopolitics, Markets & Belarus IT"
+urls = [
+	"https://finance.yahoo.com/news/rssindex",
+	"https://oilprice.com/rss/main",
+	"https://tradingeconomics.com/rss/news.aspx",
+	"https://www.investing.com/rss/news.rss",
+	"https://devby.io/rss",
+]
+
+[[rss_source]]
+topic = "Tech Trends, Algorithms, Crypto & Security"
+urls = [
+	"https://www.schneier.com/blog/atom.xml",
+	"https://habr.com/ru/rss/best/daily/",
+	"https://www.yegor256.com/rss",
+	"https://blog.cloudflare.com/rss/",
+	"https://solana.com/news/rss",
+	"https://near.org/blog/rss",
+	"https://vitalik.eth.limo/feed.xml",
+]
+
+[[rss_source]]
+topic = "Art, Music & Creativity"
+urls = [
+	"https://www.artsy.net/rss/news",
+	"https://musictech.com/feed/",
+	"https://www.themarginalian.org/feed/",
+]

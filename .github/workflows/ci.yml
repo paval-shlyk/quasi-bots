@@ -25,12 +25,40 @@ jobs:
           sudo apt-get install -y protobuf-compiler libsqlite3-dev
       - name: Lint
         run: just lint
-        working-directory: scrapper
 
   build-deb:
     runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.vars.outputs.release_tag }}
+      is_prerelease: ${{ steps.vars.outputs.is_prerelease }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Determine Version and Tag
+        id: vars
+        shell: bash
+        run: |
+          BASE_VERSION=$(grep '^version =' skill-master/Cargo.toml | cut -d '"' -f 2)
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          
+          if [[ "$BRANCH_NAME" == "dev" ]]; then
+            SUFFIX="dev"
+            RELEASE_TAG="latest-dev"
+            IS_PRERELEASE="true"
+          else
+            SUFFIX="stable"
+            RELEASE_TAG="latest-stable"
+            IS_PRERELEASE="false"
+          fi
+          
+          FULL_VERSION="${BASE_VERSION}-${SUFFIX}"
+          
+          echo "Full Version: $FULL_VERSION"
+          echo "Release Tag: $RELEASE_TAG"
+          
+          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
         run: |
@@ -66,10 +94,33 @@ jobs:
         run: cargo chef cook --release --recipe-path recipe.json
 
       - name: Build and Package
-        run: cargo deb -p scrapper
+        run: cargo deb -p skill-master --deb-version ${{ steps.vars.outputs.full_version }}
 
       - name: Upload Deb Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scrapper-deb
+          name: skill-master-deb
           path: target/debian/*.deb
+
+  release:
+    needs: build-deb
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: skill-master-deb
+          path: artifacts
+
+      - name: Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build-deb.outputs.release_tag }}
+          prerelease: ${{ needs.build-deb.outputs.is_prerelease }}
+          files: artifacts/*.deb
+          name: ${{ needs.build-deb.outputs.release_tag }}
+          body: |
+            Rolling release for branch ${{ github.ref_name }}.
+            Build Date: $(date -u)

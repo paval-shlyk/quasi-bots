@@ -54,10 +54,10 @@ proptest = "1.10.0"
 [package.metadata.deb]
 maintainer = "quasibots <bot@quasi.bot>"
 copyright = "2024, quasibots"
+depends = "$auto, ca-certificates, openssl"
+systemd-units = { enable = true }
 assets = [
-	[
-		"systemd/scrapper.service",
-		"/etc/systemd/system/scrapper.service",
-		"644",
-	],
+    ["systemd/skill-master.service", "/etc/systemd/system/skill-master.service", "644"],
+    ["config.deb.toml", "/etc/skill-master/config.toml", "640"],
+    ["knowledge-bank/*", "/var/lib/skill-master/knowledge-bank/", "644"]
 ]

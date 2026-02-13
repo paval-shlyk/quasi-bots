@@ -15,3 +15,8 @@ sqlx = { version = "0.8.6", features = ["sqlite"] }
 tokio = { version = "1.49.0", features = ["sync", "fs"] }
 tracing = "0.1.44"
 walkdir = "2.5.0"
+uuid = { version = "1.20.0", features = [
+	"v4",
+	"fast-rng",
+	"macro-diagnostics",
+] }

@@ -13,9 +13,24 @@ pub struct NewKnowledge {
 
 /// Add new knowledge entry where you can add this
 pub async fn post_new_knowledge(
-    State(_state): State<KnowledgeState>,
-    Json(_body): Json<NewKnowledge>,
+    State(state): State<KnowledgeState>,
+    Json(body): Json<NewKnowledge>,
 ) -> impl IntoResponse {
+    entries::add_new_entry(
+        &state.pool,
+        body.topic_id,
+        body.question,
+        body.truth,
+        body.tags,
+    )
+    .await
+    .map(|()| StatusCode::CREATED)
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Failed to add new knowledge: {}", e),
+        )
+    })
 }
 
 #[derive(serde::Deserialize)]
@@ -23,7 +38,6 @@ pub struct QuestionBody {
     pub tag: Option<String>,
 }
 
-#[axum::debug_handler]
 pub async fn post_next_daily_question(
     State(state): State<KnowledgeState>,
 ) -> impl IntoResponse {

@@ -42,7 +42,7 @@ set_attempt:
     curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"attempts": 1}' 
 
 set_affinity:
-    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"days" 3}'
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/affinity" --json '{"days": 0}'
 
 lint:
     cargo fmt --all --check

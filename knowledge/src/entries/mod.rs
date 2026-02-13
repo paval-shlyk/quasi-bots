@@ -8,6 +8,7 @@ pub use routes::*;
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct HumanEntry {
     // Unique identifier for the entry, can be a UUID or any string
+    // used only for potential compatibility with external systems, not used for internal logic
     pub id: String,
     pub topic: String,
     pub tags: Vec<String>,
@@ -136,4 +137,62 @@ pub async fn fetch_random_entry(
         truth: entry.truth,
         affinity_days: entry.affinity_days,
     })
+}
+
+pub async fn add_new_entry(
+    pool: &sqlx::SqlitePool,
+    topic_id: u64,
+    question: String,
+    truth: String,
+    tags: Vec<String>,
+) -> anyhow::Result<()> {
+    let name = uuid::Uuid::new_v4().to_string();
+    let topic_id = topic_id as i64;
+
+    let mut tx = pool.begin().await?;
+
+    let entry_id = sqlx::query!(
+        r#"
+            INSERT INTO entry (name, topic_id, question, truth)
+            VALUES (?, ?, ?, ?)
+            RETURNING id
+        "#,
+        name,
+        topic_id,
+        question,
+        truth
+    )
+    .fetch_one(tx.as_mut())
+    .await?
+    .id;
+
+    for tag in tags {
+        let tag_id = sqlx::query!(
+            r#"
+                INSERT INTO tag (name)
+                VALUES (?)
+                ON CONFLICT(name) DO UPDATE SET name=excluded.name
+                RETURNING id
+            "#,
+            tag
+        )
+        .fetch_one(tx.as_mut())
+        .await?
+        .id;
+
+        sqlx::query!(
+            r#"
+                INSERT INTO m2m_entry_tag (entry_id, tag_id)
+                VALUES (?, ?)
+            "#,
+            entry_id,
+            tag_id
+        )
+        .execute(tx.as_mut())
+        .await?;
+    }
+
+    tx.commit().await?;
+
+    Ok(())
 }

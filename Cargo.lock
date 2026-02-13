@@ -1844,6 +1844,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tracing",
+ "uuid",
  "walkdir",
 ]
 
@@ -4061,7 +4062,6 @@ dependencies = [
  "tracing-subscriber",
  "utoipa",
  "utoipa-scalar",
- "uuid",
  "yahoo_finance_api",
  "yfinance-rs",
 ]

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT id FROM quote\n                WHERE text = ? AND author_id = ?\n                ",
+  "query": "\n            SELECT id FROM quote\n            WHERE text = ? AND author_id = ?\n            ",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "63fb8df9dbe9b7a84cb4f0bd87c5795f0063e3bf2e49993fcadc387cc642314e"
+  "hash": "b498051b5dfdbce9ed4907b4edeb506628c6a492e177c8050470590024a892b2"
 }

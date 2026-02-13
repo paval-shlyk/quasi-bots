@@ -1,8 +1,8 @@
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
-use crate::{KnowledgeState, topics};
 use crate::topics::TopicWithStatistics;
+use crate::{KnowledgeState, topics};
 
 #[utoipa::path(
     get,

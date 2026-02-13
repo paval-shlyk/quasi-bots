@@ -5,8 +5,8 @@ use axum::{
 };
 use reqwest::StatusCode;
 
-use crate::{KnowledgeState, reviews};
 use crate::reviews::Review;
+use crate::{KnowledgeState, reviews};
 
 #[derive(Debug, serde::Deserialize, utoipa::ToSchema)]
 pub struct ReviewAttempts {

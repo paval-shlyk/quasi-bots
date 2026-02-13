@@ -1,4 +1,4 @@
-#[derive(sqlx::FromRow, serde::Serialize, Clone, Debug)]
+#[derive(sqlx::FromRow, serde::Serialize, Clone, Debug, utoipa::ToSchema)]
 pub struct FamousQuote {
     pub id: i64,
     pub text: String,
@@ -6,7 +6,7 @@ pub struct FamousQuote {
     pub when_used: Option<chrono::DateTime<chrono::Utc>>,
 }
 
-#[derive(sqlx::FromRow, serde::Serialize, Clone, Debug)]
+#[derive(sqlx::FromRow, serde::Serialize, Clone, Debug, utoipa::ToSchema)]
 pub struct QuoteAuthor {
     pub name: String,
     pub quotes_count: u64,

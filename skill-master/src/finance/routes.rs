@@ -8,15 +8,28 @@ use reqwest::StatusCode;
 
 use crate::{
     AppState,
-    finance::{metrics::AnalysisConfig, model::TrackingAsset},
+    finance::{
+        metrics::AnalysisConfig, metrics::TechnicalReport, model::TrackingAsset,
+    },
 };
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::IntoParams)]
 pub struct AssetQuery {
     pub asset: String,
 }
 
-///Generate report for given asset using it symbol
+#[utoipa::path(
+    get,
+    path = "/market-tracker/report",
+    params(
+        AssetQuery
+    ),
+    responses(
+        (status = 200, description = "Technical report generated successfully", body = TechnicalReport),
+        (status = 400, description = "Invalid asset")
+    ),
+    description = "Generates a technical report for the specified asset"
+)]
 pub async fn get_report(
     State(_state): State<AppState>,
     Query(query): Query<AssetQuery>,
@@ -57,6 +70,14 @@ pub async fn post_tracking_asset() -> impl IntoResponse {
 
 // return news about hype assets
 // returns recommendation list based on news fetched
+#[utoipa::path(
+    get,
+    path = "/market-tracker/recommendations",
+    responses(
+        (status = 200, description = "Market recommendations retrieved successfully", body = Vec<String>),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_market_recommendations(
     State(state): State<AppState>,
 ) -> impl IntoResponse {

@@ -1,4 +1,4 @@
-#[derive(serde::Serialize, Clone, Debug)]
+#[derive(serde::Serialize, Clone, Debug, utoipa::ToSchema)]
 pub struct Article {
     pub title: String,
     pub authors: Vec<String>,

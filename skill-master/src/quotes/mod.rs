@@ -8,6 +8,13 @@ use crate::AppState;
 
 pub use model::*;
 
+#[utoipa::path(
+    get,
+    path = "/quotes-bank/authors",
+    responses(
+        (status = 200, description = "Known authors retrieved successfully", body = Vec<QuoteAuthor>)
+    )
+)]
 pub async fn get_known_authors(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -34,6 +41,15 @@ pub async fn get_known_authors(
     Json(authors)
 }
 
+#[utoipa::path(
+    post,
+    path = "/quotes-bank/next",
+    responses(
+        (status = 200, description = "Next famous quote retrieved successfully", body = FamousQuote),
+        (status = 404, description = "No fresh quotes available, try again later"),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn post_next_unused_quote(
     State(state): State<AppState>,
 ) -> impl IntoResponse {

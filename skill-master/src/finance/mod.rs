@@ -1,5 +1,5 @@
-mod metrics;
-mod model;
+pub mod metrics;
+pub mod model;
 mod recommendations;
 mod routes;
 

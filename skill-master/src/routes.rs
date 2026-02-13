@@ -1,4 +1,5 @@
 use crate::finance;
+use crate::openapi::ApiDoc;
 use crate::{AppState, news, quotes, search};
 use axum::{
     Router,
@@ -6,6 +7,19 @@ use axum::{
     response::IntoResponse,
     routing::{get, post},
 };
+use utoipa::OpenApi;
+use utoipa_scalar::{Scalar, Servable};
+
+pub async fn get_openapi_json() -> impl IntoResponse {
+    axum::http::Response::builder()
+        .header("Content-Type", "application/json")
+        .body(
+            ApiDoc::openapi()
+                .to_json()
+                .expect("Failed to serialize OpenAPI spec"),
+        )
+        .expect("Failed to build response")
+}
 
 #[rustfmt::skip]
 pub fn create_routes(state: AppState) -> Router<()> {
@@ -31,7 +45,9 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .with_state(state.knowledge_state.clone());
 
     Router::new()
+        .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/knowledge-bank", knowledge_routes)
+        .route("/openapi.json", get(get_openapi_json))
 
         .with_state(state.clone())
         .route("/health", get(health_check))

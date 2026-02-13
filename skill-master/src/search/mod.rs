@@ -8,13 +8,13 @@ use reqwest::StatusCode;
 
 use crate::AppState;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, utoipa::IntoParams)]
 pub struct SearchQuery {
     #[serde(alias = "q")]
     pub query: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct FetchedArticle {
     pub title: String,
     pub link: String,
@@ -22,13 +22,13 @@ pub struct FetchedArticle {
     pub snippet: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct KnowledgeGraph {
     pub description: String,
     pub source_url: String,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, utoipa::ToSchema)]
 pub struct SearchResult {
     pub answer: Option<String>,
     /// knowledge graph information about the search query, e.g. a short description of the topic
@@ -105,6 +105,17 @@ async fn perform_search(
     })
 }
 
+#[utoipa::path(
+    get,
+    path = "/search",
+    params(
+        SearchQuery
+    ),
+    responses(
+        (status = 200, description = "Search performed successfully", body = SearchResult),
+        (status = 500, description = "Internal server error")
+    )
+)]
 pub async fn get_search(
     search: Query<SearchQuery>,
     State(state): State<AppState>,

@@ -1,16 +1,33 @@
-mod model;
+pub mod model;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
 use crate::AppState;
+use crate::config::RssSource;
 
-use model::Article;
+pub use model::Article;
 
-pub async fn post_chosen_topic(State(_): State<AppState>) -> impl IntoResponse {
+#[utoipa::path(
+    post,
+    path = "/news-bank/topics",
+    responses(
+        (status = 501, description = "Not implemented")
+    )
+)]
+pub async fn post_chosen_topic(
+    State(_state): State<AppState>,
+) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, "Topic added")
 }
 
+#[utoipa::path(
+    get,
+    path = "/news-bank/topics",
+    responses(
+        (status = 200, description = "Topics retrieved successfully", body = Vec<RssSource>)
+    )
+)]
 pub async fn get_chosen_topics(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -19,6 +36,13 @@ pub async fn get_chosen_topics(
     Json(topics)
 }
 
+#[utoipa::path(
+    get,
+    path = "/news-bank/today",
+    responses(
+        (status = 200, description = "Today's news retrieved successfully", body = Vec<Article>)
+    )
+)]
 pub async fn get_today_news(
     State(state): State<AppState>,
 ) -> impl IntoResponse {

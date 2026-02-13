@@ -1,5 +1,6 @@
 pub mod finance;
 pub mod news;
+pub mod openapi;
 pub mod quotes;
 pub mod routes;
 pub mod search;

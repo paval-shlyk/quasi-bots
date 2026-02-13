@@ -45,7 +45,7 @@ pub async fn main() {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(Notify::new()),
-        knowledge_database: knowledge_database.into(),
+        knowledge_database,
     });
 
     let app = scrapper::routes::create_routes(state);

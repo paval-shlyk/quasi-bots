@@ -18,12 +18,7 @@ pub async fn post_chosen_topic(
 pub async fn get_chosen_topics(
     State(state): State<Arc<AppState>>,
 ) -> impl IntoResponse {
-    let topics = state
-        .config
-        .rss_sources
-        .iter()
-        .map(|source| source.clone())
-        .collect::<Vec<_>>();
+    let topics = state.config.rss_sources.to_vec();
 
     Json(topics)
 }

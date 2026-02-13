@@ -1,7 +1,6 @@
 mod affinity;
-mod entries;
 mod model;
-pub mod reviews;
+mod reviews;
 mod routes;
 
 pub use affinity::*;
@@ -57,7 +56,7 @@ async fn next_topic(pool: &sqlx::SqlitePool) -> anyhow::Result<Topic> {
     .await?;
 
     match maybe_topic {
-        Some(topic) => return Ok(topic),
+        Some(topic) => Ok(topic),
         None => {
             sqlx::query!(
                 r#"

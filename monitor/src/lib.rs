@@ -126,10 +126,10 @@ fn get_smart_health(disk_name: &str) -> Option<f64> {
     match get_device_info(&path) {
         Ok(info) => {
             // Logic to calculate health
-            if let Some(nvme_log) = info.nvme_smart_health_information_log {
-                if let Some(percentage_used) = nvme_log.get("percentage_used") {
-                    return Some((100.0 - *percentage_used as f64).max(0.0));
-                }
+            if let Some(nvme_log) = info.nvme_smart_health_information_log
+                && let Some(percentage_used) = nvme_log.get("percentage_used")
+            {
+                return Some((100.0 - *percentage_used as f64).max(0.0));
             }
 
             if let Some(attrs) = info.ata_smart_attributes {

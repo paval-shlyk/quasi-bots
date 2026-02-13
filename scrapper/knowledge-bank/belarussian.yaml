@@ -4,7 +4,7 @@
   question: "Якога роду назоўнік «сабака» ў беларускай мове?"
   truth: "Мужчынскага роду (мой сабака, злы сабака)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=сабака"
+  source: "https://slounik.org/search?dict=&search=сабака"
 
 - id: "be_002"
   topic: "belarussian"
@@ -12,7 +12,7 @@
   question: "Якога роду назоўнік «гусь» у беларускай мове?"
   truth: "Жаночага роду (белая гусь)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=гусь"
+  source: "https://slounik.org/search?dict=&search=гусь"
 
 - id: "be_003"
   topic: "belarussian"
@@ -20,7 +20,7 @@
   question: "Якога роду назоўнік «медаль» у беларускай мове?"
   truth: "Мужчынскага роду (залаты медаль)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=медаль"
+  source: "https://slounik.org/search?dict=&search=медаль"
 
 - id: "be_004"
   topic: "belarussian"
@@ -28,7 +28,7 @@
   question: "Як перакласці на беларускую мову слова «ковёр»?"
   truth: "Дыван."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=дыван"
+  source: "https://slounik.org/search?dict=&search=дыван"
 
 - id: "be_005"
   topic: "belarussian"
@@ -36,7 +36,7 @@
   question: "Як перакласці на беларускую мову слова «клюква»?"
   truth: "Журавіны."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=журавіны"
+  source: "https://slounik.org/search?dict=&search=журавіны"
 
 - id: "be_006"
   topic: "belarussian"
@@ -68,7 +68,7 @@
   question: "Што азначае колер «блакітны»?"
   truth: "Гэта светла-сіні колер, колер неба (голубой)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=блакітны"
+  source: "https://slounik.org/search?dict=&search=блакітны"
 
 - id: "be_010"
   topic: "belarussian"
@@ -76,7 +76,7 @@
   question: "Што азначае слова «дыван» у беларускай мове?"
   truth: "Гэта «ковёр». Прадмет мэблі для сядзення (диван) па-беларуску называецца «канапа»."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=дыван"
+  source: "https://slounik.org/search?dict=&search=дыван"
 
 - id: "be_011"
   topic: "belarussian"
@@ -108,7 +108,7 @@
   question: "Як перакласці «белка» на беларускую мову?"
   truth: "Вавёрка."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=вавёрка"
+  source: "https://slounik.org/search?dict=&search=вавёрка"
 
 - id: "be_015"
   topic: "belarussian"
@@ -116,7 +116,7 @@
   question: "Як перакласці «лук» (расліна) на беларускую мову?"
   truth: "Цыбуля."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=цыбуля"
+  source: "https://slounik.org/search?dict=&search=цыбуля"
 
 - id: "be_016"
   topic: "belarussian"
@@ -156,7 +156,7 @@
   question: "Як сказаць па-беларуску «сейчас»?"
   truth: "Цяпер (калі гаворка пра гэты момант часу ўвогуле) або зараз (калі гаворка пра імгненнае дзеянне)."
   complexity: 2
-  source: "https://slounik.org/search?dict=&q=цяпер"
+  source: "https://slounik.org/search?dict=&search=цяпер"
 
 - id: "be_021"
   topic: "belarussian"
@@ -164,7 +164,7 @@
   question: "Як называецца «воскресенье» па-беларуску?"
   truth: "Нядзеля."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=нядзеля"
+  source: "https://slounik.org/search?dict=&search=нядзеля"
 
 - id: "be_022"
   topic: "belarussian"
@@ -172,7 +172,7 @@
   question: "Слова «шуфляда» — што гэта?"
   truth: "Высоўная скрынка ў стале ці шафе (ящик)."
   complexity: 2
-  source: "https://slounik.org/search?dict=&q=шуфляда"
+  source: "https://slounik.org/search?dict=&search=шуфляда"
 
 - id: "be_023"
   topic: "belarussian"
@@ -188,7 +188,7 @@
   question: "Як называецца месяц «октябрь» па-беларуску?"
   truth: "Кастрычнік."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=кастрычнік"
+  source: "https://slounik.org/search?dict=&search=кастрычнік"
 
 - id: "be_025"
   topic: "belarussian"
@@ -196,7 +196,7 @@
   question: "Як называецца месяц «август» па-беларуску?"
   truth: "Жнівень."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=жнівень"
+  source: "https://slounik.org/search?dict=&search=жнівень"
 
 - id: "be_026"
   topic: "belarussian"
@@ -244,7 +244,7 @@
   question: "Што значыць слова «твар»?"
   truth: "Гэта значыць «твар» (лицо)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=твар"
+  source: "https://slounik.org/search?dict=&search=твар"
 
 - id: "be_032"
   topic: "belarussian"
@@ -252,7 +252,7 @@
   question: "Як перакласці «радуга»?"
   truth: "Вясёлка."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=вясёлка"
+  source: "https://slounik.org/search?dict=&search=вясёлка"
 
 - id: "be_033"
   topic: "belarussian"
@@ -268,7 +268,7 @@
   question: "Што такое «вочы»?"
   truth: "Глаза."
   complexity: 0
-  source: "https://slounik.org/search?dict=&q=вочы"
+  source: "https://slounik.org/search?dict=&search=вочы"
 
 - id: "be_035"
   topic: "belarussian"
@@ -276,7 +276,7 @@
   question: "Што такое «падлога»?"
   truth: "Пол (насціл унізе памяшкання)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=падлога"
+  source: "https://slounik.org/search?dict=&search=падлога"
 
 - id: "be_036"
   topic: "belarussian"
@@ -284,7 +284,7 @@
   question: "Што такое «бульба»?"
   truth: "Картофель."
   complexity: 0
-  source: "https://slounik.org/search?dict=&q=бульба"
+  source: "https://slounik.org/search?dict=&search=бульба"
 
 - id: "be_037"
   topic: "belarussian"
@@ -340,7 +340,7 @@
   question: "Як перакласці «вкусный»?"
   truth: "Смачны."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=смачны"
+  source: "https://slounik.org/search?dict=&search=смачны"
 
 - id: "be_044"
   topic: "belarussian"
@@ -348,7 +348,7 @@
   question: "Што такое «адукацыя»?"
   truth: "Образование."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=адукацыя"
+  source: "https://slounik.org/search?dict=&search=адукацыя"
 
 - id: "be_045"
   topic: "belarussian"
@@ -356,7 +356,7 @@
   question: "Як перакласці «грамадства»?"
   truth: "Общество."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=грамадства"
+  source: "https://slounik.org/search?dict=&search=грамадства"
 
 - id: "be_046"
   topic: "belarussian"
@@ -364,7 +364,7 @@
   question: "Назоўнік «кава» (кофе) якога роду?"
   truth: "Жаночага роду (смачная кава)."
   complexity: 1
-  source: "https://slounik.org/search?dict=&q=кава"
+  source: "https://slounik.org/search?dict=&search=кава"
 
 - id: "be_047"
   topic: "belarussian"
@@ -380,7 +380,7 @@
   question: "Які гэта колер — «чырвоны»?"
   truth: "Красный."
   complexity: 0
-  source: "https://slounik.org/search?dict=&q=чырвоны"
+  source: "https://slounik.org/search?dict=&search=чырвоны"
 
 - id: "be_049"
   topic: "belarussian"
@@ -388,7 +388,7 @@
   question: "Хто такая «жонка»?"
   truth: "Жена."
   complexity: 0
-  source: "https://slounik.org/search?dict=&q=жонка"
+  source: "https://slounik.org/search?dict=&search=жонка"
 
 - id: "be_050"
   topic: "belarussian"
@@ -396,15 +396,15 @@
   question: "Хто такі «муж»?"
   truth: "Муж."
   complexity: 0
-  source: "https://slounik.org/search?dict=&q=муж"
+  source: "https://slounik.org/search?dict=&search=муж"
 
 - id: "be_051"
   topic: "belarussian"
   tags: ["vocabulary", "abstract"]
   question: "Што такое «каханне»?"
-  truth: "Любовь (да чалавека, рамантычная), у адрозненне ад «любові» (да Радзімы, бацькоў, справы)."
+  truth: "Любоў (да чалавека, рамантычная), у адрозненне ад «любові» (да Радзімы, бацькоў, справы)."
   complexity: 2
-  source: "https://slounik.org/search?dict=&q=каханне"
+  source: "https://slounik.org/search?dict=&search=каханне"
 
 - id: "be_052"
   topic: "belarussian"

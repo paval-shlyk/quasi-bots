@@ -2,81 +2,82 @@ use anyhow::Context;
 
 use crate::AppState;
 
-pub async fn task(state: AppState) {
-    #[derive(serde::Deserialize)]
-    struct ZenQuote {
-        q: String,
-        a: String,
-    }
+/// Quote format from the external API
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ZenQuote {
+    pub q: String,
+    pub a: String,
+}
 
-    async fn insert_new_quotes(
-        quotes: Vec<ZenQuote>,
-        pool: &sqlx::SqlitePool,
-    ) -> anyhow::Result<()> {
-        for quote in quotes {
-            let author_name = quote.a.trim();
-            let quote_text = quote.q.trim();
+pub async fn insert_new_quotes(
+    quotes: Vec<ZenQuote>,
+    pool: &sqlx::SqlitePool,
+) -> anyhow::Result<()> {
+    for quote in quotes {
+        let author_name = quote.a.trim();
+        let quote_text = quote.q.trim();
 
-            let mut tx = pool.begin().await?;
+        let mut tx = pool.begin().await?;
 
-            // Insert author if not exists
-            let author_id: i64 = sqlx::query!(
-                r#"
-                    INSERT INTO author (name)
-                    VALUES (?)
-                    ON CONFLICT(name) DO UPDATE SET name=excluded.name
-                    RETURNING id
-                "#,
-                author_name
+        // Insert author if not exists
+        let author_id: i64 = sqlx::query!(
+            r#"
+                INSERT INTO author (name)
+                VALUES (?)
+                ON CONFLICT(name) DO UPDATE SET name=excluded.name
+                RETURNING id
+            "#,
+            author_name
+        )
+        .fetch_one(tx.as_mut())
+        .await
+        .inspect_err(|e| {
+            tracing::error!(
+                "Failed to insert author '{}' into DB: {}",
+                author_name,
+                e
             )
-            .fetch_one(tx.as_mut())
-            .await
-            .inspect_err(|e| {
-                tracing::error!(
-                    "Failed to insert author '{}' into DB: {}",
-                    author_name,
-                    e
-                )
-            })?
-            .id;
+        })?
+        .id;
 
-            let already_exists = sqlx::query!(
-                r#"
-                SELECT id FROM quote
-                WHERE text = ? AND author_id = ?
-                "#,
-                quote_text,
-                author_id
-            )
-            .fetch_optional(tx.as_mut())
-            .await?
-            .is_some();
+        let already_exists = sqlx::query!(
+            r#"
+            SELECT id FROM quote
+            WHERE text = ? AND author_id = ?
+            "#,
+            quote_text,
+            author_id
+        )
+        .fetch_optional(tx.as_mut())
+        .await?
+        .is_some();
 
-            if already_exists {
-                tracing::info!(
-                    "Quote already exists in DB, skipping: '{}'",
-                    quote_text
-                );
-                continue;
-            }
-
-            sqlx::query!(
-                r#"
-                INSERT INTO quote (text, author_id)
-                VALUES (?, ?)
-                "#,
-                quote_text,
-                author_id
-            )
-            .execute(tx.as_mut())
-            .await?;
-
-            tx.commit().await?;
+        if already_exists {
+            tracing::info!(
+                "Quote already exists in DB, skipping: '{}'",
+                quote_text
+            );
+            continue;
         }
 
-        Ok(())
+        sqlx::query!(
+            r#"
+            INSERT INTO quote (text, author_id)
+            VALUES (?, ?)
+            "#,
+            quote_text,
+            author_id
+        )
+        .execute(tx.as_mut())
+        .await?;
+
+        tx.commit().await?;
     }
 
+    Ok(())
+}
+
+pub async fn task(state: AppState) {
     async fn fetch_quotes_from_api() -> anyhow::Result<Vec<ZenQuote>> {
         let client = reqwest::Client::new();
 

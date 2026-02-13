@@ -1,6 +1,6 @@
 lint:
     cargo fmt --all --check
-    cargo clippy --all-targets -- -D warnings
+    cargo clippy --all --all-targets --all-features -- -D warnings
 
 fix:
     cargo fmt

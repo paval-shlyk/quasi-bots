@@ -41,56 +41,12 @@ pub async fn fetch_random_topic(
         return Err(anyhow::anyhow!("No topics are available"));
     }
 
-    async fn fetch_and_update_topic(
-        pool: &sqlx::SqlitePool,
-    ) -> anyhow::Result<Option<Topic>> {
-        let maybe_topic = sqlx::query!(
-            r#"
-                SELECT id, name
-                FROM topic
-                WHERE is_used = FALSE AND (disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP)
-                ORDER BY RANDOM()
-                LIMIT 1
-            "#
-        )
-        .fetch_optional(pool)
-        .await?;
-
-        let Some(topic) = maybe_topic else {
-            return Ok(None);
-        };
-        tracing::info!("Updating topic with id {} as used", topic.id);
-
-        // Mark the topic as used
-        // This action trigger `trg_mark_topic_disabled` which
-        // will set `disabled_until` to `CURRENT_TIMESTAMP + INTERVAL 'N day'` where
-        // N is the affinity days. If affinity days is set to NULL, the topic will not be disabled.
-        // But still marked as used, so it won't be selected again until all other topics are used.
-        sqlx::query!(
-            r#"
-                UPDATE topic
-                SET is_used = TRUE
-                WHERE id = ?
-            "#,
-            topic.id
-        )
-        .execute(pool)
-        .await?;
-
-        Ok(Some(Topic {
-            id: topic.id as u64,
-            name: topic.name,
-        }))
-    }
-
     let maybe_topic = fetch_and_update_topic(pool).await?;
 
     match maybe_topic {
         Some(topic) => Ok(topic),
         None => {
-            tracing::info!(
-                "All topics have been used, resetting is_used flags"
-            );
+            tracing::info!("All topics have been used, resetting them");
 
             sqlx::query!(
                 r#"
@@ -147,4 +103,46 @@ pub async fn fetch_topics(
         .await?;
 
     Ok(topics)
+}
+
+async fn fetch_and_update_topic(
+    pool: &sqlx::SqlitePool,
+) -> anyhow::Result<Option<Topic>> {
+    let maybe_topic = sqlx::query!(
+            r#"
+                SELECT id, name
+                FROM topic
+                WHERE is_used = FALSE AND (disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP)
+                ORDER BY RANDOM()
+                LIMIT 1
+            "#
+        )
+        .fetch_optional(pool)
+        .await?;
+
+    let Some(topic) = maybe_topic else {
+        return Ok(None);
+    };
+    tracing::debug!("Updating topic with id {} as used", topic.id);
+
+    // Mark the topic as used
+    // This action trigger `trg_mark_topic_disabled` which
+    // will set `disabled_until` to `CURRENT_TIMESTAMP + INTERVAL 'N day'` where
+    // N is the affinity days. If affinity days is set to NULL, the topic will not be disabled.
+    // But still marked as used, so it won't be selected again until all other topics are used.
+    sqlx::query!(
+        r#"
+                UPDATE topic
+                SET is_used = TRUE
+                WHERE id = ?
+            "#,
+        topic.id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(Some(Topic {
+        id: topic.id as u64,
+        name: topic.name,
+    }))
 }

@@ -26,10 +26,6 @@ pub struct HumanEntry {
 pub async fn fetch_random_entry(
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<HumanEntry> {
-    let topic = topics::fetch_random_topic(pool).await?;
-
-    let topic_id = topic.id as i64;
-
     #[derive(Debug, Clone, sqlx::FromRow)]
     struct EntryWithoutTags {
         pub id: i64,
@@ -53,10 +49,10 @@ pub async fn fetch_random_entry(
                         t.name as topic,
                         e.question,
                         e.truth,
-                        e.affinity_days as "affinity_days: Option<u32>"
+                        e.affinity_days as "affinity_days: u32"
                     FROM entry as e
                     JOIN topic as t ON e.topic_id = t.id
-                    WHERE t.id = ? AND e.is_reviewed = FALSE
+                    WHERE t.id = ? AND e.is_reviewed = FALSE AND (e.disabled_until IS NULL OR e.disabled_until <= CURRENT_TIMESTAMP)
                     ORDER BY RANDOM()
                     LIMIT 1
                 "#,
@@ -67,6 +63,10 @@ pub async fn fetch_random_entry(
 
         Ok(entry)
     }
+
+    let topic = topics::fetch_random_topic(pool).await?;
+
+    let topic_id = topic.id as i64;
 
     let entry = match fetch_entry(pool, topic_id).await? {
         Some(entry) => entry,
@@ -94,6 +94,14 @@ pub async fn fetch_random_entry(
     };
 
     //also invoke trigger to create recent review
+    //This update also invokes two triggers:
+    //`trg_mark_entry_disabled` and `trg_create_recent_review`.
+    //
+    //`trg_mark_entry_disabled` will disable the
+    //entry for a certain period of time based on the affinity days (if not affinity is set then
+    //trigger does nothing).
+    //`trg_crate_recent_review` create a new record in the `review`
+    //table with the current timestamp and remove old one (only one review exist).
     sqlx::query!(
         r#"
                 UPDATE entry

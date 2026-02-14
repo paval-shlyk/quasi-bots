@@ -18,9 +18,37 @@ fix:
     cargo fmt
     __CARGO_FIX_YOLO=1 cargo clippy --all-targets --all-features --fix --allow-dirty
 
-arm64-build:
-    docker buildx build -t paval-shlyk/quasi-bots/skill-master:latest -f skill-master/docker/arm64.Dockerfile .
-    cargo deb -p skill-master --target=aarch64-unknown-linux-gnu --no-build
+test-install:
+    #!/bin/bash
+    docker buildx build -t paval-shlyk/quasi-bots/skill-master:latest -f skill-master/docker/Dockerfile .
+
+    # Build the package (no compilation, just assets)
+    cargo deb -p skill-master --no-build
+
+    # Clean up previous test container
+    docker rm -f skill-master-test 2>/dev/null || true
+
+    echo "Running systemd container..."
+    # Run privileged container with systemd
+    docker run -it --rm -d --name skill-master-test --privileged \
+        --cgroupns=host \
+        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v $(pwd):/repo \
+        jrei/systemd-ubuntu:24.04 \
+        /bin/bash
+
+    echo "Installing package..."
+    # Install dependencies and our package
+    docker exec skill-master-test bash -c "apt-get update && apt-get install -y /repo/target/debian/skill-master_*.deb"
+    
+    echo ""
+    echo "---------------------------------------------------"
+    echo "✅ Installation complete!"
+    echo "To test the service:"
+    echo "  1. Enter container: docker exec -it skill-master-test bash"
+    echo "  2. Edit config:     vi /etc/skill-master/config.toml"
+    echo "  3. Start service:   systemctl start skill-master"
+    echo "---------------------------------------------------"
 
 
 reset-db:

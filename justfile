@@ -18,9 +18,18 @@ fix:
     cargo fmt
     __CARGO_FIX_YOLO=1 cargo clippy --all-targets --all-features --fix --allow-dirty
 
-test-install:
+build-docker:
     #!/bin/bash
     docker buildx build -t paval-shlyk/quasi-bots/skill-master:latest -f skill-master/docker/Dockerfile .
+
+run-docker: build-docker
+    docker run -it --rm --name skill-master-run \
+        -v $(pwd)/skill-master:/config:rw \
+        paval-shlyk/quasi-bots/skill-master:latest
+
+test-install: build-docker
+    #!/bin/bash
+
 
     # Build the package (no compilation, just assets)
     cargo deb -p skill-master --no-build
@@ -53,7 +62,7 @@ test-install:
 
 reset-db:
     #!/bin/bash
-    export DATABASE_URL="sqlite://$(pwd)/scrapper.db"
+    export DATABASE_URL="sqlite://$(pwd)/skills.db"
 
     sqlx database drop
     sqlx database create

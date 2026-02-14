@@ -11,6 +11,7 @@ Volume=/var/lib/skill-master:/var/lib/skill-master
 Volume=/etc/localtime:/etc/localtime:ro
 Environment=RUST_LOG=info
 PublishPort=8080:8080
+AutoUpdate=registry
 
 [Service]
 Restart=always

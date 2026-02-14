@@ -19,6 +19,10 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -102,8 +106,8 @@ jobs:
           push: true
           tags: |
             ghcr.io/${{ github.repository }}/skill-master:${{ steps.vars.outputs.docker_tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.docker_platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.docker_platform }}
 
       - name: Update container image reference
         run: |

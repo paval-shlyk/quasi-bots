@@ -1,5 +1,35 @@
-target/*
-.git/*
-.github/*
-LICENSE
+# Build artifacts
+target/
+**/*.rs.bk
+
+# Version control
+.git/
+.github/
+.gitignore
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+# Configuration and Environment
+.env*
+*.local
 codebook.toml
+
+# IDE settings
+.vscode/
+.idea/
+*.swp
+
+# OS generated
+.DS_Store
+Thumbs.db
+
+# Documentation and temporary files
+README.md
+LICENSE
+docs/
+tmp/

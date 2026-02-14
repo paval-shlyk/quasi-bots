@@ -1,8 +1,12 @@
 #!/bin/bash
-set -e
-
 # Reload systemd to pick up the new Quadlet file
 systemctl daemon-reload
+
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to reload systemd daemon. Please check the output above for details."
+else
+    echo "Systemd daemon reloaded successfully."
+fi
 
 echo ""
 echo "=========================================================================="

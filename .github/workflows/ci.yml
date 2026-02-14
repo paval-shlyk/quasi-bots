@@ -109,11 +109,11 @@ jobs:
         run: |
           sed -i 's|IMAGE_TAG|${{ steps.vars.outputs.docker_tag }}|g' skill-master/systemd/skill-master.container
 
+      - name: Install cargo-binstall
+        uses: cargo-bins/cargo-binstall@main
+
       - name: Install cargo-deb
-        run: |
-          if ! command -v cargo-deb &> /dev/null; then
-            cargo install cargo-deb
-          fi
+        run: cargo binstall cargo-deb --no-confirm
 
       - name: Build and Package
         run: cargo deb -p skill-master --no-build --target ${{ matrix.target }} --deb-version ${{ steps.vars.outputs.full_version }}

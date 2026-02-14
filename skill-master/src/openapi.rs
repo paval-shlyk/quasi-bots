@@ -71,4 +71,5 @@ use knowledge;
         (name = "finance", description = "Market Tracker API")
     )
 )]
+#[rustfmt::skip]
 pub struct ApiDoc;

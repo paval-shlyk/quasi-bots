@@ -18,19 +18,23 @@ WORKDIR /build
 
 COPY --from=planner /build/recipe.json recipe.json
 
-# Build dependencies separately to leverage Docker caching
+# Build dependencies - this layer is cached until Cargo.toml changes
 RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY . . 
 
-# Native build on the current platform
-RUN cargo build --release --bin skill-master
+RUN cargo build --release --bin skill-master && \
+    strip target/release/skill-master
 
 FROM debian:trixie-slim AS runtime
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
-# The binary will be in the standard target/release directory
 COPY --from=builder /build/target/release/skill-master /app/
 
 ENV RUST_LOG=info

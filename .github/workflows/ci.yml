@@ -28,20 +28,30 @@ jobs:
       - name: Lint
         run: just lint
 
-  build-deb:
+  build:
+    needs: lint
     strategy:
       matrix:
         include:
           - runner: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             arch: amd64
+            dockerfile: skill-master/docker/x86_64.Dockerfile
+            docker_tag_suffix: ""
+            docker_platform: linux/amd64
           - runner: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             arch: arm64
+            dockerfile: skill-master/docker/arm64.Dockerfile
+            docker_tag_suffix: -arm64
+            docker_platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     outputs:
       release_tag: ${{ steps.vars.outputs.release_tag }}
       is_prerelease: ${{ steps.vars.outputs.is_prerelease }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
@@ -56,48 +66,50 @@ jobs:
             SUFFIX="dev"
             RELEASE_TAG="latest-dev"
             IS_PRERELEASE="true"
+            DOCKER_TAG="${BRANCH_NAME}${{ matrix.docker_tag_suffix }}"
           else
             SUFFIX="stable"
             RELEASE_TAG="latest-stable"
             IS_PRERELEASE="false"
+            DOCKER_TAG="latest${{ matrix.docker_tag_suffix }}"
           fi
           
           FULL_VERSION="${BASE_VERSION}-${SUFFIX}"
           
           echo "Full Version: $FULL_VERSION"
           echo "Release Tag: $RELEASE_TAG"
+          echo "Docker Tag: $DOCKER_TAG"
           
           echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
           echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
           echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+          echo "docker_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
 
-      - name: Install dependencies
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.docker_platform }}
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/skill-master:${{ steps.vars.outputs.docker_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update container image reference
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler libsqlite3-dev
-
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install cargo-chef
-        run: cargo install cargo-chef
-
-      - name: Prepare recipe
-        run: cargo chef prepare --recipe-path recipe.json
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('recipe.json') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.target }}-
+          sed -i 's|IMAGE_TAG|${{ steps.vars.outputs.docker_tag }}|g' skill-master/systemd/skill-master.container
 
       - name: Install cargo-deb
         run: |
@@ -105,11 +117,8 @@ jobs:
             cargo install cargo-deb
           fi
 
-      - name: Cook ingredients
-        run: cargo chef cook --release --target ${{ matrix.target }} --recipe-path recipe.json
-
       - name: Build and Package
-        run: cargo deb -p skill-master --target ${{ matrix.target }} --deb-version ${{ steps.vars.outputs.full_version }}
+        run: cargo deb -p skill-master --no-build --target ${{ matrix.target }} --deb-version ${{ steps.vars.outputs.full_version }}
 
       - name: Upload Deb Artifact
         uses: actions/upload-artifact@v4
@@ -118,7 +127,7 @@ jobs:
           path: target/${{ matrix.target }}/debian/*.deb
 
   release:
-    needs: build-deb
+    needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')
     permissions:
@@ -136,10 +145,10 @@ jobs:
       - name: Update Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ needs.build-deb.outputs.release_tag }}
-          prerelease: ${{ needs.build-deb.outputs.is_prerelease }}
+          tag_name: ${{ needs.build.outputs.release_tag }}
+          prerelease: ${{ needs.build.outputs.is_prerelease }}
           files: artifacts/*.deb
-          name: ${{ needs.build-deb.outputs.release_tag }}
+          name: ${{ needs.build.outputs.release_tag }}
           body: |
             Rolling release for branch ${{ github.ref_name }}.
             Build Date: ${{ env.DATE }}

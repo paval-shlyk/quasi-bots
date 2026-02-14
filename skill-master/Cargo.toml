@@ -56,17 +56,12 @@ proptest = "1.10.0"
 [package.metadata.deb]
 maintainer = "Paval Shlyk <paval.shlyk@quasi.su>"
 copyright = "2026, quasi.su"
-depends = "$auto, ca-certificates, openssl"
+depends = "$auto, podman"
 section = "utility"
 assets = [
 	[
-		"target/release/skill-master",
-		"/usr/bin/skill-master",
-		"755",
-	],
-	[
-		"systemd/skill-master.service",
-		"/etc/systemd/system/skill-master.service",
+		"systemd/skill-master.container",
+		"/etc/containers/systemd/skill-master.container",
 		"644",
 	],
 	[
@@ -86,4 +81,4 @@ assets = [
 	],
 ]
 conf-files = ["/etc/skill-master/config.toml"]
-systemd-units = { enable = true }
+maintainer-scripts = "debian/"

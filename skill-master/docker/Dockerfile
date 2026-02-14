@@ -9,12 +9,14 @@ RUN apt-get update && \
 
 COPY . .
 
+# Native build on the current platform
 RUN cargo build --release -p skill-master
 
 FROM debian:stable-slim AS runtime
 
 WORKDIR /app
 
+# The binary will be in the standard target/release directory
 COPY --from=builder /build/target/release/skill-master /app/
 
 ENV RUST_LOG=info

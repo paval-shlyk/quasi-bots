@@ -104,6 +104,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.docker_platform }}
           push: true
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
           tags: |
             ghcr.io/${{ github.repository }}/skill-master:${{ steps.vars.outputs.docker_tag }}
           cache-from: type=gha,scope=${{ matrix.docker_platform }}
@@ -113,11 +115,16 @@ jobs:
         run: |
           sed -i 's|IMAGE_TAG|${{ steps.vars.outputs.docker_tag }}|g' skill-master/systemd/skill-master.container
 
-      - name: Install cargo-binstall
-        uses: cargo-bins/cargo-binstall@main
+      - name: Cache cargo-deb
+        id: cache-cargo-deb
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-deb
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-deb-v2
 
       - name: Install cargo-deb
-        run: cargo binstall cargo-deb --no-confirm
+        if: steps.cache-cargo-deb.outputs.cache-hit != 'true'
+        run: cargo install cargo-deb
 
       - name: Build and Package
         run: cargo deb -p skill-master --no-build --target ${{ matrix.target }} --deb-version ${{ steps.vars.outputs.full_version }}

@@ -21,9 +21,10 @@ COPY --from=planner /build/recipe.json recipe.json
 # Build dependencies - this layer is cached until Cargo.toml changes
 RUN cargo chef cook --release --recipe-path recipe.json
 
-COPY . . 
+COPY . .
 
-RUN cargo build --release --bin skill-master && \
+ARG GIT_COMMIT
+RUN GIT_COMMIT=$GIT_COMMIT cargo build --release --bin skill-master && \
     strip target/release/skill-master
 
 FROM debian:trixie-slim AS runtime

@@ -1,11 +1,17 @@
 #!/bin/bash
 # Reload systemd to pick up the new Quadlet file
-systemctl daemon-reload
-
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to reload systemd daemon. Please check the output above for details."
-else
+if systemctl daemon-reload; then
     echo "Systemd daemon reloaded successfully."
+else
+    echo "Warning: Failed to reload systemd daemon."
+fi
+
+# Enable Podman auto-update timer (if available)
+if systemctl list-unit-files | grep -q podman-auto-update.timer; then
+    echo "Enabling Podman auto-update timer..."
+    systemctl enable --now podman-auto-update.timer || true
+else
+    echo "Note: podman-auto-update.timer not found. Automatic updates will not run."
 fi
 
 echo ""

@@ -37,9 +37,14 @@ pub async fn main() {
 
     let state = skill_master::app_state(config.clone()).await;
 
+    let version = env!("CARGO_PKG_VERSION");
+    let git_commit = option_env!("GIT_COMMIT").unwrap_or("unknown");
+
     tracing::info!(
-        "App state initialized in {:.2?} ms",
-        start.elapsed().as_millis()
+        "App state initialized in {:.2?} ms. Version: {}, Commit: {}",
+        start.elapsed().as_millis(),
+        version,
+        git_commit
     );
 
     let app = skill_master::routes::create_routes(state);

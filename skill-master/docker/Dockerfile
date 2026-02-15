@@ -1,4 +1,4 @@
-FROM rust:1.93-trixie AS planner
+FROM rust:1.93-trixie AS chef
 
 WORKDIR /build
 
@@ -8,13 +8,13 @@ RUN apt-get update && \
 
 RUN cargo install cargo-chef
 
+FROM chef AS planner
+
 COPY . .
 
 RUN cargo chef prepare --bin skill-master --recipe-path recipe.json
 
-FROM planner AS builder
-
-WORKDIR /build
+FROM chef AS builder
 
 COPY --from=planner /build/recipe.json recipe.json
 

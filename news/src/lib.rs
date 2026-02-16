@@ -1,4 +1,5 @@
 mod config;
+mod llm;
 mod model;
 mod state;
 
@@ -9,8 +10,12 @@ pub use config::*;
 pub use model::*;
 pub use state::*;
 
+pub use llm::*;
+
 pub async fn connect(config: Config) -> anyhow::Result<NewsState> {
     Ok(NewsState {
+        gemini_api: llm::GeminiApi::connect(config.gemini_config.clone())
+            .await?,
         config: std::sync::Arc::new(config),
     })
 }
@@ -75,12 +80,17 @@ pub async fn get_today_news(
 
     let mut tasks = tokio::task::JoinSet::new();
 
-    let next_task = |client, topic: String, url: reqwest::Url| async move {
-        match fetch_feed(&client, url.clone()).await {
-            Ok(articles) => Some(FetchedArticle { topic, articles }),
-            Err(e) => {
-                tracing::warn!("Error fetching feed {}: {}", url, e);
-                None
+    let gemini_api = state.gemini_api.clone();
+    let next_task = move |client, topic: String, url: reqwest::Url| {
+        let gemini_api = gemini_api.clone();
+
+        async move {
+            match fetch_feed(&client, url.clone(), gemini_api).await {
+                Ok(articles) => Some(FetchedArticle { topic, articles }),
+                Err(e) => {
+                    tracing::warn!("Error fetching feed {}: {}", url, e);
+                    None
+                }
             }
         }
     };
@@ -106,21 +116,11 @@ pub async fn get_today_news(
     Json(articles)
 }
 
-async fn fetch_feed(
-    client: &reqwest::Client,
-    url: reqwest::Url,
-) -> anyhow::Result<Vec<Article>> {
+fn parse_feed(feed: feed_rs::model::Feed, api: llm::GeminiApi) -> Vec<Article> {
     //huge width to prevent line breaks in the middle of sentences
     const HTML_WIDTH: usize = 1_000_000;
 
-    //todo: run bert or other model to summarize the content or simply truncate it to a certain
-    //length
-
-    let resp = client.get(url).send().await?;
-    let content = resp.bytes().await?;
-    let feed = feed_rs::parser::parse(content.as_ref())?;
-
-    let articles = feed
+    feed
         .entries
         .into_iter()
         .map(|entry| {
@@ -144,9 +144,20 @@ async fn fetch_feed(
 
             let parse_summary = || entry.summary.and_then(|s| parse_body(s.content_type, s.content));
 
+            //by default, we are not believing
+            //to the summary text
             let content = entry
                 .content
                 .and_then(|c| parse_body(c.content_type, c.body?))
+                .and_then(|c| {
+                    match api.summarize_blocking(&c) {
+                        Ok(summary) => Some(summary),
+                        Err(e) => {
+                            tracing::error!("Failed to summarize content: {e}");
+                            None
+                        },
+                    }
+                })
                 .unwrap_or_else(|| {
                     let Some(summary) = parse_summary() else {
                         tracing::warn!("Entry '{}' has no content or summary", title);
@@ -165,7 +176,27 @@ async fn fetch_feed(
                 content,
             }
         })
-        .collect();
+        .collect()
+}
+
+async fn fetch_feed(
+    client: &reqwest::Client,
+    url: reqwest::Url,
+    api: llm::GeminiApi,
+) -> anyhow::Result<Vec<Article>> {
+    let resp = client.get(url).send().await?;
+    let content = resp.bytes().await?;
+    let feed = feed_rs::parser::parse(content.as_ref())?;
+
+    let (tx, rx) = tokio::sync::oneshot::channel();
+
+    rayon::spawn(move || {
+        let articles = parse_feed(feed, api);
+
+        let _ = tx.send(articles);
+    });
+
+    let articles = rx.await.expect("Tx cannot die");
 
     Ok(articles)
 }

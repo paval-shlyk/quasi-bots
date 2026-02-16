@@ -1,5 +1,6 @@
-//todo: add healthcheck that gemini model is still available
+use anyhow::Context;
 
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct GeminiConfig {
     pub api_key: String,
     pub model: gemini_rust::Model,
@@ -27,6 +28,14 @@ impl GeminiApi {
             api,
             config: std::sync::Arc::new(config),
         })
+    }
+
+    pub fn summarize_blocking(&self, text: &str) -> anyhow::Result<String> {
+        let rt = tokio::runtime::Runtime::new()?;
+
+        let text = rt.block_on(async { self.summarize(text).await })?;
+
+        Ok(text)
     }
 
     /// Send text to LLM with prompt to summarize given text is   

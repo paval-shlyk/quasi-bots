@@ -9,10 +9,9 @@ pub struct RssSource {
     pub urls: Vec<reqwest::Url>,
 }
 
-#[derive(
-    Clone, Debug, serde::Serialize, serde::Deserialize, utoipa::ToSchema,
-)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Config {
     #[serde(alias = "rss_source")]
     pub rss_sources: Vec<RssSource>,
+    pub gemini_config: crate::llm::GeminiConfig,
 }

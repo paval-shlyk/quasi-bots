@@ -1,5 +1,3 @@
-use anyhow::Context;
-
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct GeminiConfig {
     pub api_key: String,
@@ -14,18 +12,15 @@ pub struct GeminiConfig {
 
 #[derive(Clone)]
 pub struct GeminiApi {
-    api: gemini_rust::Gemini,
     config: std::sync::Arc<GeminiConfig>,
 }
 
 impl GeminiApi {
     pub async fn connect(config: GeminiConfig) -> anyhow::Result<Self> {
-        let api = gemini_rust::GeminiBuilder::new(&config.api_key)
-            .with_model(config.model.clone())
-            .build()?;
-
+        //fixme: it seems that's better to build single gemini_rust::Gemini
+        //instance. But sending too much requests cause
+        //reqwest::Client fails sometimes (i guess it mutate some internal state)
         Ok(Self {
-            api,
             config: std::sync::Arc::new(config),
         })
     }
@@ -38,12 +33,48 @@ impl GeminiApi {
         Ok(text)
     }
 
+    pub async fn summarize_all(
+        &self,
+        texts: Vec<String>,
+    ) -> anyhow::Result<()> {
+        let api = gemini_rust::GeminiBuilder::new(&self.config.api_key)
+            .with_model(self.config.model.clone())
+            .build()?;
+
+        let requests = texts
+            .into_iter()
+            // .enumerate()
+            .map(|text| {
+                let req = api
+                    .generate_content()
+                    .with_temperature(self.config.summarize_temperature)
+                    .with_system_instruction(&self.config.summarize_instruction)
+                    .with_message(gemini_rust::Message::user(text))
+                    .build();
+
+                req
+                // (id, req)
+            })
+            .collect::<Vec<_>>();
+
+        let _handle = api
+            .batch_generate_content()
+            .with_requests(requests)
+            .execute()
+            .await?;
+
+        todo!()
+    }
+
     /// Send text to LLM with prompt to summarize given text is   
     pub async fn summarize(&self, text: &str) -> anyhow::Result<String> {
         let text = format!("Text to process: {text}");
 
-        let resp = self
-            .api
+        let api = gemini_rust::GeminiBuilder::new(&self.config.api_key)
+            .with_model(self.config.model.clone())
+            .build()?;
+
+        let resp = api
             .generate_content()
             .with_temperature(self.config.summarize_temperature)
             .with_system_instruction(&self.config.summarize_instruction)

@@ -153,7 +153,7 @@ fn parse_feed(feed: feed_rs::model::Feed, api: llm::GeminiApi) -> Vec<Article> {
                     match api.summarize_blocking(&c) {
                         Ok(summary) => Some(summary),
                         Err(e) => {
-                            tracing::error!("Failed to summarize content: {e}");
+                            tracing::error!("Failed to summarize content: {e:?}");
                             None
                         },
                     }

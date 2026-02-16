@@ -1,6 +1,6 @@
 use crate::Article;
 
-//not fully parsed, huge articles
+//not fully parsed
 #[derive(Debug)]
 pub struct RawArticle {
     pub title: String,
@@ -26,6 +26,8 @@ impl RawArticle {
 
         let summarized_content: Option<String>;
 
+        //by default, we are not believing
+        //to the summary text
         if let Some(text) = content.take() {
             summarized_content = api.summarize(&text).await?.into();
         } else {
@@ -71,35 +73,6 @@ pub fn parse(raw_feed: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
 
             let parse_summary = || entry.summary.and_then(|s| parse_body(s.content_type, s.content));
             let parse_content = || entry.content.and_then(|c| parse_body(c.content_type, c.body?));
-
-            //by default, we are not believing
-            //to the summary text
-            // let content = entry
-            //     .content
-            //     .and_then(|c| parse_body(c.content_type, c.body?));
-                // .and_then(|c| {
-                //     //fixme: change data processing logic
-                //     //as we block thread for LLM response 
-                //     let start = std::time::Instant::now();
-                //     match api.summarize_blocking(&c) {
-                //         Ok(summary) => {
-                //             tracing::info!("Took to summarize: {:.2} ms", start.elapsed().as_millis());
-                //             Some(summary)
-                //         }
-                //         Err(e) => {
-                //             tracing::error!("Failed to summarize content: {e:?}");
-                //             None
-                //         },
-                //     }
-                // })
-                // .unwrap_or_else(|| {
-                //     let Some(summary) = parse_summary() else {
-                //         tracing::warn!("Entry '{}' has no content or summary", title);
-                //         return "".to_string();
-                //     };
-                //
-                //     summary
-                // });
 
             let authors = entry.authors.into_iter().map(|a| a.name).collect();
 

@@ -8,6 +8,13 @@ use crate::config::RssSource;
 
 pub use model::Article;
 
+#[derive(Debug, Clone, Hash)]
+pub struct Entry {
+    pub title: String,
+    pub source: String,
+    pub authors: Vec<String>,
+}
+
 #[utoipa::path(
     post,
     path = "/news-bank/topics",
@@ -36,32 +43,58 @@ pub async fn get_chosen_topics(
     Json(topics)
 }
 
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct FetchedArticle {
+    pub articles: Vec<Article>,
+    pub topic: String,
+}
+
 #[utoipa::path(
     get,
     path = "/news-bank/today",
     responses(
-        (status = 200, description = "Today's news retrieved successfully", body = Vec<Article>)
+        (status = 200, description = "Today's news retrieved successfully", body = Vec<FetchedArticle>)
     )
 )]
 pub async fn get_today_news(
     State(state): State<AppState>,
 ) -> impl IntoResponse {
+    //todo: metric to estimate time
+    let time = std::time::Instant::now();
+
     let client = reqwest::Client::new();
-    let mut articles = Vec::new();
 
-    let urls: Vec<reqwest::Url> = state
-        .config
-        .rss_sources
-        .iter()
-        .flat_map(|source| source.urls.iter().cloned())
-        .collect();
+    let sources = state.config.rss_sources.clone();
 
-    for url in urls {
+    let mut tasks = tokio::task::JoinSet::new();
+
+    let next_task = |client, topic: String, url: reqwest::Url| async move {
         match fetch_feed(&client, url.clone()).await {
-            Ok(mut feed_articles) => articles.append(&mut feed_articles),
-            Err(e) => tracing::warn!("Error fetching feed {}: {}", url, e),
+            Ok(articles) => Some(FetchedArticle { topic, articles }),
+            Err(e) => {
+                tracing::warn!("Error fetching feed {}: {}", url, e);
+                None
+            }
+        }
+    };
+
+    for source in sources {
+        for url in source.urls {
+            tasks.spawn(next_task(client.clone(), source.topic.clone(), url));
         }
     }
+
+    let articles = tasks
+        .join_all()
+        .await
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
+
+    tracing::info!(
+        "Elapsed to fetch all articles: {:.2} ms",
+        time.elapsed().as_millis()
+    );
 
     Json(articles)
 }

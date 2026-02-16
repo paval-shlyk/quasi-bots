@@ -5,7 +5,7 @@ serve:
     cargo run --bin skill-master
 
 fetch:
-    curl -s -L http://localhost:8080/news | jq
+    curl -s -L http://localhost:8080/news-bank/today | jq
 
 search:
     curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"

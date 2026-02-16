@@ -11,3 +11,9 @@ if [[ -n $(git status --porcelain) ]]; then
   echo "You have uncommitted changes. Please commit or stash them before pushing."
   exit 1
 fi
+
+cargo sqlx prepare --workspace --check --all -- --all-targets --all-features
+if [ $? -ne 0 ]; then
+	echo "SQLx checks failed. Aborting push."
+	exit 1
+fi

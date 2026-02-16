@@ -9,7 +9,6 @@ anyhow = "1.0.101"
 axum = "0.8.8"
 chrono = { version = "0.4.43", features = ["serde"] }
 rand = "0.10.0"
-reqwest = "0.13.2"
 serde = "1.0.228"
 serde_yaml = "0.9.34"
 sqlx = { version = "0.8.6", features = ["sqlite", "chrono", "runtime-tokio"] }
@@ -22,3 +21,4 @@ uuid = { version = "1.20.0", features = [
 	"macro-diagnostics",
 ] }
 utoipa = { version = "5.4.0", features = ["axum_extras", "uuid", "chrono"] }
+url = "2.5.8"

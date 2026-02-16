@@ -1,0 +1,18 @@
+[package]
+name = "finance"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.101"
+axum = "0.8.8"
+feed-rs = "2.3.1"
+polars = "0.51.0"
+reqwest = "0.13.2"
+serde = { version = "1.0.228", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["sqlite"] }
+ta = "0.5.0"
+tracing = "0.1.44"
+utoipa = { version = "5.4.0" }
+yahoo_finance_api = "4.1.0"
+yfinance-rs = "0.7.2"

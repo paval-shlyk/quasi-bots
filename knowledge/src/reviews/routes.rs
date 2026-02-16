@@ -1,9 +1,9 @@
 use axum::{
     Json,
     extract::{Path, Query, State},
+    http::StatusCode,
     response::IntoResponse,
 };
-use reqwest::StatusCode;
 
 use crate::reviews::Review;
 use crate::{KnowledgeState, reviews};

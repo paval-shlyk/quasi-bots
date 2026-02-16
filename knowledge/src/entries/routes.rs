@@ -1,5 +1,5 @@
+use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
-use reqwest::StatusCode;
 
 use crate::entries::HumanEntry;
 use crate::{KnowledgeState, entries};

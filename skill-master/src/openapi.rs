@@ -1,6 +1,8 @@
 use utoipa::OpenApi;
 
-use crate::{config, finance, news, quotes, search};
+use crate::{config, news, quotes, search};
+
+use finance;
 use knowledge;
 
 #[derive(OpenApi)]

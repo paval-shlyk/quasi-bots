@@ -1,4 +1,3 @@
-pub mod finance;
 pub mod news;
 pub mod openapi;
 pub mod quotes;
@@ -53,10 +52,15 @@ pub async fn app_state(config: Config) -> AppState {
         .expect("Failed to refresh empty knowledge database");
     }
 
+    let finance_state = finance::connect(config.finance.clone(), &pool)
+        .await
+        .expect("Failed to initialize finance state");
+
     AppState {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(tokio::sync::Notify::new()),
         knowledge_state,
+        finance_state,
     }
 }

@@ -1,5 +1,4 @@
 #![allow(unused)]
-use reqwest::Url;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
@@ -63,7 +62,7 @@ pub struct FullMarketReport {
 }
 
 pub struct Config {
-    pub news_source: Url,
+    pub news_source: reqwest::Url,
 }
 
 // Обновляем функцию получения рекомендаций

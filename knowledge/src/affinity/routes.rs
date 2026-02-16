@@ -1,9 +1,9 @@
 use axum::{
     Json,
     extract::{Path, State},
+    http::StatusCode,
     response::IntoResponse,
 };
-use reqwest::StatusCode;
 
 use crate::{KnowledgeState, affinity};
 

@@ -2,15 +2,13 @@
 use axum::{
     Json,
     extract::{Query, State},
+    http::StatusCode,
     response::IntoResponse,
 };
-use reqwest::StatusCode;
 
 use crate::{
-    AppState,
-    finance::{
-        metrics::AnalysisConfig, metrics::TechnicalReport, model::TrackingAsset,
-    },
+    FinanceState, metrics::AnalysisConfig, metrics::TechnicalReport,
+    model::TrackingAsset,
 };
 
 #[derive(serde::Deserialize, utoipa::IntoParams)]
@@ -31,7 +29,7 @@ pub struct AssetQuery {
     description = "Generates a technical report for the specified asset"
 )]
 pub async fn get_report(
-    State(_state): State<AppState>,
+    State(_state): State<FinanceState>,
     Query(query): Query<AssetQuery>,
 ) -> impl IntoResponse {
     let config = AnalysisConfig::default();
@@ -43,7 +41,7 @@ pub async fn get_report(
 }
 
 pub async fn get_tracking_assets(
-    State(state): State<AppState>,
+    State(state): State<FinanceState>,
 ) -> impl IntoResponse {
     StatusCode::NOT_IMPLEMENTED
 }
@@ -79,9 +77,9 @@ pub async fn post_tracking_asset() -> impl IntoResponse {
     )
 )]
 pub async fn get_market_recommendations(
-    State(state): State<AppState>,
+    State(state): State<FinanceState>,
 ) -> impl IntoResponse {
-    let source = state.config.investment_rss_sources[0].clone();
+    let source = state.config.rss_source.clone();
     let client = reqwest::Client::new();
 
     match fetch_popular_assets(&client, source).await {

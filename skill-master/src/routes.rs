@@ -1,4 +1,3 @@
-use crate::finance;
 use crate::openapi::ApiDoc;
 use crate::{AppState, news, quotes, search};
 use axum::{
@@ -43,10 +42,19 @@ pub fn create_routes(state: AppState) -> Router<()> {
                 )
                 .route("/reviews", get(knowledge::get_recent_reviews))
         .with_state(state.knowledge_state.clone());
+    
+    let finance_routes = Router::new()
+        .route("/report", get(finance::get_report))
+        .route(
+            "/recommendations",
+            get(finance::get_market_recommendations),
+        ).with_state(state.finance_state.clone());
+
 
     Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/knowledge-bank", knowledge_routes)
+        .nest("/market-tracker", finance_routes)
         .route("/openapi.json", get(get_openapi_json))
 
         .with_state(state.clone())
@@ -63,12 +71,6 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .route("/quotes-bank/authors", get(quotes::get_known_authors))
         .route("/quotes-bank/next", post(quotes::post_next_unused_quote))
 
-
-        .route("/market-tracker/report", get(finance::get_report))
-        .route(
-            "/market-tracker/recommendations",
-            get(finance::get_market_recommendations),
-        )
         .with_state(state.clone())
 }
 

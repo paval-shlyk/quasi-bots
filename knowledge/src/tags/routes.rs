@@ -1,5 +1,4 @@
-use axum::{Json, extract::State, response::IntoResponse};
-use reqwest::StatusCode;
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::{KnowledgeState, tags};
 

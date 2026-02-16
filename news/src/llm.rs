@@ -25,8 +25,11 @@ impl GeminiApi {
         })
     }
 
+    /// CAUTION: should be invoked in dedicated thread
     pub fn summarize_blocking(&self, text: &str) -> anyhow::Result<String> {
-        let rt = tokio::runtime::Runtime::new()?;
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
 
         let text = rt.block_on(async { self.summarize(text).await })?;
 

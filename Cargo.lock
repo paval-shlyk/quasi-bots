@@ -2225,6 +2225,7 @@ dependencies = [
  "gemini-rust",
  "html2text",
  "mediatype",
+ "metrics",
  "rayon",
  "reqwest 0.13.2",
  "serde",

@@ -1,13 +1,11 @@
 db_file = "/var/lib/skill-master/skills.db"
-serp_api_key = "" # REPLACE_WITH_YOUR_KEY
+serp_api_key = ""                           # REPLACE_WITH_YOUR_KEY
+
+[finance]
+rss_source = "https://finance.yahoo.com/news/rssindex"
 
 [knowledge]
 database_file = "/var/lib/skill-master/knowledge-bank"
-
-investment_rss_sources = [
-	"https://finance.yahoo.com/news/rssindex",
-	"https://www.investing.com/rss/news.rss",
-]
 
 
 [[rss_source]]

@@ -1,6 +1,7 @@
 use crate::Config;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct NewsState {
     pub config: std::sync::Arc<Config>,
+    pub gemini_api: crate::llm::GeminiApi,
 }

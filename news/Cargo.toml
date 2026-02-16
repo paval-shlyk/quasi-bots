@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 axum = { workspace = true }
-reqwest = { workspace = true }
+reqwest.workspace = true
 serde = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
@@ -17,3 +17,6 @@ mediatype = "=0.19"
 feed-rs = "2.3.1"
 html2text = "0.16.7"
 rayon = "1.11.0"
+sqlx = "0.8.6"
+serde_json = "1.0.149"
+gemini-rust = "1.7.1"

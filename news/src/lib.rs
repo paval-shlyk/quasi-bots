@@ -1,12 +1,19 @@
-pub mod model;
+mod config;
+mod model;
+mod state;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
 
-use crate::AppState;
-use crate::config::RssSource;
+pub use config::*;
+pub use model::*;
+pub use state::*;
 
-pub use model::Article;
+pub async fn connect(config: Config) -> anyhow::Result<NewsState> {
+    Ok(NewsState {
+        config: std::sync::Arc::new(config),
+    })
+}
 
 #[derive(Debug, Clone, Hash)]
 pub struct Entry {
@@ -23,7 +30,7 @@ pub struct Entry {
     )
 )]
 pub async fn post_chosen_topic(
-    State(_state): State<AppState>,
+    State(_state): State<NewsState>,
 ) -> impl IntoResponse {
     (StatusCode::NOT_IMPLEMENTED, "Topic added")
 }
@@ -36,7 +43,7 @@ pub async fn post_chosen_topic(
     )
 )]
 pub async fn get_chosen_topics(
-    State(state): State<AppState>,
+    State(state): State<NewsState>,
 ) -> impl IntoResponse {
     let topics = state.config.rss_sources.to_vec();
 
@@ -57,7 +64,7 @@ pub struct FetchedArticle {
     )
 )]
 pub async fn get_today_news(
-    State(state): State<AppState>,
+    State(state): State<NewsState>,
 ) -> impl IntoResponse {
     //todo: metric to estimate time
     let time = std::time::Instant::now();

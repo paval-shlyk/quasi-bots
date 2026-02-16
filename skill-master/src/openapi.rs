@@ -1,9 +1,6 @@
 use utoipa::OpenApi;
 
-use crate::{config, news, quotes, search};
-
-use finance;
-use knowledge;
+use crate::{quotes, search};
 
 #[derive(OpenApi)]
 #[openapi(
@@ -47,7 +44,7 @@ use knowledge;
             
             // News Schemas
             news::Article,
-            config::RssSource,
+            news::RssSource,
             
             // Search Schemas
             search::FetchedArticle,
@@ -65,11 +62,12 @@ use knowledge;
         )
     ),
     tags(
-        (name = "knowledge", description = "Knowledge Bank API"),
         (name = "quotes", description = "Quotes Bank API"),
-
+        (name = "knowledge", description = "Knowledge Bank API"),
         (name = "news", description = "News Bank API"),
+
         (name = "search", description = "Search API"),
+
         (name = "finance", description = "Market Tracker API")
     )
 )]

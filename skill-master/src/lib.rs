@@ -1,4 +1,3 @@
-pub mod news;
 pub mod openapi;
 pub mod quotes;
 pub mod routes;
@@ -56,11 +55,16 @@ pub async fn app_state(config: Config) -> AppState {
         .await
         .expect("Failed to initialize finance state");
 
+    let news_state = news::connect(config.news.clone())
+        .await
+        .expect("Failed to initialize news state");
+
     AppState {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(tokio::sync::Notify::new()),
         knowledge_state,
         finance_state,
+        news_state,
     }
 }

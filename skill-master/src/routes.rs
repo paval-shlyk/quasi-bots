@@ -1,5 +1,5 @@
 use crate::openapi::ApiDoc;
-use crate::{AppState, news, quotes, search};
+use crate::{AppState, quotes, search};
 use axum::{
     Router,
     http::StatusCode,
@@ -50,21 +50,25 @@ pub fn create_routes(state: AppState) -> Router<()> {
             get(finance::get_market_recommendations),
         ).with_state(state.finance_state.clone());
 
+    let news_routes = Router::new()
+        .route("/today", get(news::get_today_news))
+        .route(
+            "/topics",
+            get(news::get_chosen_topics).post(news::post_chosen_topic),
+        )
+        .with_state(state.news_state.clone());
 
     Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/knowledge-bank", knowledge_routes)
         .nest("/market-tracker", finance_routes)
+        .nest("/news-bank", news_routes)
+
         .route("/openapi.json", get(get_openapi_json))
 
         .with_state(state.clone())
         .route("/health", get(health_check))
 
-        .route("/news-bank/today", get(news::get_today_news))
-        .route(
-            "/news-bank/topics",
-            get(news::get_chosen_topics).post(news::post_chosen_topic),
-        )
 
         .route("/search", get(search::get_search))
 

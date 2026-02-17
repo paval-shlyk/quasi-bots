@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                DELETE FROM article\n                WHERE published_at < ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "7dacddab305f47b0a0a5c692ae8261accbcd51791e4808dadf12a8911656d578"
+}

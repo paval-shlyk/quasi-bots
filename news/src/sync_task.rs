@@ -239,8 +239,37 @@ pub async fn refresh_task(state: crate::NewsState) {
             config.refresh_timeout.as_secs()
         );
 
+        state.purge_notify.notify_one();
+
         tokio::time::sleep(config.refresh_timeout).await;
     }
 }
 
-pub async fn purge_task(_state: crate::NewsState) {}
+pub async fn purge_task(state: crate::NewsState) {
+    loop {
+        tokio::select! {
+            _ = state.purge_notify.notified() => {
+                tracing::info!("Purge task triggered by refresh task");
+            }
+            _ = tokio::time::sleep(state.config.article_max_age) => {
+                tracing::info!("Purge task triggered by timeout");
+            }
+        }
+        let cutoff_time = chrono::Utc::now()
+            - chrono::Duration::from_std(state.config.article_max_age)
+                .expect("Invalid article max age");
+
+        let _ = sqlx::query!(
+            r#"
+                DELETE FROM article
+                WHERE published_at < ?
+            "#,
+            cutoff_time
+        )
+        .execute(&state.pool)
+        .await
+        .inspect_err(|e| {
+            tracing::warn!("Failed to purge old articles: {e}");
+        });
+    }
+}

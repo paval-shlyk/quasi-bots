@@ -12,4 +12,6 @@ pub struct NewsState {
 
     //the list of recently broken links
     pub broken_links: Arc<RwLock<Vec<BrokenLink>>>,
+
+    pub purge_notify: Arc<tokio::sync::Notify>,
 }

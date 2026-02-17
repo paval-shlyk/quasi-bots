@@ -84,7 +84,7 @@ pub struct SourceStatistics {
 pub async fn select_source_with_statistics(
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<Vec<SourceStatistics>> {
-    let time = std::time::Instant::now();
+    telemetry::execution_time!("Select url sources");
 
     let sources = sqlx::query_as!(
         SourceStatistics,
@@ -103,11 +103,6 @@ pub async fn select_source_with_statistics(
     )
     .fetch_all(pool)
     .await?;
-
-    tracing::info!(
-        "Fetched source statistics in {} ms",
-        time.elapsed().as_micros()
-    );
 
     Ok(sources)
 }

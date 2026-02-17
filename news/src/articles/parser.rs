@@ -1,6 +1,8 @@
 use crate::RawArticle;
 
 pub fn parse_feed(feed_content: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
+    telemetry::execution_time!("Parse Feed");
+
     //huge width to prevent line breaks in the middle of sentences
     const HTML_WIDTH: usize = 1_000_000;
     let feed = feed_rs::parser::parse(feed_content)?;

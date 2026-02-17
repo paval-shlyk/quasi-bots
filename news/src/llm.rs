@@ -25,17 +25,6 @@ impl GeminiApi {
         })
     }
 
-    /// CAUTION: should be invoked in dedicated thread
-    pub fn summarize_blocking(&self, text: &str) -> anyhow::Result<String> {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()?;
-
-        let text = rt.block_on(async { self.summarize(text).await })?;
-
-        Ok(text)
-    }
-
     pub async fn summarize_all(
         &self,
         texts: Vec<String>,
@@ -68,6 +57,8 @@ impl GeminiApi {
 
     /// Send text to LLM with prompt to summarize given text is   
     pub async fn summarize(&self, text: &str) -> anyhow::Result<String> {
+        telemetry::execution_time!("Gemini summarize");
+
         let text = format!("Text to process: {text}");
 
         let api = gemini_rust::GeminiBuilder::new(&self.config.api_key)

@@ -11,4 +11,6 @@ pub struct AppState {
     pub knowledge_state: knowledge::KnowledgeState,
     pub finance_state: finance::FinanceState,
     pub news_state: news::NewsState,
+
+    pub metrics_handle: telemetry::PrometheusHandle,
 }

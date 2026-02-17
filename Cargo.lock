@@ -2114,6 +2114,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "memory-stats"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c73f5c649995a115e1a0220b35e4df0a1294500477f97a91d0660fb5abeb574a"
+dependencies = [
+ "libc",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
 name = "metrics"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2243,6 +2253,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sqlx",
+ "telemetry",
  "tokio",
  "tracing",
  "utoipa",
@@ -4330,14 +4341,13 @@ dependencies = [
  "finance",
  "knowledge",
  "libsqlite3-sys",
- "metrics",
- "metrics-exporter-prometheus",
  "news",
  "proptest",
  "reqwest 0.13.2",
  "serde",
  "serde_json",
  "sqlx",
+ "telemetry",
  "tokio",
  "toml",
  "tracing",
@@ -4847,6 +4857,16 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "telemetry"
+version = "0.1.0"
+dependencies = [
+ "memory-stats",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "tokio",
+]
 
 [[package]]
 name = "tempfile"

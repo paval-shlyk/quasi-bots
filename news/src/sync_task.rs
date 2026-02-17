@@ -183,7 +183,7 @@ pub async fn refresh_task(state: crate::NewsState) {
                 for (a_id, maybe_a) in articles {
                     match maybe_a {
                         Ok(a) => {
-                            tracing::info!(
+                            tracing::debug!(
                                 "Article with id {} summarized successfully",
                                 a_id
                             );

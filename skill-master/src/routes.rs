@@ -1,5 +1,6 @@
 use crate::openapi::ApiDoc;
 use crate::{AppState, quotes, search};
+use axum::extract::State;
 use axum::{
     Router,
     http::StatusCode,
@@ -22,7 +23,6 @@ pub async fn get_openapi_json() -> impl IntoResponse {
 
 #[rustfmt::skip]
 pub fn create_routes(state: AppState) -> Router<()> {
-    tokio::task::spawn(crate::quotes::sync_task::task(state.clone()));
     let knowledge_routes = Router::new()
                 .route("/next", post(knowledge::post_next_daily_question))
                 .route("/topics", get(knowledge::get_all_topics))
@@ -67,7 +67,8 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .nest("/news-bank", news_routes)
 
         .route("/openapi.json", get(get_openapi_json))
-
+        .route("/metrics", get(get_metrics))
+        .layer(axum::middleware::from_fn(crate::middleware::track_http))
         .with_state(state.clone())
         .route("/health", get(health_check))
 
@@ -82,4 +83,8 @@ pub fn create_routes(state: AppState) -> Router<()> {
 
 async fn health_check() -> impl IntoResponse {
     (StatusCode::OK, "OK")
+}
+
+async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {
+    state.metrics_handle.render()
 }

@@ -6,6 +6,7 @@ pub mod search;
 mod state;
 
 mod config;
+mod middleware;
 
 use std::sync::Arc;
 
@@ -31,6 +32,8 @@ pub async fn apply_migrations(pool: &sqlx::SqlitePool) {
 }
 
 pub async fn app_state(config: Config) -> AppState {
+    let metrics_handle = telemetry::init_prometheus_recorder();
+
     let pool = connect_db(&config.db_file).await;
     apply_migrations(&pool).await;
 
@@ -59,12 +62,19 @@ pub async fn app_state(config: Config) -> AppState {
         .await
         .expect("Failed to initialize news state");
 
-    AppState {
+    telemetry::spawn_system_monitor(15);
+
+    let state = AppState {
         config: Arc::new(config),
         pool,
         needs_more_quotes: Arc::new(tokio::sync::Notify::new()),
         knowledge_state,
         finance_state,
         news_state,
-    }
+        metrics_handle,
+    };
+
+    tokio::task::spawn(crate::quotes::sync_task::task(state.clone()));
+
+    state
 }

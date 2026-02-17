@@ -1,0 +1,10 @@
+[package]
+name = "telemetry"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+memory-stats = "1.2.0"
+metrics = "0.24.3"
+metrics-exporter-prometheus = "0.18.1"
+tokio.workspace = true

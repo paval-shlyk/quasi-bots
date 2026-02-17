@@ -95,8 +95,8 @@ pub async fn select_source_with_statistics(
             COUNT(a.id) as article_count,
             json_group_array(DISTINCT t.name) as "topics!: sqlx::types::Json<Vec<String>>"
         FROM news_source as s
-        LEFT JOIN article as a ON a.source_id = s.id
-        LEFT JOIN news_topic as t ON a.topic_id = t.id
+        JOIN article as a ON a.source_id = s.id
+        JOIN news_topic as t ON a.topic_id = t.id
         GROUP BY s.id
         ORDER BY article_count DESC
         "#

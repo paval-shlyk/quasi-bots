@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n        SELECT \n            s.id,\n            s.url as url,\n            COUNT(a.id) as article_count,\n            json_group_array(DISTINCT t.name) as \"topics!: sqlx::types::Json<Vec<String>>\"\n        FROM news_source as s\n        LEFT JOIN article as a ON a.source_id = s.id\n        LEFT JOIN news_topic as t ON a.topic_id = t.id\n        GROUP BY s.id\n        ORDER BY article_count DESC\n        ",
+  "query": "\n        SELECT \n            s.id,\n            s.url as url,\n            COUNT(a.id) as article_count,\n            json_group_array(DISTINCT t.name) as \"topics!: sqlx::types::Json<Vec<String>>\"\n        FROM news_source as s\n        JOIN article as a ON a.source_id = s.id\n        JOIN news_topic as t ON a.topic_id = t.id\n        GROUP BY s.id\n        ORDER BY article_count DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       true
     ]
   },
-  "hash": "2ba7fb0bd210a62119e59884181fd5c39c7a219ac4496a7f8a1ef0f92ebe2619"
+  "hash": "51611cf4b9019485c824bcf770d28db6bde3af82016192224bbff6b313130ad7"
 }

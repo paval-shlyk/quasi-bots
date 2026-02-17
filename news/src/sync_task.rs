@@ -54,6 +54,19 @@ pub async fn refresh_task(state: crate::NewsState) {
                             }).ok()?;
 
                             articles
+                                .into_iter()
+                                .filter(|a| {
+                                    let age =
+                                        chrono::Utc::now() - a.published_at;
+
+                                    let max_age = chrono::TimeDelta::from_std(
+                                        state.config.article_max_age,
+                                    )
+                                    .expect("Invalid article max age");
+
+                                    age < max_age
+                                })
+                                .collect::<Vec<_>>()
                         }
                         Err(e) => {
                             tracing::warn!(

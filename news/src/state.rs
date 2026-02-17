@@ -1,8 +1,15 @@
-use crate::Config;
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use crate::{Config, links::BrokenLink};
 
 #[derive(Clone)]
 pub struct NewsState {
-    pub config: std::sync::Arc<Config>,
+    pub config: Arc<Config>,
     pub gemini_api: crate::llm::GeminiApi,
     pub pool: sqlx::SqlitePool,
+
+    //the list of recently broken links
+    pub broken_links: Arc<RwLock<Vec<BrokenLink>>>,
 }

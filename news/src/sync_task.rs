@@ -1,6 +1,6 @@
 use futures::{StreamExt, stream::FuturesUnordered};
 
-use crate::article;
+use crate::{articles, links};
 
 pub fn spawn(state: crate::NewsState) {
     tokio::task::spawn(refresh_task(state.clone()));
@@ -13,17 +13,23 @@ pub async fn refresh_task(state: crate::NewsState) {
     loop {
         let config = state.config.clone();
 
-        let sources = state.config.rss_sources.clone();
+        let sources = crate::links::fetch_active_sources(&state)
+            .await
+            .unwrap_or_else(|e| {
+                tracing::warn!("Failed to fetch active sources: {e}");
+                vec![]
+            });
 
         let mut tasks = tokio::task::JoinSet::new();
 
         let next_task = |client, topic: String, url: reqwest::Url| {
             let gemini_api = state.gemini_api.clone();
             let pool = state.pool.clone();
+            let state = state.clone();
 
             struct ArticleWithId {
                 id: i64,
-                article: article::RawArticle,
+                article: articles::RawArticle,
             }
 
             let summarize = move |a: ArticleWithId| {
@@ -33,16 +39,43 @@ pub async fn refresh_task(state: crate::NewsState) {
 
             async move {
                 let articles =
-                    article::fetch_raw_articles(&client, url.clone())
+                    match articles::fetch_raw_articles(&client, url.clone())
                         .await
-                        .inspect_err(|e| {
+                    {
+                        Ok(articles) => {
+                            links::restore_broken(&state, url.as_str())
+                            .await
+                            .inspect_err(|e| {
+                                tracing::warn!(
+                                    "Failed to restore broken link for {}: {}",
+                                    url,
+                                    e
+                                );
+                            }).ok()?;
+
+                            articles
+                        }
+                        Err(e) => {
                             tracing::warn!(
-                                "Error fetching feed {}: {}",
+                                "Failed to fetch feed {}: {}",
                                 url,
                                 e
                             );
-                        })
-                        .ok()?;
+
+                            crate::links::set_broken(&state, url.as_str())
+                                .await
+                                .inspect_err(|e| {
+                                    tracing::warn!(
+                                        "Failed to set broken link for {}: {}",
+                                        url,
+                                        e
+                                    );
+                                })
+                                .ok()?;
+
+                            return None;
+                        }
+                    };
 
                 let topic_id = sqlx::query!(
                     r#"

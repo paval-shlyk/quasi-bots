@@ -1,0 +1,74 @@
+use crate::RssSource;
+
+#[derive(Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub struct BrokenLink {
+    pub url: String,
+    pub last_attempted: chrono::DateTime<chrono::Utc>,
+    pub next_attempt: chrono::DateTime<chrono::Utc>,
+    pub attempt_count: u32,
+}
+
+pub async fn fetch_broken_links(
+    state: &crate::NewsState,
+) -> anyhow::Result<Vec<BrokenLink>> {
+    Ok(state.broken_links.read().await.clone())
+}
+
+/// Fetch active Feed sources that are not broken in broken links list
+pub async fn fetch_active_sources(
+    state: &crate::NewsState,
+) -> anyhow::Result<Vec<RssSource>> {
+    let now = chrono::Utc::now();
+    let mut sources = state.config.rss_sources.clone();
+
+    for source in sources.iter_mut() {
+        let broken_links = state.broken_links.read().await;
+        source.urls.retain(|url| {
+            let is_broken = broken_links.iter().any(|l| {
+                &l.url == url.as_str()
+                    && l.next_attempt > now
+                    && l.attempt_count >= state.config.retry_attempts
+            });
+
+            !is_broken
+        });
+    }
+
+    sources.retain(|s| !s.urls.is_empty());
+
+    Ok(sources)
+}
+
+pub async fn restore_broken(
+    state: &crate::NewsState,
+    url: &str,
+) -> anyhow::Result<()> {
+    state.broken_links.write().await.retain(|l| l.url != url);
+
+    Ok(())
+}
+
+pub async fn set_broken(
+    state: &crate::NewsState,
+    url: &str,
+) -> anyhow::Result<()> {
+    let mut broken_links = state.broken_links.write().await;
+    let next_attempt = chrono::Utc::now() + state.config.broken_link_cooldown;
+
+    if let Some(link) = broken_links.iter_mut().find(|l| l.url == url) {
+        link.last_attempted = chrono::Utc::now();
+        link.next_attempt = next_attempt;
+        if link.attempt_count < state.config.retry_attempts {
+            link.attempt_count += 1;
+        }
+    } else {
+        broken_links.push(BrokenLink {
+            url: url.to_string(),
+            last_attempted: chrono::Utc::now(),
+            next_attempt,
+            attempt_count: 1,
+        });
+    }
+
+    Ok(())
+}

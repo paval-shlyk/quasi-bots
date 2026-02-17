@@ -1,9 +1,10 @@
-mod article;
+mod articles;
 mod config;
+mod links;
 mod llm;
 mod state;
 mod sync_task;
-mod topic;
+mod topics;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
@@ -13,7 +14,7 @@ pub use state::*;
 
 pub use llm::*;
 
-pub use article::*;
+pub use articles::*;
 pub use sync_task::*;
 
 pub async fn connect(
@@ -24,6 +25,7 @@ pub async fn connect(
         gemini_api: llm::GeminiApi::connect(config.gemini_config.clone())
             .await?,
         config: std::sync::Arc::new(config),
+        broken_links: std::sync::Arc::new(tokio::sync::RwLock::new(vec![])),
         pool,
     };
 
@@ -61,11 +63,31 @@ pub async fn post_chosen_topic(
 pub async fn get_chosen_topics(
     State(state): State<NewsState>,
 ) -> impl IntoResponse {
-    topic::select_news_topics(&state.pool)
+    topics::select_news_topics(&state.pool)
         .await
         .map(Json)
         .map_err(|e| {
             tracing::warn!("Failed to fetch topics: {e}");
+
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::json!({
+                    "error": e.to_string(),
+                })
+                .to_string(),
+            )
+                .into_response()
+        })
+}
+
+pub async fn get_broken_links(
+    State(state): State<NewsState>,
+) -> impl IntoResponse {
+    links::fetch_broken_links(&state)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            tracing::warn!("Failed to fetch broken links: {e}");
 
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -88,7 +110,7 @@ pub async fn get_chosen_topics(
 pub async fn get_today_news(
     State(state): State<NewsState>,
 ) -> impl IntoResponse {
-    article::select_today_articles(&state.pool)
+    articles::select_today_articles(&state.pool)
         .await
         .map(Json)
         .map_err(|e| {

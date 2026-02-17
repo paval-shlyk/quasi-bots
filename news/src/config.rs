@@ -24,4 +24,9 @@ pub struct Config {
     /// Timeout when data will persist in storage
     #[serde(with = "humantime_serde")]
     pub lifetime_timeout: Duration,
+
+    /// Number of retry attempts for fetching a source before marking it as broken
+    pub retry_attempts: u32,
+    #[serde(with = "humantime_serde")]
+    pub broken_link_cooldown: Duration,
 }

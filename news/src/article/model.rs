@@ -52,7 +52,7 @@ pub struct RawArticle {
     pub content: Option<String>,
     pub summary: Option<String>,
 
-    pub published_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub published_at: chrono::DateTime<chrono::Utc>,
 }
 
 impl RawArticle {
@@ -82,7 +82,7 @@ impl RawArticle {
         }
 
         Ok(FeedArticle {
-            published_at: published_at.unwrap_or_else(|| chrono::Utc::now()),
+            published_at,
             title,
             authors,
             links,

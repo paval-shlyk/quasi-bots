@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT \n                t.name as topic,\n                a.title,\n                a.content, \n                authors as \"authors: Json<Vec<String>>\",\n                links as \"links: Json<Vec<String>>\",\n                published_at as \"published_at: chrono::DateTime<chrono::Utc>\"\n            FROM article as a\n            JOIN topic as t ON a.topic_id = t.id\n            WHERE a.published_at > datetime('now', '-1 days')\n        ",
+  "query": "\n            SELECT \n                t.name as topic,\n                a.title,\n                a.content as \"content!\", \n                authors as \"authors: Json<Vec<String>>\",\n                links as \"links: Json<Vec<String>>\",\n                published_at as \"published_at: chrono::DateTime<chrono::Utc>\"\n            FROM article as a\n            JOIN topic as t ON a.topic_id = t.id\n            WHERE a.published_at > datetime('now', '-1 days') AND a.content IS NOT NULL\n        ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Text"
       },
       {
-        "name": "content",
+        "name": "content!",
         "ordinal": 2,
         "type_info": "Text"
       },
@@ -40,11 +40,11 @@
     "nullable": [
       false,
       false,
-      false,
+      true,
       false,
       false,
       false
     ]
   },
-  "hash": "83052069cb29243fe2a25fb4f4002b63330d0671134a8f585ae7a5f573de359d"
+  "hash": "ab5ac75aae266430e854334854b358838de6c489e14cc1a4c7db59fbf687b249"
 }

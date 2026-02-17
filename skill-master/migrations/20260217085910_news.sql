@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS article (
 	topic_id INTEGER NOT NULL,
 
 	title TEXT NOT NULL,
-	content TEXT NOT NULL,
+	content TEXT DEFAULT NULL, --content is null if the article is not fully scraped yet, but we want to save the metadata (title, authors, links, published_at) for later processing
 
 	authors TEXT NOT NULL CHECK (json_valid(authors) == TRUE),
 	links TEXT NOT NULL CHECK (json_valid(links) == TRUE),

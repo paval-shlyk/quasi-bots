@@ -5,11 +5,10 @@ mod queries;
 pub use model::*;
 pub use queries::*;
 
-pub async fn fetch_feed_articles(
+pub async fn fetch_raw_articles(
     client: &reqwest::Client,
     url: reqwest::Url,
-    api: crate::llm::GeminiApi,
-) -> anyhow::Result<Vec<FeedArticle>> {
+) -> anyhow::Result<Vec<RawArticle>> {
     let resp = client.get(url).send().await?;
     let content = resp.bytes().await?;
 
@@ -27,23 +26,7 @@ pub async fn fetch_feed_articles(
 
     let raw_articles = rx.await.expect("Tx cannot die")?;
 
-    let mut tasks = tokio::task::JoinSet::new();
-
-    for a in raw_articles.into_iter() {
-        tasks.spawn((|| {
-            let api = api.clone();
-            async move { a.summarize(&api).await }
-        })());
-    }
-
-    let articles = tasks
-        .join_all()
-        .await
-        .into_iter()
-        .map(|a| a.unwrap())
-        .collect();
-
     tracing::info!("Took to fetch news: {:.2} ms", start.elapsed().as_millis());
 
-    Ok(articles)
+    Ok(raw_articles)
 }

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                                    UPDATE article\n                                    SET content = ?\n                                    WHERE id = ?\n                                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "62df4cd7f93edc76ee05b7330730d8b0cb3849a7f443d77768057fb82887f11f"
+}

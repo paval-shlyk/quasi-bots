@@ -3,6 +3,7 @@ mod config;
 mod llm;
 mod state;
 mod sync_task;
+mod topic;
 
 use axum::{Json, extract::State, response::IntoResponse};
 use reqwest::StatusCode;
@@ -60,9 +61,21 @@ pub async fn post_chosen_topic(
 pub async fn get_chosen_topics(
     State(state): State<NewsState>,
 ) -> impl IntoResponse {
-    let topics = state.config.rss_sources.to_vec();
+    topic::select_news_topics(&state.pool)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            tracing::warn!("Failed to fetch topics: {e}");
 
-    Json(topics)
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::json!({
+                    "error": e.to_string(),
+                })
+                .to_string(),
+            )
+                .into_response()
+        })
 }
 
 #[utoipa::path(

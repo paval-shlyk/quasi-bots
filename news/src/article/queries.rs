@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{ArticlesWithTopic, SavedArticle, article};
+use crate::{ArticlesWithTopic, SavedArticle};
 
 pub async fn select_today_articles(
     pool: &sqlx::SqlitePool,

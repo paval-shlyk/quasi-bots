@@ -11,7 +11,7 @@ env:
   SQLX_OFFLINE: true
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,9 +29,11 @@ jobs:
           sudo apt-get install -y protobuf-compiler libsqlite3-dev
       - name: Lint
         run: just lint
+      - name: Test
+        run: just test-all
 
   build:
-    needs: lint
+    needs: check
     strategy:
       matrix:
         include:

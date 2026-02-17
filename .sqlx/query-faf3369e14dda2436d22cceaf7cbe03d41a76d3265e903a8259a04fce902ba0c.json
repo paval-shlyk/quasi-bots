@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT COUNT(id) as \"count: u64\"\n            FROM quote\n            WHERE when_used IS NULL OR when_used < datetime('now', '-6 months')\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "count: u64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "faf3369e14dda2436d22cceaf7cbe03d41a76d3265e903a8259a04fce902ba0c"
+}

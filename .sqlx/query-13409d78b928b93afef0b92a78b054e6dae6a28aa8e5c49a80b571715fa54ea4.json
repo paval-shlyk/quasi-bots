@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT q.id, q.text, a.name as author, q.when_used as \"when_used: chrono::DateTime<chrono::Utc>\"\n        FROM quote q\n        JOIN author a ON q.author_id = a.id\n        WHERE q.when_used IS NULL OR q.when_used < datetime('now', '-6 months')\n        LIMIT 1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "text",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "author",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "when_used: chrono::DateTime<chrono::Utc>",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "13409d78b928b93afef0b92a78b054e6dae6a28aa8e5c49a80b571715fa54ea4"
+}

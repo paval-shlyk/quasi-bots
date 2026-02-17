@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE quote\n            SET when_used = datetime('now')\n            WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "2edcb4e7dcea0c8ce45d2e3f010136c1011a4ebd20b65a74b7336326ac06091c"
+}

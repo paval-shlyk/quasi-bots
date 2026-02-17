@@ -43,7 +43,7 @@ use crate::{quotes, search};
             knowledge::ReviewAttempts,
             
             // News Schemas
-            news::Article,
+            news::FeedArticle,
             news::RssSource,
             
             // Search Schemas

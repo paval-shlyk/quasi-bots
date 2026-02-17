@@ -17,14 +17,22 @@ pub struct Config {
     pub rss_sources: Vec<RssSource>,
     pub gemini_config: crate::llm::GeminiConfig,
 
+    /// Timeout when new fetch session will be started
     #[serde(
-        serialize_with = "serialize_duration",
-        deserialize_with = "deserialize_duration"
+        serialize_with = "serialize_hours",
+        deserialize_with = "deserialize_hours"
     )]
     pub refresh_timeout: Duration,
+
+    /// Timeout when data will persist in storage
+    #[serde(
+        serialize_with = "serialize_hours",
+        deserialize_with = "deserialize_hours"
+    )]
+    pub lifetime_timeout: Duration,
 }
 
-fn serialize_duration<S>(
+fn serialize_hours<S>(
     duration: &Duration,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
@@ -34,7 +42,7 @@ where
     serializer.serialize_u64(duration.as_secs() / 60)
 }
 
-fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+fn deserialize_hours<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: serde::Deserializer<'de>,
 {

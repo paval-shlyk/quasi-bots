@@ -1,53 +1,9 @@
-use crate::Article;
+use crate::RawArticle;
 
-//not fully parsed
-#[derive(Debug)]
-pub struct RawArticle {
-    pub title: String,
-    pub authors: Vec<String>,
-    pub links: Vec<String>,
-
-    pub content: Option<String>,
-    pub summary: Option<String>,
-}
-
-impl RawArticle {
-    pub async fn summarize(
-        self,
-        api: &crate::GeminiApi,
-    ) -> anyhow::Result<Article> {
-        let RawArticle {
-            title,
-            authors,
-            links,
-            mut content,
-            summary,
-        } = self;
-
-        let summarized_content: Option<String>;
-
-        //by default, we are not believing
-        //to the summary text
-        if let Some(text) = content.take() {
-            summarized_content = api.summarize(&text).await?.into();
-        } else {
-            //if no content available then use summary information
-            summarized_content = summary;
-        }
-
-        Ok(Article {
-            title,
-            authors,
-            links,
-            content: summarized_content.unwrap_or_default(),
-        })
-    }
-}
-
-pub fn parse(raw_feed: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
+pub fn parse_feed(feed_content: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
     //huge width to prevent line breaks in the middle of sentences
     const HTML_WIDTH: usize = 1_000_000;
-    let feed = feed_rs::parser::parse(raw_feed)?;
+    let feed = feed_rs::parser::parse(feed_content)?;
 
     let articles = feed
         .entries
@@ -82,6 +38,7 @@ pub fn parse(raw_feed: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
                 title,
                 links,
                 authors,
+                published_at: entry.published,
             }
         })
         .collect();

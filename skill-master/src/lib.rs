@@ -55,7 +55,7 @@ pub async fn app_state(config: Config) -> AppState {
         .await
         .expect("Failed to initialize finance state");
 
-    let news_state = news::connect(config.news.clone())
+    let news_state = news::connect(config.news.clone(), pool.clone())
         .await
         .expect("Failed to initialize news state");
 

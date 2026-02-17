@@ -19,8 +19,8 @@ pub async fn select_today_articles(
                 published_at as "published_at: chrono::DateTime<chrono::Utc>"
             FROM article as a
             JOIN topic as t ON a.topic_id = t.id
-            WHERE a.published_at > datetime('now', '- 1 days')
-        "#
+            WHERE a.published_at > datetime('now', '-1 days')
+        "#,
     )
     .fetch_all(pool)
     .await?;

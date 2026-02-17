@@ -48,14 +48,11 @@ impl GeminiApi {
             .into_iter()
             // .enumerate()
             .map(|text| {
-                let req = api
-                    .generate_content()
+                api.generate_content()
                     .with_temperature(self.config.summarize_temperature)
                     .with_system_instruction(&self.config.summarize_instruction)
                     .with_message(gemini_rust::Message::user(text))
-                    .build();
-
-                req
+                    .build()
                 // (id, req)
             })
             .collect::<Vec<_>>();

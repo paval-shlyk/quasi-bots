@@ -38,7 +38,7 @@ pub fn parse_feed(feed_content: &[u8]) -> anyhow::Result<Vec<RawArticle>> {
                 title,
                 links,
                 authors,
-                published_at: entry.published.unwrap_or_else(|| chrono::Utc::now()),
+                published_at: entry.published.unwrap_or_else(chrono::Utc::now),
             }
         })
         .collect();

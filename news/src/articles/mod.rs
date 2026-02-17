@@ -26,7 +26,10 @@ pub async fn fetch_raw_articles(
 
     let raw_articles = rx.await.expect("Tx cannot die")?;
 
-    tracing::debug!("Took to fetch news: {:.2} ms", start.elapsed().as_millis());
+    tracing::debug!(
+        "Took to fetch news: {:.2} ms",
+        start.elapsed().as_millis()
+    );
 
     Ok(raw_articles)
 }

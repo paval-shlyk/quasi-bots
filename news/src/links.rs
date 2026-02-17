@@ -25,7 +25,7 @@ pub async fn fetch_active_sources(
         let broken_links = state.broken_links.read().await;
         source.urls.retain(|url| {
             let is_broken = broken_links.iter().any(|l| {
-                &l.url == url.as_str()
+                l.url == url.as_str()
                     && l.next_attempt > now
                     && l.attempt_count >= state.config.retry_attempts
             });

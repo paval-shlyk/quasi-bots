@@ -10,6 +10,12 @@ fetch:
 search:
     curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"
 
+broken-links:
+    curl -s -L "http://localhost:8080/news-bank/broken-links" | jq
+
+news-sources:
+    curl -s -L "http://localhost:8080/news-bank/sources" | jq
+
 next-quote:
     #!/bin/bash
     for i in {1..5}; do \

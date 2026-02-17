@@ -53,6 +53,7 @@ pub fn create_routes(state: AppState) -> Router<()> {
     let news_routes = Router::new()
         .route("/today", get(news::get_today_news))
         .route("/broken-links", get(news::get_broken_links))
+        .route("/sources", get(news::get_source_statistics))
         .route(
             "/topics",
             get(news::get_chosen_topics).post(news::post_chosen_topic),

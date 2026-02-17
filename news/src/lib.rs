@@ -125,6 +125,24 @@ pub async fn get_today_news(
             )
                 .into_response()
         })
+}
 
-    // Json(articles)
+pub async fn get_source_statistics(
+    State(state): State<NewsState>,
+) -> impl IntoResponse {
+    links::select_source_with_statistics(&state.pool)
+        .await
+        .map(Json)
+        .map_err(|e| {
+            tracing::warn!("Failed to fetch source statistics: {e}");
+
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                serde_json::json!({
+                    "error": e.to_string(),
+                })
+                .to_string(),
+            )
+                .into_response()
+        })
 }

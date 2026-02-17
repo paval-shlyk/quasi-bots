@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                            INSERT INTO article\n                                (topic_id, source_id, title, authors, links, published_at)\n                            VALUES\n                                (?, ?, ?, ?, ?, ?)\n                            RETURNING id as \"id!\"\n                        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "64be4f76985ff8ca2d7c8a74bba05189cad13fae93d35d6ac216f07e62c27e07"
+}

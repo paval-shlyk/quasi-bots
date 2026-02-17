@@ -72,3 +72,42 @@ pub async fn set_broken(
 
     Ok(())
 }
+
+#[derive(Debug, serde::Serialize)]
+pub struct SourceStatistics {
+    pub id: i64,
+    pub url: String,
+    pub article_count: i64,
+    pub topics: sqlx::types::Json<Vec<String>>,
+}
+
+pub async fn select_source_with_statistics(
+    pool: &sqlx::SqlitePool,
+) -> anyhow::Result<Vec<SourceStatistics>> {
+    let time = std::time::Instant::now();
+
+    let sources = sqlx::query_as!(
+        SourceStatistics,
+        r#"
+        SELECT 
+            s.id,
+            s.url as url,
+            COUNT(a.id) as article_count,
+            json_group_array(DISTINCT t.name) as "topics!: sqlx::types::Json<Vec<String>>"
+        FROM news_source as s
+        LEFT JOIN article as a ON a.source_id = s.id
+        LEFT JOIN news_topic as t ON a.topic_id = t.id
+        GROUP BY s.id
+        ORDER BY article_count DESC
+        "#
+    )
+    .fetch_all(pool)
+    .await?;
+
+    tracing::info!(
+        "Fetched source statistics in {} ms",
+        time.elapsed().as_micros()
+    );
+
+    Ok(sources)
+}

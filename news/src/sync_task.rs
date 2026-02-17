@@ -92,6 +92,23 @@ pub async fn refresh_task(state: crate::NewsState) {
                 })
                 .ok()?
                 .id;
+                let source_url = url.as_str();
+
+                let source_id = sqlx::query!(
+                    r#"
+                        INSERT INTO news_source (url) VALUES (?)
+                        ON CONFLICT(url) DO UPDATE SET url = excluded.url
+                        RETURNING id
+                    "#,
+                    source_url,
+                )
+                .fetch_one(&pool)
+                .await
+                .inspect_err(|e| {
+                    tracing::warn!("Failed to insert news source: {e}");
+                })
+                .ok()?
+                .id;
 
                 let mut new_articles = vec![];
 
@@ -104,12 +121,13 @@ pub async fn refresh_task(state: crate::NewsState) {
                     let maybe_id = sqlx::query!(
                         r#"
                             INSERT INTO article
-                                (topic_id, title, authors, links, published_at)
+                                (topic_id, source_id, title, authors, links, published_at)
                             VALUES
-                                (?, ?, ?, ?, ?)
+                                (?, ?, ?, ?, ?, ?)
                             RETURNING id as "id!"
                         "#,
                         topic_id,
+                        source_id,
                         title,
                         authors,
                         links,

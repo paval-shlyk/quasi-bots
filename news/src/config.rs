@@ -13,7 +13,7 @@ pub struct RssSource {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct Config {
-    #[serde(alias = "rss_source")]
+    #[serde(alias = "rss_source", default)]
     pub rss_sources: Vec<RssSource>,
     pub gemini_config: crate::llm::GeminiConfig,
 

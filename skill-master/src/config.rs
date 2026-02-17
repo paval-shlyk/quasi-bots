@@ -10,7 +10,6 @@ pub struct KnowledgeConfig {
 pub struct Config {
     /// sqlite database file path, e.g. "scrapper.db"
     pub db_file: String,
-    #[serde(flatten)]
     pub news: news::Config,
 
     pub knowledge: KnowledgeConfig,

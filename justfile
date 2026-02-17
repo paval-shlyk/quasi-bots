@@ -14,6 +14,12 @@ lint:
         exit 1
     fi
 
+test-all:
+    #!/bin/bash
+    export SQLX_OFFLINE=true
+
+    cargo test --all-features --all-targets
+
 fix:
     cargo fmt
     __CARGO_FIX_YOLO=1 cargo clippy --all-targets --all-features --fix --allow-dirty
@@ -50,7 +56,7 @@ test-install: build-docker
     echo "Installing package..."
     # Install dependencies and our package
     docker exec skill-master-test bash -c "apt-get update && apt-get install -y /repo/target/debian/skill-master_*.deb"
-    
+
     echo ""
     echo "---------------------------------------------------"
     echo "✅ Installation complete!"
@@ -59,7 +65,6 @@ test-install: build-docker
     echo "  2. Edit config:     vi /etc/skill-master/config.toml"
     echo "  3. Start service:   systemctl start skill-master"
     echo "---------------------------------------------------"
-
 
 reset-db:
     #!/bin/bash

@@ -15,7 +15,7 @@ retry_attempts = 3
 broken_link_cooldown = "10s"
 
 [news.gemini_config]
-api_key = "" # REPLACE_WITH_YOUR_KEY
+api_key = ""                      # REPLACE_WITH_YOUR_KEY
 model = "models/gemini-2.5-flash" # YOU CAN CHOOSE A DIFFERENT MODEL IF YOU WANT
 
 summarize_instruction = '''

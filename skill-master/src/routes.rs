@@ -44,10 +44,9 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .with_state(state.knowledge_state.clone());
     
     let finance_routes = Router::new()
-        .route("/report", get(finance::get_report))
         .route(
-            "/recommendations",
-            get(finance::get_market_recommendations),
+            "/portfolio",
+            get(finance::get_portfolio),
         ).with_state(state.finance_state.clone());
 
     let news_routes = Router::new()

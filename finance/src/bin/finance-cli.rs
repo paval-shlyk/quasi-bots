@@ -13,13 +13,22 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     /// Call REST /time endpoint
-    Time { url: String },
+    Time {
+        url: String,
+    },
     /// Call REST /depth endpoint for symbol
-    Depth { url: String, symbol: String },
+    Depth {
+        url: String,
+        symbol: String,
+    },
     /// Call REST /exchangeInfo endpoint
-    ExchangeInfo { url: String },
+    ExchangeInfo {
+        url: String,
+    },
     /// Call REST /currencies endpoint
-    Currencies { url: String },
+    Currencies {
+        url: String,
+    },
     /// Call REST /klines endpoint
     Klines {
         url: String,
@@ -27,26 +36,50 @@ enum Commands {
         interval: String,
     },
     /// Call REST /account endpoint (requires API_KEY/API_SECRET env)
-    Account { url: String },
+    Account {
+        url: String,
+    },
     /// Call REST /deposits endpoint (requires API_KEY/API_SECRET env)
-    Deposits { url: String },
+    Deposits {
+        url: String,
+    },
     /// Call REST /myTrades endpoint (requires API_KEY/API_SECRET env)
-    MyTrades { url: String, symbol: String },
+    MyTrades {
+        url: String,
+        symbol: String,
+    },
     /// Call REST /fetchOrder endpoint (requires API_KEY/API_SECRET env)
-    FetchOrder { url: String, order_id: String },
+    FetchOrder {
+        url: String,
+        order_id: String,
+    },
     /// Call REST /openOrders endpoint (requires API_KEY/API_SECRET env)
-    OpenOrders { url: String, symbol: Option<String> },
+    OpenOrders {
+        url: String,
+        symbol: Option<String>,
+    },
     /// Call REST /ledger endpoint (requires API_KEY/API_SECRET env)
     Ledger {
         url: String,
         currency: Option<String>,
     },
     /// Call REST /transactions endpoint (requires API_KEY/API_SECRET env)
-    Transactions { url: String },
+    Transactions {
+        url: String,
+    },
     /// Call REST /tradingPositions endpoint (requires API_KEY/API_SECRET env)
-    TradingPositions { url: String },
+    TradingPositions {
+        url: String,
+    },
     /// Call REST /tradingPositionHistory endpoint (requires API_KEY/API_SECRET env)
-    TradingPositionHistory { url: String, symbol: Option<String> },
+    TradingPositionHistory {
+        url: String,
+        symbol: Option<String>,
+    },
+    Ticker {
+        url: String,
+        symbol: String,
+    },
 }
 
 #[tokio::main]
@@ -77,7 +110,10 @@ async fn main() -> anyhow::Result<()> {
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
-            let v = rc.exchange_info().await?;
+
+            let ts = rc.time().await?;
+            let v = rc.exchange_info(ts).await?;
+
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
         Commands::Account { url } => {
@@ -96,7 +132,10 @@ async fn main() -> anyhow::Result<()> {
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
-            let v = rc.currencies().await?;
+
+            let ts = rc.time().await?;
+            let v = rc.currencies(ts).await?;
+
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
         Commands::Klines {
@@ -158,8 +197,9 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
-            let v = rc.ledger(currency.as_deref(), ts).await?;
-            println!("{}", serde_json::to_string_pretty(&v)?);
+            let mut v = rc.ledger(currency.as_deref(), ts).await?;
+            v.sort_by_key(|e| -e.timestamp.timestamp_millis());
+            println!("{:#?}", v);
         }
         Commands::Transactions { url } => {
             let api_key = env::var("API_KEY").expect("API_KEY required");
@@ -179,7 +219,7 @@ async fn main() -> anyhow::Result<()> {
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.trading_positions(ts).await?;
-            println!("{}", serde_json::to_string_pretty(&v)?);
+            println!("{:#?}", v);
         }
         Commands::TradingPositionHistory { url, symbol } => {
             let api_key = env::var("API_KEY").expect("API_KEY required");
@@ -190,6 +230,17 @@ async fn main() -> anyhow::Result<()> {
             let ts = rc.time().await?;
             let v = rc.trading_position_history(symbol.as_deref(), ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
+        }
+        Commands::Ticker { url, symbol } => {
+            let api_key = env::var("API_KEY").expect("API_KEY required");
+            let api_secret =
+                env::var("API_SECRET").expect("API_SECRET required");
+            let rc =
+                finance::portfolio::RestClient::new(url, api_key, api_secret);
+
+            let v = rc.ticker(&symbol).await?;
+
+            println!("{:#?}", v);
         }
     }
 

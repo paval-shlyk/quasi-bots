@@ -6,6 +6,7 @@ use serde::de::DeserializeOwned;
 const API_KEY_HEADER: &str = "X-MBX-APIKEY";
 
 /// Lightweight REST client for dzengi-like API used by tests.
+#[derive(Clone)]
 pub struct RestClient {
     pub base_url: String,
     pub api_key: String,
@@ -57,8 +58,17 @@ impl RestClient {
     }
 
     /// Fetch list of currencies from `/currencies` REST endpoint.
-    pub async fn currencies(&self) -> anyhow::Result<Vec<Currency>> {
+    pub async fn currencies(
+        &self,
+        server_ts: u64,
+    ) -> anyhow::Result<Vec<Currency>> {
         let url = format!("{}/currencies", self.base_url);
+
+        let params = format!("timestamp={}", server_ts);
+        let sig = sign(&self.api_secret, &params);
+
+        let url = format!("{}?{}&signature={}", url, params, sig);
+
         self.get(&url).await
     }
 
@@ -70,8 +80,17 @@ impl RestClient {
     }
 
     /// Fetch exchange metadata (symbols, filters, rate limits) from `/exchangeInfo`.
-    pub async fn exchange_info(&self) -> anyhow::Result<ExchangeInfo> {
+    pub async fn exchange_info(
+        &self,
+        server_ts: u64,
+    ) -> anyhow::Result<ExchangeInfo> {
         let url = format!("{}/exchangeInfo", self.base_url);
+
+        let params = format!("timestamp={}", server_ts);
+        let sig = sign(&self.api_secret, &params);
+
+        let url = format!("{}?{}&signature={}", url, params, sig);
+
         self.get(&url).await
     }
 
@@ -111,9 +130,11 @@ impl RestClient {
         server_ts: u64,
     ) -> anyhow::Result<Vec<Deposit>> {
         let url = format!("{}/deposits", self.base_url);
+
         let params = format!("timestamp={}", server_ts);
         let sig = sign(&self.api_secret, &params);
         let url = format!("{}?{}&signature={}", url, params, sig);
+
         self.get(&url).await
     }
 
@@ -174,7 +195,8 @@ impl RestClient {
         server_ts: u64,
     ) -> anyhow::Result<Vec<LedgerEntry>> {
         let url = format!("{}/ledger", self.base_url);
-        let mut params = format!("timestamp={}", server_ts);
+        let mut params = format!("timestamp={}&limit={}", server_ts, 100);
+
         if let Some(c) = currency {
             params = format!("currency={}&{}", urlencoding::encode(c), params);
         }
@@ -223,5 +245,11 @@ impl RestClient {
         let url = format!("{}?{}&signature={}", url, params, sig);
         let resp: TradingPositionHistoryResponse = self.get(&url).await?;
         Ok(resp.history)
+    }
+
+    pub async fn ticker(&self, symbol: &str) -> anyhow::Result<Ticker> {
+        let url = format!("{}/ticker/24hr", self.base_url);
+        let url = format!("{}?symbol={}", url, urlencoding::encode(symbol));
+        self.get(&url).await
     }
 }

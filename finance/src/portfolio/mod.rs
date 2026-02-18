@@ -1,14 +1,17 @@
 mod config;
 pub mod model;
 pub mod rest_api;
+mod routes;
 pub mod ws_api;
 
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+pub use config::ProviderConfig;
 pub use model::*;
 pub use rest_api::RestClient;
+pub use routes::*;
 pub use ws_api::Client;
 
 type HmacSha256 = Hmac<Sha256>;

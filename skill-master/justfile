@@ -16,6 +16,9 @@ broken-links:
 news-sources:
     curl -s -L "http://localhost:8080/news-bank/sources" | jq
 
+portfolio:
+    curl -s -L "http://localhost:8080/market-tracker/portfolio" | jq
+
 next-quote:
     #!/bin/bash
     for i in {1..5}; do \
@@ -53,4 +56,3 @@ set_affinity:
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings
-

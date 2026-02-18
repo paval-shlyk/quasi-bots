@@ -1,5 +1,76 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Ticker {
+    pub symbol: String,
+    #[serde(
+        rename = "priceChange",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price_change: f64,
+    #[serde(
+        rename = "priceChangePercent",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub price_change_percent: f64,
+    #[serde(
+        rename = "weightedAvgPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub weighted_avg_price: f64,
+    #[serde(
+        rename = "prevClosePrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub prev_close_price: f64,
+    #[serde(
+        rename = "lastPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub last_price: f64,
+    #[serde(
+        rename = "lastQty",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub last_qty: f64,
+    #[serde(
+        rename = "bidPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub bid_price: f64,
+    #[serde(
+        rename = "askPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub ask_price: f64,
+    #[serde(
+        rename = "openPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub open_price: f64,
+    #[serde(
+        rename = "highPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub high_price: f64,
+    #[serde(
+        rename = "lowPrice",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub low_price: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub volume: f64,
+    #[serde(
+        rename = "quoteVolume",
+        deserialize_with = "deserialize_string_to_f64"
+    )]
+    pub quote_volume: f64,
+    #[serde(rename = "openTime", with = "chrono::serde::ts_milliseconds")]
+    pub open_time: chrono::DateTime<chrono::Utc>,
+    #[serde(rename = "closeTime", with = "chrono::serde::ts_milliseconds")]
+    pub close_time: chrono::DateTime<chrono::Utc>,
+}
+
 /// Authentication request payload for WebSocket.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AuthRequest {
@@ -52,9 +123,23 @@ pub struct ServerTime {
 /// Currency information.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Currency {
-    pub id: String,
     pub name: String,
-    // Add other fields as discovered/needed
+    #[serde(rename = "displaySymbol")]
+    pub symbol: String,
+
+    #[serde(rename = "type")]
+    pub ty: String,
+
+    #[serde(rename = "minDeposit")]
+    pub min_deposit: Option<f64>,
+    #[serde(rename = "minWithdrawal")]
+    pub min_withdrawal: Option<f64>,
+    #[serde(rename = "maxWithdrawal")]
+    pub max_withdrawal: Option<f64>,
+    #[serde(rename = "commissionMin")]
+    pub commission_min: Option<f64>,
+    #[serde(rename = "commissionPercent")]
+    pub commission_percent: Option<f64>,
 }
 
 /// Order book entry (price, quantity).
@@ -255,13 +340,13 @@ impl<'de> Deserialize<'de> for Kline {
 }
 
 /// Account balance.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Balance {
     pub asset: String,
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub free: String,
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub locked: String,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub free: f64,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub locked: f64,
     pub timestamp: Option<u64>,
 }
 
@@ -305,6 +390,25 @@ where
     }
 }
 
+fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrNumber {
+        String(String),
+        Number(f64),
+    }
+
+    match StringOrNumber::deserialize(deserializer)? {
+        StringOrNumber::String(s) => {
+            s.parse::<f64>().map_err(serde::de::Error::custom)
+        }
+        StringOrNumber::Number(n) => Ok(n),
+    }
+}
+
 /// Account information.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AccountInformation {
@@ -313,11 +417,11 @@ pub struct AccountInformation {
     #[serde(rename = "takerCommission")]
     pub taker_commission: Option<f64>,
     #[serde(rename = "canTrade")]
-    pub can_trade: Option<bool>,
+    pub can_trade: bool,
     #[serde(rename = "canWithdraw")]
-    pub can_withdraw: Option<bool>,
+    pub can_withdraw: bool,
     #[serde(rename = "canDeposit")]
-    pub can_deposit: Option<bool>,
+    pub can_deposit: bool,
     #[serde(rename = "updateTime")]
     pub update_time: Option<u64>,
     pub balances: Vec<Balance>,
@@ -424,6 +528,15 @@ pub struct Order {
     pub update_time: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum LedgerEntryType {
+    Trade,
+    Deposit,
+    Withdrawal,
+    ExchangeCommission,
+}
+
 /// Ledger entry.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct LedgerEntry {
@@ -434,9 +547,11 @@ pub struct LedgerEntry {
     pub currency: String,
     pub description: Option<String>,
     pub status: String,
-    pub timestamp: u64,
     #[serde(rename = "type")]
-    pub type_: String,
+    pub ty: String,
+
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Transaction (often similar to Ledger but might have specific fields for deposits/withdrawals).
@@ -460,37 +575,32 @@ pub struct Transaction {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TradingPosition {
     pub symbol: String,
+    pub id: String,
+    #[serde(alias = "accountId", alias = "account_id")]
+    pub account_id: String,
+
+    pub margin: f64,
+    pub fee: f64,
+    #[serde(rename = "openQuantity")]
+    pub open_qty: f64,
+    #[serde(rename = "closeQuantity")]
+    pub close_qty: f64,
+
+    #[serde(rename = "openPrice")]
+    pub open_price: f64,
+    #[serde(rename = "closePrice")]
+    pub close_price: f64,
+
+    pub cost: f64,
+
+    #[serde(rename = "upl")]
+    pub profit_loss: f64,
+
     #[serde(
-        default,
-        deserialize_with = "deserialize_option_string_from_number"
+        rename = "createdTimestamp",
+        with = "chrono::serde::ts_milliseconds"
     )]
-    pub id: Option<String>,
-    #[serde(
-        default,
-        deserialize_with = "deserialize_option_string_from_number",
-        alias = "quantity",
-        alias = "size"
-    )]
-    pub amount: Option<String>,
-    #[serde(
-        default,
-        rename = "openPrice",
-        deserialize_with = "deserialize_option_string_from_number"
-    )]
-    pub open_price: Option<String>,
-    #[serde(
-        default,
-        rename = "currentPrice",
-        deserialize_with = "deserialize_option_string_from_number"
-    )]
-    pub current_price: Option<String>,
-    #[serde(
-        default,
-        rename = "pl",
-        deserialize_with = "deserialize_option_string_from_number"
-    )]
-    pub profit_loss: Option<String>,
-    pub timestamp: Option<u64>,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

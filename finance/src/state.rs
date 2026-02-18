@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::Config;
+use crate::{Config, portfolio};
 
 #[derive(Clone)]
 pub struct FinanceState {
@@ -8,4 +8,6 @@ pub struct FinanceState {
 
     #[allow(unused)]
     pub(crate) pool: sqlx::SqlitePool,
+
+    pub(crate) api: portfolio::RestClient,
 }

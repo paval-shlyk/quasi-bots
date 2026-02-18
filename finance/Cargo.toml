@@ -9,13 +9,38 @@ axum = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+futures-util = "0.3"
+serde_json = "1.0"
+urlencoding = "2.1"
+clap = { version = "4.3", features = ["derive"] }
+dotenvy = "0.15"
 
 polars = "0.51.0"
 feed-rs = "2.3.1"
-reqwest = "0.13.2"
+reqwest = { workspace = true }
 
 
 sqlx = { version = "0.8.6", features = ["sqlite"] }
 ta = "0.5.0"
 yahoo_finance_api = "4.1.0"
 yfinance-rs = "0.7.2"
+tokio-tungstenite = "0.28.0"
+hmac = "0.12.1"
+sha2 = "0.10.8"
+hex = "0.4.3"
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+serde_json = "1.0"
+dotenvy = "0.15"
+
+[features]
+default = []
+
+[package.metadata]
+build-binaries = true
+
+[[bin]]
+name = "finance-cli"
+path = "src/bin/finance-cli.rs"

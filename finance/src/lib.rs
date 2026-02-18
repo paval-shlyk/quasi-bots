@@ -3,6 +3,7 @@ pub mod model;
 mod recommendations;
 mod routes;
 mod state;
+pub mod portfolio;
 
 pub use routes::*;
 pub use state::FinanceState;

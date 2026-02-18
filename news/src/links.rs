@@ -73,12 +73,12 @@ pub async fn set_broken(
     Ok(())
 }
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
 pub struct SourceStatistics {
     pub id: i64,
     pub url: String,
     pub article_count: i64,
-    pub topics: sqlx::types::Json<Vec<String>>,
+    pub topics: Vec<String>,
 }
 
 pub async fn select_source_with_statistics(
@@ -86,8 +86,7 @@ pub async fn select_source_with_statistics(
 ) -> anyhow::Result<Vec<SourceStatistics>> {
     telemetry::execution_time!("Select url sources");
 
-    let sources = sqlx::query_as!(
-        SourceStatistics,
+    let sources = sqlx::query!(
         r#"
         SELECT 
             s.id,
@@ -102,7 +101,14 @@ pub async fn select_source_with_statistics(
         "#
     )
     .fetch_all(pool)
-    .await?;
+    .await?
+    .into_iter()
+    .map(|r| SourceStatistics {
+        id: r.id,
+        article_count: r.article_count,
+        url: r.url,
+        topics: r.topics.0,
+    }).collect();
 
     Ok(sources)
 }

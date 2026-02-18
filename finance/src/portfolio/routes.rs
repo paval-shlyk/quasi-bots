@@ -58,7 +58,7 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
             continue;
         }
 
-        current_volume += estimate_price_in_usd(&api, &b.asset, b.free).await?;
+        current_volume += estimate_price_in_usd(api, &b.asset, b.free).await?;
     }
 
     //not included fee for banks to deposit account
@@ -155,9 +155,9 @@ pub async fn estimate_price_in_usd(
 
 pub async fn find_quote_symbol(
     api: &RestClient,
-    base_symbol: &str,
+    _base_symbol: &str,
 ) -> anyhow::Result<Option<String>> {
-    let ts = api.time().await?;
+    let _ts = api.time().await?;
 
     //fetch pair from exchange-info
     todo!()

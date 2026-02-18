@@ -18,10 +18,14 @@ fn load_dotenv() {
 async fn sign_and_serialization() {
     load_dotenv();
 
-    let api_key =
-        env::var("API_KEY").expect("API_KEY must be set for this test");
-    let api_secret =
-        env::var("API_SECRET").expect("API_SECRET must be set for this test");
+    let api_key = env::var("API_KEY").unwrap_or_else(|_| {
+        tracing::warn!("API_KEY not set, using dummy value for test");
+        "dummy_api_key".to_string()
+    });
+    let api_secret = env::var("API_SECRET").unwrap_or_else(|_| {
+        tracing::warn!("API_SECRET not set, using dummy value for test");
+        "dummy_api_secret".to_string()
+    });
 
     // ensure now_ms returns a reasonable timestamp
     let ts = now_ms();
@@ -86,7 +90,7 @@ async fn sign_and_serialization() {
         let _depth = rc.depth("BTC/USD").await.expect("depth");
 
         // exchange info
-        let _info = rc.exchange_info().await.expect("exchange info");
+        let _info = rc.exchange_info(server_ts).await.expect("exchange info");
 
         // account (signed)
         let _acct = rc.account(server_ts).await.expect("account");
@@ -105,16 +109,26 @@ async fn sign_and_serialization() {
         let _klines = rc.klines("BTC/USD", "1m").await.expect("klines");
 
         // open orders
-        let _open_orders = rc.open_orders(None, server_ts).await.expect("open orders");
+        let _open_orders =
+            rc.open_orders(None, server_ts).await.expect("open orders");
 
         // ledger
-        let _ledger = rc.ledger(None, server_ts).await.expect("ledger");
+        let _ledger = rc
+            .ledger(None, None, None, None, None, server_ts)
+            .await
+            .expect("ledger");
 
         // transactions
-        let _transactions = rc.transactions(server_ts).await.expect("transactions");
+        let _transactions = rc
+            .fetch_all_transactions(server_ts)
+            .await
+            .expect("transactions");
 
         // trading positions
-        let _positions = rc.trading_positions(server_ts).await.expect("trading positions");
+        let _positions = rc
+            .trading_positions(server_ts)
+            .await
+            .expect("trading positions");
 
         // trading position history
         // let _history = rc.trading_position_history(None, server_ts).await.expect("trading position history");

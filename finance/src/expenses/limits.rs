@@ -1,3 +1,1 @@
-pub struct Limit {
-    
-}
+pub struct Limit {}

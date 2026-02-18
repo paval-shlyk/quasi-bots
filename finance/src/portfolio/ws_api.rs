@@ -1,9 +1,9 @@
 use crate::portfolio::model::*;
 use crate::portfolio::{now_ms, sign};
 use futures_util::{SinkExt, StreamExt};
+use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
-use std::time::Duration;
 
 /// Client connects to dzengi.com websocket, authenticates and produces parsed events.
 pub struct Client {
@@ -91,7 +91,9 @@ impl Client {
                                         == Some("auth")
                                     {
                                         let resp: Result<AuthResponse, _> =
-                                            serde_json::from_value(json.clone());
+                                            serde_json::from_value(
+                                                json.clone(),
+                                            );
                                         if let Ok(r) = resp {
                                             let _ = tx_evt_clone
                                                 .send(PortfolioEvent::Auth(r));
@@ -101,32 +103,29 @@ impl Client {
 
                                     if obj.get("type").and_then(|v| v.as_str())
                                         == Some("portfolio_snapshot")
-                                    {
-                                        if let Ok(snap) = serde_json::from_value::<
+                                        && let Ok(snap) = serde_json::from_value::<
                                             PortfolioSnapshot,
-                                        >(json.clone()) {
-                                            let _ = tx_evt_clone.send(
-                                                PortfolioEvent::Snapshot(snap),
-                                            );
-                                            continue;
-                                        }
+                                        >(
+                                            json.clone()
+                                        )
+                                    {
+                                        let _ = tx_evt_clone.send(
+                                            PortfolioEvent::Snapshot(snap),
+                                        );
+                                        continue;
                                     }
 
                                     if obj.get("type").and_then(|v| v.as_str())
                                         == Some("position_update")
-                                    {
-                                        if let Ok(pos) =
+                                        && let Ok(pos) =
                                             serde_json::from_value::<Position>(
                                                 json.clone(),
                                             )
-                                        {
-                                            let _ = tx_evt_clone.send(
-                                                PortfolioEvent::PositionUpdate(
-                                                    pos,
-                                                ),
-                                            );
-                                            continue;
-                                        }
+                                    {
+                                        let _ = tx_evt_clone.send(
+                                            PortfolioEvent::PositionUpdate(pos),
+                                        );
+                                        continue;
                                     }
                                 }
 
@@ -189,23 +188,27 @@ impl Client {
         loop {
             let recv = tokio::time::timeout(timeout, self.rx.recv()).await;
             match recv {
-                Ok(Some(evt)) => match evt {
-                    PortfolioEvent::Raw(val) => {
-                        if val.get("correlationId").and_then(|v| v.as_str())
+                Ok(Some(evt)) => {
+                    if let PortfolioEvent::Raw(val) = evt
+                        && val.get("correlationId").and_then(|v| v.as_str())
                             == Some(correlation_id)
-                        {
-                            // Some responses wrap the result in "payload"
-                            // If the caller expects the inner payload, we should extract it here or let caller do it.
-                            // REST endpoints usually return the data directly.
-                            // WS `request` generic helper returns the FULL response JSON.
-                            // Wrapper methods below should extract `payload`.
-                            return Ok(val);
-                        }
+                    {
+                        // Some responses wrap the result in "payload"
+                        // If the caller expects the inner payload, we should extract it here or let caller do it.
+                        // REST endpoints usually return the data directly.
+                        // WS `request` generic helper returns the FULL response JSON.
+                        // Wrapper methods below should extract `payload`.
+                        return Ok(val);
                     }
-                    _ => {} // ignore other events
-                },
-                Ok(None) => return Err(anyhow::anyhow!("event receiver closed")),
-                Err(_) => return Err(anyhow::anyhow!("timeout waiting for websocket response")),
+                }
+                Ok(None) => {
+                    return Err(anyhow::anyhow!("event receiver closed"));
+                }
+                Err(_) => {
+                    return Err(anyhow::anyhow!(
+                        "timeout waiting for websocket response"
+                    ));
+                }
             }
         }
     }
@@ -218,13 +221,15 @@ impl Client {
         correlation_id: &str,
         timeout_secs: u64,
     ) -> anyhow::Result<T> {
-        let resp = self.request(destination, payload, correlation_id, timeout_secs).await?;
+        let resp = self
+            .request(destination, payload, correlation_id, timeout_secs)
+            .await?;
         // Check if response has "payload" field, if so try to deserialize that.
         // If not, try to deserialize the whole response.
-        if let Some(p) = resp.get("payload") {
-             if let Ok(v) = serde_json::from_value(p.clone()) {
-                 return Ok(v);
-             }
+        if let Some(p) = resp.get("payload")
+            && let Ok(v) = serde_json::from_value(p.clone())
+        {
+            return Ok(v);
         }
         let v = serde_json::from_value(resp)?;
         Ok(v)
@@ -236,54 +241,79 @@ impl Client {
         let payload = serde_json::json!({});
         // special case: time response structure might vary
         let resp = self.request("/api/v1/time", payload, &cid, 5).await?;
-        
-        if let Some(st) = resp.get("payload").and_then(|p| p.get("serverTime")).and_then(|v| v.as_u64()) {
+
+        if let Some(st) = resp
+            .get("payload")
+            .and_then(|p| p.get("serverTime"))
+            .and_then(|v| v.as_u64())
+        {
             return Ok(st);
         }
         if let Some(st) = resp.get("serverTime").and_then(|v| v.as_u64()) {
             return Ok(st);
         }
-         Err(anyhow::anyhow!("serverTime not found in time response"))
+        Err(anyhow::anyhow!("serverTime not found in time response"))
     }
 
     /// Fetch order book depth.
-    pub async fn ws_depth(&mut self, symbol: &str) -> anyhow::Result<OrderBook> {
+    pub async fn ws_depth(
+        &mut self,
+        symbol: &str,
+    ) -> anyhow::Result<OrderBook> {
         let cid = format!("depth-{}-{}", symbol, now_ms());
         let payload = serde_json::json!({"symbol": symbol});
-        self.request_payload("/api/v1/depth", payload, &cid, 5).await
+        self.request_payload("/api/v1/depth", payload, &cid, 5)
+            .await
     }
 
     /// Fetch exchange metadata.
     pub async fn ws_exchange_info(&mut self) -> anyhow::Result<ExchangeInfo> {
         let cid = format!("exinfo-{}", now_ms());
         let payload = serde_json::json!({});
-        self.request_payload("/api/v1/exchangeInfo", payload, &cid, 5).await
+        self.request_payload("/api/v1/exchangeInfo", payload, &cid, 5)
+            .await
     }
 
     /// Fetch account information.
-    pub async fn ws_account(&mut self, server_ts: u64) -> anyhow::Result<AccountInformation> {
+    pub async fn ws_account(
+        &mut self,
+        server_ts: u64,
+    ) -> anyhow::Result<AccountInformation> {
         let cid = format!("account-{}", server_ts);
-        let param_str = format!("timestamp={}&apiKey={}", server_ts, self.api_key);
+        let param_str =
+            format!("timestamp={}&apiKey={}", server_ts, self.api_key);
         let sig = sign(&self.api_secret, &param_str);
         let payload = serde_json::json!({"apiKey": self.api_key, "timestamp": server_ts, "signature": sig});
-        self.request_payload("/api/v1/account", payload, &cid, 5).await
+        self.request_payload("/api/v1/account", payload, &cid, 5)
+            .await
     }
 
     /// Fetch deposit history.
-    pub async fn ws_deposits(&mut self, server_ts: u64) -> anyhow::Result<Vec<Deposit>> {
+    pub async fn ws_deposits(
+        &mut self,
+        server_ts: u64,
+    ) -> anyhow::Result<Vec<Deposit>> {
         let cid = format!("deposits-{}", server_ts);
-        let param_str = format!("timestamp={}&apiKey={}", server_ts, self.api_key);
+        let param_str =
+            format!("timestamp={}&apiKey={}", server_ts, self.api_key);
         let sig = sign(&self.api_secret, &param_str);
         let payload = serde_json::json!({"apiKey": self.api_key, "timestamp": server_ts, "signature": sig});
-        self.request_payload("/api/v1/deposits", payload, &cid, 5).await
+        self.request_payload("/api/v1/deposits", payload, &cid, 5)
+            .await
     }
 
     /// Fetch account trades.
-    pub async fn ws_my_trades(&mut self, symbol: &str, server_ts: u64) -> anyhow::Result<Vec<Trade>> {
+    pub async fn ws_my_trades(
+        &mut self,
+        symbol: &str,
+        server_ts: u64,
+    ) -> anyhow::Result<Vec<Trade>> {
         let cid = format!("mytrades-{}-{}", symbol, server_ts);
-        let param_str = format!("timestamp={}&apiKey={}", server_ts, self.api_key);
+        let param_str =
+            format!("timestamp={}&apiKey={}", server_ts, self.api_key);
         let sig = sign(&self.api_secret, &param_str);
         let payload = serde_json::json!({"symbol": symbol, "apiKey": self.api_key, "timestamp": server_ts, "signature": sig});
-        self.request_payload("/api/v1/myTrades", payload, &cid, 5).await
+        self.request_payload("/api/v1/myTrades", payload, &cid, 5)
+            .await
     }
 }

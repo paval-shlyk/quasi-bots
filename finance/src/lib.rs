@@ -1,9 +1,10 @@
+mod expenses;
 pub mod metrics;
 pub mod model;
+pub mod portfolio;
 mod recommendations;
 mod routes;
 mod state;
-pub mod portfolio;
 
 pub use routes::*;
 pub use state::FinanceState;

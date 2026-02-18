@@ -192,13 +192,29 @@ impl RestClient {
     pub async fn ledger(
         &self,
         currency: Option<&str>,
+        start_time: Option<u64>,
+        end_time: Option<u64>,
+        limit: Option<u64>,
+        recv_window: Option<u64>,
         server_ts: u64,
     ) -> anyhow::Result<Vec<LedgerEntry>> {
         let url = format!("{}/ledger", self.base_url);
-        let mut params = format!("timestamp={}&limit={}", server_ts, 100);
+        let mut params = format!("timestamp={}", server_ts);
 
         if let Some(c) = currency {
-            params = format!("currency={}&{}", urlencoding::encode(c), params);
+            params = format!("{}&currency={}", params, urlencoding::encode(c));
+        }
+        if let Some(st) = start_time {
+            params = format!("{}&startTime={}", params, st);
+        }
+        if let Some(et) = end_time {
+            params = format!("{}&endTime={}", params, et);
+        }
+        if let Some(l) = limit {
+            params = format!("{}&limit={}", params, l);
+        }
+        if let Some(rw) = recv_window {
+            params = format!("{}&recvWindow={}", params, rw);
         }
         let sig = sign(&self.api_secret, &params);
         let url = format!("{}?{}&signature={}", url, params, sig);
@@ -208,13 +224,111 @@ impl RestClient {
     /// Fetch transactions (deposit/withdrawals).
     pub async fn transactions(
         &self,
+        start_time: Option<u64>,
+        end_time: Option<u64>,
+        limit: Option<u64>,
+        recv_window: Option<u64>,
         server_ts: u64,
     ) -> anyhow::Result<Vec<Transaction>> {
         let url = format!("{}/transactions", self.base_url);
-        let params = format!("timestamp={}", server_ts);
+        let mut params = format!("timestamp={}", server_ts);
+
+        if let Some(st) = start_time {
+            params = format!("{}&startTime={}", params, st);
+        }
+        if let Some(et) = end_time {
+            params = format!("{}&endTime={}", params, et);
+        }
+        if let Some(l) = limit {
+            params = format!("{}&limit={}", params, l);
+        }
+        if let Some(rw) = recv_window {
+            params = format!("{}&recvWindow={}", params, rw);
+        }
+
         let sig = sign(&self.api_secret, &params);
         let url = format!("{}?{}&signature={}", url, params, sig);
         self.get(&url).await
+    }
+
+    pub async fn fetch_full_ledger(
+        &self,
+        currency: Option<&str>,
+        server_ts: u64,
+    ) -> anyhow::Result<Vec<LedgerEntry>> {
+        let mut all_entries = Vec::new();
+        let mut start_time = 0; // Or reasonable default
+        let limit = 100;
+
+        loop {
+            let entries = self
+                .ledger(
+                    currency,
+                    Some(start_time),
+                    None,
+                    Some(limit),
+                    None,
+                    server_ts,
+                )
+                .await?;
+
+            if entries.is_empty() {
+                break;
+            }
+
+            let len = entries.len();
+            let last_ts =
+                entries.last().unwrap().timestamp.timestamp_millis() as u64;
+            all_entries.extend(entries);
+
+            if len < limit as usize {
+                break;
+            }
+
+            // Pagination logic: next page starts after the last item's timestamp
+            start_time = last_ts + 1;
+        }
+
+        Ok(all_entries)
+    }
+
+    pub async fn fetch_all_transactions(
+        &self,
+        server_ts: u64,
+    ) -> anyhow::Result<Vec<Transaction>> {
+        let mut all_transactions = Vec::new();
+        let mut start_time = 0; // Or reasonable default
+        let limit = 100;
+
+        loop {
+            let txs = self
+                .transactions(
+                    Some(start_time),
+                    None,
+                    Some(limit),
+                    None,
+                    server_ts,
+                )
+                .await?;
+
+            if txs.is_empty() {
+                break;
+            }
+
+            let len = txs.len();
+            let last_ts =
+                txs.last().unwrap().timestamp.timestamp_millis() as u64;
+            all_transactions.extend(txs);
+
+            if len < limit as usize {
+                break;
+            }
+
+            // Pagination logic: next page starts after the last item's timestamp
+            start_time = last_ts + 1;
+        }
+
+        Ok(all_transactions)
     }
 
     /// Fetch trading positions.

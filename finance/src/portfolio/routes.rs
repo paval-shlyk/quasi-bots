@@ -1,4 +1,4 @@
-use axum::{Json, extract::State, response::IntoResponse};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::portfolio::{Balance, RestClient, TradingPosition};
 
@@ -11,6 +11,8 @@ pub struct Portfolio {
     pub current_volume: f64,
     pub historical_volume: f64,
     pub total_fee_spending: f64,
+
+    pub total_withdrawal: f64,
 }
 
 pub enum Asset {
@@ -23,7 +25,13 @@ pub async fn get_portfolio(
 ) -> impl IntoResponse {
     fetch_portfolio(&state.api).await.map(Json).map_err(|e| {
         tracing::error!("failed to fetch portfolio: {:?}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            serde_json::json!({
+                "error": e.to_string()
+            })
+            .to_string(),
+        )
     })
 }
 
@@ -53,15 +61,51 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
         current_volume += estimate_price_in_usd(&api, &b.asset, b.free).await?;
     }
 
-    // let ledger_entries = api.ledger(None, server_ts).await?;
+    //not included fee for banks to deposit account
+    let mut total_fee = 0.0;
+    let mut total_withdrawal = 0.0;
+    let mut historical_volume = 0.0;
+    let server_ts = api.time().await?;
+    let entries = api.fetch_full_ledger(None, server_ts).await?;
 
-    tracing::info!("BIBA");
+    for e in entries {
+        let amount = if e.currency == "USD" {
+            e.amount.abs()
+        } else {
+            let new_amount =
+                estimate_price_in_usd(api, &e.currency, e.amount.abs()).await?;
+
+            tracing::info!(
+                "new_amount = {new_amount}, old_amount = {}",
+                e.amount.abs()
+            );
+
+            new_amount
+        };
+
+        match e.ty {
+            super::LedgerEntryType::Swap | super::LedgerEntryType::Trade => {
+                //skip swap between tokens
+            }
+            super::LedgerEntryType::Deposit => {
+                historical_volume += amount;
+            }
+            super::LedgerEntryType::Withdrawal => {
+                total_withdrawal += amount;
+            }
+            super::LedgerEntryType::TradeCommission
+            | super::LedgerEntryType::ExchangeCommission => {
+                total_fee += amount;
+            }
+        }
+    }
 
     //exchange commission
     Ok(Portfolio {
         current_volume,
-        historical_volume: 0.0,
-        total_fee_spending: 0.0,
+        historical_volume,
+        total_withdrawal,
+        total_fee_spending: total_fee,
 
         can_trade: account.can_trade,
         can_withdraw: account.can_withdraw,
@@ -77,28 +121,36 @@ pub async fn estimate_price_in_usd(
     if symbol == "USD" {
         return Ok(amount);
     }
+    let (base_to_quote, trade_symbol) = if symbol == "BYN" {
+        (false, "USD/BYN".to_string())
+    } else {
+        let ts = api.time().await?;
 
-    let ts = api.time().await?;
+        let exchanges = api.exchange_info(ts).await?;
 
-    let exchanges = api.exchange_info(ts).await?;
+        let trade_info = exchanges
+            .symbols
+            .into_iter()
+            .filter(|s| s.symbol.contains(symbol))
+            .min_by_key(|s| s.symbol.len())
+            .ok_or_else(|| {
+                tracing::warn!("Failed to find trade of {symbol}");
 
-    let trade_symbol = exchanges
-        .symbols
-        .into_iter()
-        .filter(|s| s.symbol.contains(symbol))
-        .min_by_key(|s| s.symbol.len())
-        .map(|s| s.symbol)
-        .ok_or_else(|| {
-            tracing::warn!("Failed to find trade of {symbol}");
+                anyhow::anyhow!("no trading pair found for symbol {}", symbol)
+            })?;
 
-            anyhow::anyhow!("no trading pair found for symbol {}", symbol)
-        })?;
+        (trade_info.quote_asset == "USD", trade_info.symbol)
+    };
 
     tracing::info!("found trading pair {} for symbol {}", trade_symbol, symbol);
 
     let ticker = api.ticker(&trade_symbol).await?;
 
-    Ok(ticker.bid_price * amount)
+    if base_to_quote {
+        Ok(amount * ticker.bid_price)
+    } else {
+        Ok(amount / ticker.bid_price)
+    }
 }
 
 pub async fn find_quote_symbol(

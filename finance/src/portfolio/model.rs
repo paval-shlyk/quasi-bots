@@ -531,9 +531,11 @@ pub struct Order {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum LedgerEntryType {
+    Swap,
     Trade,
     Deposit,
     Withdrawal,
+    TradeCommission,
     ExchangeCommission,
 }
 
@@ -542,13 +544,13 @@ pub enum LedgerEntryType {
 pub struct LedgerEntry {
     #[serde(deserialize_with = "deserialize_string_from_number")]
     pub id: String,
-    #[serde(deserialize_with = "deserialize_string_from_number")]
-    pub amount: String,
+    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    pub amount: f64,
     pub currency: String,
     pub description: Option<String>,
     pub status: String,
     #[serde(rename = "type")]
-    pub ty: String,
+    pub ty: LedgerEntryType,
 
     #[serde(with = "chrono::serde::ts_milliseconds")]
     pub timestamp: chrono::DateTime<chrono::Utc>,
@@ -562,13 +564,15 @@ pub struct Transaction {
     #[serde(deserialize_with = "deserialize_string_from_number")]
     pub amount: String,
     pub currency: String,
+    //PROCESSED, DECLINED
     pub status: String,
-    pub timestamp: u64,
     #[serde(rename = "type")]
     pub type_: String,
     pub address: Option<String>,
     #[serde(rename = "txId")]
     pub tx_id: Option<String>,
+    #[serde(with = "chrono::serde::ts_milliseconds")]
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 /// Trading position details (rest endpoint might return different structure than WS Position).

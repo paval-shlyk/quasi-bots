@@ -197,9 +197,14 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
-            let mut v = rc.ledger(currency.as_deref(), ts).await?;
+            let mut v = rc.fetch_full_ledger(currency.as_deref(), ts).await?;
+            // .into_iter()
+            // .filter(|e| !matches!(e.ty, finance::LedgerEntryType::Deposit))
+            // .collect::<Vec<_>>();
+
             v.sort_by_key(|e| -e.timestamp.timestamp_millis());
             println!("{:#?}", v);
+            println!("Total count = {}", v.len());
         }
         Commands::Transactions { url } => {
             let api_key = env::var("API_KEY").expect("API_KEY required");
@@ -208,8 +213,9 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
-            let v = rc.transactions(ts).await?;
-            println!("{}", serde_json::to_string_pretty(&v)?);
+            let v = rc.fetch_all_transactions(ts).await?;
+            println!("{:#?}", v);
+            println!("Total count = {}", v.len());
         }
         Commands::TradingPositions { url } => {
             let api_key = env::var("API_KEY").expect("API_KEY required");
@@ -229,7 +235,7 @@ async fn main() -> anyhow::Result<()> {
                 finance::portfolio::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.trading_position_history(symbol.as_deref(), ts).await?;
-            println!("{}", serde_json::to_string_pretty(&v)?);
+            println!("{:#?}", v);
         }
         Commands::Ticker { url, symbol } => {
             let api_key = env::var("API_KEY").expect("API_KEY required");

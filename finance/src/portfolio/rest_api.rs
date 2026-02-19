@@ -261,7 +261,7 @@ impl RestClient {
         let limit = 100;
 
         loop {
-            let entries = self
+            let mut entries = self
                 .ledger(
                     currency,
                     Some(start_time),
@@ -271,6 +271,8 @@ impl RestClient {
                     server_ts,
                 )
                 .await?;
+
+            entries.sort_by_key(|e| e.timestamp.timestamp());
 
             if entries.is_empty() {
                 break;

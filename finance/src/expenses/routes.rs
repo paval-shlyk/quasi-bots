@@ -6,9 +6,12 @@ use axum::{
     routing::{get, post},
 };
 
+use utoipa::{IntoParams, ToSchema};
+
 use crate::expenses::{
     NativeCurrency, category, entry,
-    report::{self},
+    report::{self, MonthlyReport, YearReport},
+    Category, ExpenseEntry, ExpenseEntryWithCategory,
 };
 
 use crate::FinanceState;
@@ -23,6 +26,13 @@ pub fn router() -> Router<FinanceState> {
         .route("/report/yearly", get(yearly_report))
 }
 
+#[utoipa::path(
+    get,
+    path = "/expenses/categories",
+    responses(
+        (status = 200, body = Vec<Category>)
+    )
+)]
 async fn list_categories(
     State(state): State<FinanceState>,
 ) -> impl IntoResponse {
@@ -36,6 +46,14 @@ async fn list_categories(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/expenses/categories",
+    request_body = CreateCategoryRequest,
+    responses(
+        (status = 201, body = Category)
+    )
+)]
 async fn create_category(
     State(state): State<FinanceState>,
     Json(payload): Json<CreateCategoryRequest>,
@@ -50,11 +68,19 @@ async fn create_category(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, ToSchema)]
 struct CreateCategoryRequest {
     name: String,
 }
 
+#[utoipa::path(
+    get,
+    path = "/expenses/entries",
+    params(ListEntriesParams),
+    responses(
+        (status = 200, body = Vec<ExpenseEntryWithCategory>)
+    )
+)]
 async fn list_entries(
     State(state): State<FinanceState>,
     Query(params): Query<ListEntriesParams>,
@@ -81,12 +107,20 @@ async fn list_entries(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(IntoParams, serde::Deserialize)]
 struct ListEntriesParams {
     year: Option<i32>,
     month: Option<u32>,
 }
 
+#[utoipa::path(
+    post,
+    path = "/expenses/entries",
+    request_body = CreateEntryRequest,
+    responses(
+        (status = 201, body = ExpenseEntry)
+    )
+)]
 async fn create_entry(
     State(state): State<FinanceState>,
     Json(payload): Json<CreateEntryRequest>,
@@ -108,13 +142,21 @@ async fn create_entry(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, ToSchema)]
 struct CreateEntryRequest {
     description: String,
     amount: NativeCurrency,
     category_id: i64,
 }
 
+#[utoipa::path(
+    get,
+    path = "/expenses/report/monthly",
+    params(ReportParams),
+    responses(
+        (status = 200, body = MonthlyReport)
+    )
+)]
 async fn monthly_report(
     State(state): State<FinanceState>,
     Query(params): Query<ReportParams>,
@@ -137,6 +179,14 @@ async fn monthly_report(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/expenses/report/yearly",
+    params(ReportParams),
+    responses(
+        (status = 200, body = YearReport)
+    )
+)]
 async fn yearly_report(
     State(state): State<FinanceState>,
     Query(params): Query<ReportParams>,
@@ -156,7 +206,7 @@ async fn yearly_report(
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(IntoParams, serde::Deserialize)]
 struct ReportParams {
     year: Option<i32>,
     month: Option<u32>,

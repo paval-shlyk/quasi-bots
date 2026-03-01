@@ -21,7 +21,7 @@ feed-rs = "2.3.1"
 reqwest = { workspace = true }
 
 
-sqlx = { version = "0.8.6", features = ["sqlite", "chrono"] }
+sqlx = { version = "0.8.6", features = ["sqlite", "chrono", "runtime-tokio"] }
 ta = "0.5.0"
 yahoo_finance_api = "4.1.0"
 yfinance-rs = "0.7.2"

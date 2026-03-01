@@ -1,7 +1,8 @@
 use crate::expenses::NativeCurrency;
 use chrono::{DateTime, Utc};
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, serde::Deserialize, ToSchema)]
 pub struct ExpenseEntry {
     pub id: i64,
     pub description: String,
@@ -10,7 +11,7 @@ pub struct ExpenseEntry {
     pub category_id: i64,
 }
 
-#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize, ToSchema)]
 pub struct ExpenseEntryWithCategory {
     pub id: i64,
     pub description: String,

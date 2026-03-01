@@ -66,7 +66,7 @@ expense-yearly:
     curl -s -L "http://localhost:8080/expenses-bank/report/yearly" | jq
 
 add-expense:
-    curl -X POST -s -L "http://localhost:8080/expenses-bank/entries" --json '{"description": "test", "amount": 100, "category_id": 1}' | jq
+    curl -X POST -s -L "http://localhost:8080/expenses-bank/entries" --json '{"description": "test-2", "amount": 100, "category_id": 3}' | jq
 
 lint:
     cargo fmt --all --check

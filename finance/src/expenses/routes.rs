@@ -133,7 +133,7 @@ async fn create_entry(
     State(state): State<FinanceState>,
     Json(payload): Json<CreateEntryRequest>,
 ) -> impl IntoResponse {
-    let created_at = payload.created_at.unwrap_or_else(|| chrono::Utc::now());
+    let created_at = payload.created_at.unwrap_or_else(chrono::Utc::now);
 
     match entry::insert(
         &state.pool,
@@ -171,7 +171,7 @@ async fn update_entry(
     Path(entry_id): Path<i64>,
     Json(payload): Json<CreateEntryRequest>,
 ) -> impl IntoResponse {
-    let date = payload.created_at.unwrap_or_else(|| chrono::Utc::now());
+    let date = payload.created_at.unwrap_or_else(chrono::Utc::now);
 
     match entry::update(
         &state.pool,

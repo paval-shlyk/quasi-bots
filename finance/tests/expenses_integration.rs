@@ -66,7 +66,7 @@ async fn test_expense_crud() {
         "Updated expense",
         1500,
         food_category.id,
-        None,
+        chrono::Utc::now(),
     )
     .await
     .unwrap()
@@ -74,7 +74,7 @@ async fn test_expense_crud() {
 
     assert_eq!(updated_entry.description, "Updated expense");
     assert_eq!(updated_entry.amount, 1500);
-    
+
     // Verify report updated
     let report_updated = finance::expenses::fetch_monthly_report(
         &pool,

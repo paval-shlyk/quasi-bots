@@ -1,11 +1,12 @@
 db_file = "/var/lib/skill-master/skills.db"
 serp_api_key = ""                           # REPLACE_WITH_YOUR_KEY
 
-[finance]
-rss_source = "https://finance.yahoo.com/news/rssindex"
-
 [knowledge]
 database_file = "/var/lib/skill-master/knowledge-bank"
+
+[finance]
+rss_source = "https://finance.yahoo.com/news/rssindex"
+provider = { base_url = "https://api-adapter.dzengi.com/api/v2", api_key = "", api_secret = "" } # REPlACE_WITH_YOUR_API_KEYS
 
 
 [news]

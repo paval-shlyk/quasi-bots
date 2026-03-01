@@ -120,7 +120,7 @@ pub fn generate_monthly_chart(report: &MonthlyReport) -> Option<Vec<u8>> {
     if report.by_category.is_empty() {
         return None;
     }
-    let title = format!("Expenses {}年{}月", report.year, report.month);
+    let title = format!("Expenses {}/{}", report.year, report.month);
     chart::create_bar_chart(&report.by_category, &title).ok()
 }
 

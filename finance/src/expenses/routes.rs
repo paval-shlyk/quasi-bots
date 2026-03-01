@@ -151,13 +151,21 @@ struct CreateEntryRequest {
     category_id: i64,
 }
 
+#[derive(utoipa::IntoParams, serde::Deserialize)]
+struct ReportParams {
+    year: Option<i32>,
+    month: Option<u32>,
+    format: Option<String>,
+}
+
 #[utoipa::path(
     get,
     path = "/expenses-bank/report/monthly",
     tag = "Finance",
     params(ReportParams),
     responses(
-        (status = 200, body = MonthlyReport)
+        (status = 200, body = MonthlyReport),
+        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
     )
 )]
 async fn monthly_report(
@@ -173,7 +181,20 @@ async fn monthly_report(
         .unwrap_or(now.format("%m").to_string().parse().unwrap_or(3));
 
     match report::fetch_monthly_report(&state.pool, year, month).await {
-        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
+        Ok(report) => {
+            if params.format.as_deref() == Some("svg") {
+                match report::generate_monthly_chart(&report) {
+                    Some(svg) => (
+                        StatusCode::OK,
+                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+                        svg
+                    ).into_response(),
+                    None => (StatusCode::NO_CONTENT).into_response(),
+                }
+            } else {
+                (StatusCode::OK, Json(report)).into_response()
+            }
+        }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
@@ -188,7 +209,8 @@ async fn monthly_report(
     tag = "Finance",
     params(ReportParams),
     responses(
-        (status = 200, body = YearReport)
+        (status = 200, body = YearReport),
+        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
     )
 )]
 async fn yearly_report(
@@ -201,17 +223,24 @@ async fn yearly_report(
         .unwrap_or(now.format("%Y").to_string().parse().unwrap_or(2026));
 
     match report::fetch_year_report(&state.pool, year).await {
-        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
+        Ok(report) => {
+            if params.format.as_deref() == Some("svg") {
+                match report::generate_year_chart(&report) {
+                    Some(svg) => (
+                        StatusCode::OK,
+                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+                        svg
+                    ).into_response(),
+                    None => (StatusCode::NO_CONTENT).into_response(),
+                }
+            } else {
+                (StatusCode::OK, Json(report)).into_response()
+            }
+        }
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
         )
             .into_response(),
     }
-}
-
-#[derive(utoipa::IntoParams, serde::Deserialize)]
-struct ReportParams {
-    year: Option<i32>,
-    month: Option<u32>,
 }

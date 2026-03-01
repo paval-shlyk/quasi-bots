@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE expense_entries\n            SET description = ?, amount = ?, category_id = ?, date = ?\n            WHERE id = ?\n            RETURNING id as \"id!\", description as \"description!\", date as \"date: DateTime<Utc>\", amount as \"amount: u64\", category_id as \"category_id!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "date: DateTime<Utc>",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "amount: u64",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "category_id!",
+        "ordinal": 4,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "475812e5caf45c6e3469bd3eb55bd9131bf6775901d17cb7b79d6247dfb4e454"
+}

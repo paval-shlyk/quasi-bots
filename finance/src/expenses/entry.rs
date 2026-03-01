@@ -34,8 +34,8 @@ pub async fn insert(
     description: &str,
     amount: NativeCurrency,
     category_id: i64,
+    date: chrono::DateTime<chrono::Utc>,
 ) -> sqlx::Result<ExpenseEntry> {
-    let now = chrono::Utc::now();
     let amount = amount as i64;
 
     let expense_id = sqlx::query!(
@@ -47,7 +47,7 @@ pub async fn insert(
         RETURNING id as "id!"
         "#,
         description,
-        now,
+        date,
         amount,
         category_id
     )
@@ -61,10 +61,40 @@ pub async fn insert(
     Ok(ExpenseEntry {
         id: expense_id,
         description: description.to_string(),
-        date: now,
+        date,
         amount: amount as u64,
         category_id,
     })
+}
+
+pub async fn update(
+    pool: &sqlx::SqlitePool,
+    id: i64,
+    description: &str,
+    amount: NativeCurrency,
+    category_id: i64,
+    date: chrono::DateTime<chrono::Utc>,
+) -> sqlx::Result<Option<ExpenseEntry>> {
+    let amount = amount as i64;
+
+    let maybe_entry = sqlx::query_as!(
+            ExpenseEntry,
+            r#"
+            UPDATE expense_entries
+            SET description = ?, amount = ?, category_id = ?, date = ?
+            WHERE id = ?
+            RETURNING id as "id!", description as "description!", date as "date: DateTime<Utc>", amount as "amount: u64", category_id as "category_id!"
+            "#,
+            description,
+            amount,
+            category_id,
+            date,
+            id
+        )
+        .fetch_optional(pool)
+        .await?;
+
+    Ok(maybe_entry)
 }
 
 pub async fn list_by_date_range(

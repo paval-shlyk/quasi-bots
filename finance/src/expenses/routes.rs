@@ -1,10 +1,11 @@
 use axum::{
     Json, Router,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
 };
+use chrono::Datelike;
 
 use crate::expenses::{
     Category, ExpenseEntry, ExpenseEntryWithCategory, NativeCurrency, category,
@@ -20,6 +21,7 @@ pub fn router() -> Router<FinanceState> {
         .route("/categories", post(create_category))
         .route("/entries", get(list_entries))
         .route("/entries", post(create_entry))
+        .route("/entries/{entry_id}", post(update_entry))
         .route("/report/monthly", get(monthly_report))
         .route("/report/yearly", get(yearly_report))
         .route("/report/weekly", get(weekly_report))
@@ -71,6 +73,7 @@ async fn create_category(
 
 #[derive(serde::Deserialize, utoipa::ToSchema)]
 struct CreateCategoryRequest {
+    #[schema(example = "Food")]
     name: String,
 }
 
@@ -111,7 +114,9 @@ async fn list_entries(
 
 #[derive(utoipa::IntoParams, serde::Deserialize)]
 struct ListEntriesParams {
+    #[param(minimum = 2000)]
     year: Option<i32>,
+    #[param(minimum = 1, maximum = 12)]
     month: Option<u32>,
 }
 
@@ -128,11 +133,14 @@ async fn create_entry(
     State(state): State<FinanceState>,
     Json(payload): Json<CreateEntryRequest>,
 ) -> impl IntoResponse {
+    let created_at = payload.created_at.unwrap_or_else(|| chrono::Utc::now());
+
     match entry::insert(
         &state.pool,
         &payload.description,
         payload.amount,
         payload.category_id,
+        created_at,
     )
     .await
     {
@@ -145,64 +153,66 @@ async fn create_entry(
     }
 }
 
-#[derive(serde::Deserialize, utoipa::ToSchema)]
-struct CreateEntryRequest {
-    description: String,
-    amount: NativeCurrency,
-    category_id: i64,
-}
-
-#[derive(utoipa::IntoParams, serde::Deserialize)]
-struct WeeklyReportParams {
-    year: Option<i32>,
-    week: Option<u32>,
-    format: Option<String>,
-}
-
 #[utoipa::path(
-    get,
-    path = "/expenses-bank/report/weekly",
+    post,
+    path = "/expenses-bank/entries/{entry_id}",
     tag = "Finance",
-    params(WeeklyReportParams),
+    request_body = CreateEntryRequest,
+    params(
+        ("entry_id" = i64, Path, description = "Expense entry ID"),
+    ),
     responses(
-        (status = 200, body = WeeklyReport),
-        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+        (status = 200, body = ExpenseEntry),
+        (status = 404, description = "Entry not found")
     )
 )]
-async fn weekly_report(
+async fn update_entry(
     State(state): State<FinanceState>,
-    Query(params): Query<WeeklyReportParams>,
+    Path(entry_id): Path<i64>,
+    Json(payload): Json<CreateEntryRequest>,
 ) -> impl IntoResponse {
-    let now = chrono::Utc::now();
-    let year = params
-        .year
-        .unwrap_or(now.format("%Y").to_string().parse().unwrap_or(2026));
-    let week = params
-        .week
-        .unwrap_or(now.format("%U").to_string().parse().unwrap_or(1));
+    let date = payload.created_at.unwrap_or_else(|| chrono::Utc::now());
 
-    match report::fetch_weekly_report(&state.pool, year, week).await {
-        Ok(report) => {
-            if params.format.as_deref() == Some("svg") {
-                match report::generate_weekly_chart(&report) {
-                    Some(svg) => (
-                        StatusCode::OK,
-                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg,
-                    )
-                        .into_response(),
-                    None => (StatusCode::NO_CONTENT).into_response(),
-                }
-            } else {
-                (StatusCode::OK, Json(report)).into_response()
-            }
-        }
+    match entry::update(
+        &state.pool,
+        entry_id,
+        &payload.description,
+        payload.amount,
+        payload.category_id,
+        date,
+    )
+    .await
+    {
+        Ok(Some(entry)) => (StatusCode::OK, Json(entry)).into_response(),
+        Ok(None) => (StatusCode::NOT_FOUND, "Entry not found").into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),
         )
             .into_response(),
     }
+}
+
+#[derive(serde::Deserialize, utoipa::ToSchema)]
+struct CreateEntryRequest {
+    #[schema(example = "Grocery shopping")]
+    description: String,
+    #[schema(minimum = 1)]
+    amount: NativeCurrency,
+    #[schema(minimum = 1)]
+    category_id: i64,
+    #[schema(value_type = Option<String>, format = Date)]
+    created_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+#[derive(utoipa::IntoParams, serde::Deserialize)]
+struct ReportParams {
+    #[param(minimum = 2000)]
+    year: Option<i32>,
+    #[param(minimum = 1, maximum = 12)]
+    month: Option<u32>,
+    #[param(example = "svg")]
+    format: Option<String>,
 }
 
 #[utoipa::path(
@@ -220,12 +230,8 @@ async fn monthly_report(
     Query(params): Query<ReportParams>,
 ) -> impl IntoResponse {
     let now = chrono::Utc::now();
-    let year = params
-        .year
-        .unwrap_or(now.format("%Y").to_string().parse().unwrap_or(2026));
-    let month = params
-        .month
-        .unwrap_or(now.format("%m").to_string().parse().unwrap_or(3));
+    let year = params.year.unwrap_or(now.year());
+    let month = params.month.unwrap_or(now.month());
 
     match report::fetch_monthly_report(&state.pool, year, month).await {
         Ok(report) => {
@@ -266,9 +272,7 @@ async fn yearly_report(
     Query(params): Query<ReportParams>,
 ) -> impl IntoResponse {
     let now = chrono::Utc::now();
-    let year = params
-        .year
-        .unwrap_or(now.format("%Y").to_string().parse().unwrap_or(2026));
+    let year = params.year.unwrap_or(now.year());
 
     match report::fetch_year_report(&state.pool, year).await {
         Ok(report) => {
@@ -295,8 +299,53 @@ async fn yearly_report(
 }
 
 #[derive(utoipa::IntoParams, serde::Deserialize)]
-struct ReportParams {
+struct WeeklyReportParams {
+    #[param(minimum = 2000)]
     year: Option<i32>,
-    month: Option<u32>,
+    #[param(minimum = 1, maximum = 53)]
+    week: Option<u32>,
+    #[param(example = "svg")]
     format: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/expenses-bank/report/weekly",
+    tag = "Finance",
+    params(WeeklyReportParams),
+    responses(
+        (status = 200, body = WeeklyReport),
+        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+    )
+)]
+async fn weekly_report(
+    State(state): State<FinanceState>,
+    Query(params): Query<WeeklyReportParams>,
+) -> impl IntoResponse {
+    let now = chrono::Utc::now();
+    let year = params.year.unwrap_or(now.year());
+    let week = params.week.unwrap_or(now.iso_week().week());
+
+    match report::fetch_weekly_report(&state.pool, year, week).await {
+        Ok(report) => {
+            if params.format.as_deref() == Some("svg") {
+                match report::generate_weekly_chart(&report) {
+                    Some(svg) => (
+                        StatusCode::OK,
+                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+                        svg,
+                    )
+                        .into_response(),
+                    None => (StatusCode::NO_CONTENT).into_response(),
+                }
+            } else {
+                (StatusCode::OK, Json(report)).into_response()
+            }
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }

@@ -24,6 +24,7 @@ async fn test_expense_crud() {
         "Test expense",
         1000,
         food_category.id,
+        chrono::Utc::now(),
     )
     .await
     .unwrap();
@@ -57,4 +58,30 @@ async fn test_expense_crud() {
     assert_eq!(report.total, 1000);
     assert_eq!(report.by_category.len(), 1);
     assert_eq!(report.by_category[0].category_name, "Food");
+
+    // Update expense entry
+    let updated_entry = finance::expenses::update(
+        &pool,
+        entry.id,
+        "Updated expense",
+        1500,
+        food_category.id,
+        None,
+    )
+    .await
+    .unwrap()
+    .expect("Entry should exist");
+
+    assert_eq!(updated_entry.description, "Updated expense");
+    assert_eq!(updated_entry.amount, 1500);
+    
+    // Verify report updated
+    let report_updated = finance::expenses::fetch_monthly_report(
+        &pool,
+        now.format("%Y").to_string().parse().unwrap(),
+        now.format("%m").to_string().parse().unwrap(),
+    )
+    .await
+    .unwrap();
+    assert_eq!(report_updated.total, 1500);
 }

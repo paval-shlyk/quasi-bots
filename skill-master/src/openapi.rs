@@ -36,8 +36,10 @@ use crate::{quotes, search};
         finance::expenses::create_category,
         finance::expenses::list_entries,
         finance::expenses::create_entry,
+        finance::expenses::update_entry,
         finance::expenses::monthly_report,
         finance::expenses::yearly_report,
+        finance::expenses::weekly_report,
     ),
     components(
         schemas(
@@ -74,8 +76,10 @@ use crate::{quotes, search};
             finance::expenses::ExpenseEntryWithCategory,
             finance::expenses::report::MonthlyReport,
             finance::expenses::report::YearReport,
+            finance::expenses::report::WeeklyReport,
             finance::expenses::report::CategoryTotal,
             finance::expenses::report::MonthData,
+            finance::expenses::report::WeekData,
         )
     ),
     tags(

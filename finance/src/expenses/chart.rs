@@ -12,9 +12,9 @@ pub fn create_bar_chart(
         return Ok(Vec::new());
     }
 
-    let path = "/tmp/expense_chart.svg";
+    let path = "/tmp/expense_chart.png";
     {
-        let root = SVGBackend::new(path, (600, 400)).into_drawing_area();
+        let root = BitMapBackend::new(path, (600, 400)).into_drawing_area();
 
         root.fill(&RGBColor(20, 20, 30))?;
 
@@ -82,9 +82,9 @@ pub fn create_year_chart(
         return Ok(Vec::new());
     }
 
-    let path = "/tmp/year_chart.svg";
+    let path = "/tmp/year_chart.png";
     {
-        let root = SVGBackend::new(path, (800, 400)).into_drawing_area();
+        let root = BitMapBackend::new(path, (800, 400)).into_drawing_area();
 
         root.fill(&RGBColor(20, 20, 30))?;
 

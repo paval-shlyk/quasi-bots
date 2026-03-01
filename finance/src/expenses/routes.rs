@@ -211,7 +211,7 @@ struct ReportParams {
     year: Option<i32>,
     #[param(minimum = 1, maximum = 12)]
     month: Option<u32>,
-    #[param(example = "svg")]
+    #[param(example = "png")]
     format: Option<String>,
 }
 
@@ -222,7 +222,7 @@ struct ReportParams {
     params(ReportParams),
     responses(
         (status = 200, body = MonthlyReport),
-        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+        (status = 200, description = "PNG chart", content_type = "image/png")
     )
 )]
 async fn monthly_report(
@@ -235,12 +235,12 @@ async fn monthly_report(
 
     match report::fetch_monthly_report(&state.pool, year, month).await {
         Ok(report) => {
-            if params.format.as_deref() == Some("svg") {
+            if params.format.as_deref() == Some("png") {
                 match report::generate_monthly_chart(&report) {
-                    Some(svg) => (
+                    Some(png) => (
                         StatusCode::OK,
-                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg,
+                        [(axum::http::header::CONTENT_TYPE, "image/png")],
+                        png,
                     )
                         .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),
@@ -264,7 +264,7 @@ async fn monthly_report(
     params(ReportParams),
     responses(
         (status = 200, body = YearReport),
-        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+        (status = 200, description = "PNG chart", content_type = "image/png")
     )
 )]
 async fn yearly_report(
@@ -276,12 +276,12 @@ async fn yearly_report(
 
     match report::fetch_year_report(&state.pool, year).await {
         Ok(report) => {
-            if params.format.as_deref() == Some("svg") {
+            if params.format.as_deref() == Some("png") {
                 match report::generate_year_chart(&report) {
-                    Some(svg) => (
+                    Some(png) => (
                         StatusCode::OK,
-                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg,
+                        [(axum::http::header::CONTENT_TYPE, "image/png")],
+                        png,
                     )
                         .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),
@@ -304,7 +304,7 @@ struct WeeklyReportParams {
     year: Option<i32>,
     #[param(minimum = 1, maximum = 53)]
     week: Option<u32>,
-    #[param(example = "svg")]
+    #[param(example = "png")]
     format: Option<String>,
 }
 
@@ -315,7 +315,7 @@ struct WeeklyReportParams {
     params(WeeklyReportParams),
     responses(
         (status = 200, body = WeeklyReport),
-        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+        (status = 200, description = "PNG chart", content_type = "image/png")
     )
 )]
 async fn weekly_report(
@@ -328,12 +328,12 @@ async fn weekly_report(
 
     match report::fetch_weekly_report(&state.pool, year, week).await {
         Ok(report) => {
-            if params.format.as_deref() == Some("svg") {
+            if params.format.as_deref() == Some("png") {
                 match report::generate_weekly_chart(&report) {
-                    Some(svg) => (
+                    Some(png) => (
                         StatusCode::OK,
-                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg,
+                        [(axum::http::header::CONTENT_TYPE, "image/png")],
+                        png,
                     )
                         .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),

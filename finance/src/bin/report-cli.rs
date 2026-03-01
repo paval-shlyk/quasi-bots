@@ -7,13 +7,13 @@ use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "report-cli")]
-#[command(about = "Generates SVG charts from expense report JSON", long_about = None)]
+#[command(about = "Generates PNG charts from expense report JSON", long_about = None)]
 struct Cli {
     /// Input JSON file path
     #[arg(short, long)]
     input: PathBuf,
 
-    /// Output SVG file path
+    /// Output PNG file path
     #[arg(short, long)]
     output: PathBuf,
 
@@ -34,7 +34,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let json_content = fs::read_to_string(&cli.input)?;
 
-    let svg_data = match cli.type_ {
+    let png_data = match cli.type_ {
         ReportType::Monthly => {
             let report: MonthlyReport = serde_json::from_str(&json_content)?;
             let title = format!("Expenses {}/{}", report.year, report.month);
@@ -55,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     let mut file = fs::File::create(&cli.output)?;
-    file.write_all(&svg_data)?;
+    file.write_all(&png_data)?;
 
     println!("Generated chart at {}", cli.output.display());
 

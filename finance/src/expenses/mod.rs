@@ -4,7 +4,11 @@ mod category;
 mod entry;
 mod goal;
 mod limits;
+mod report;
 mod wallet;
 
-// Minimal value, BYN, RUB, PL or whatever you want to choose
+pub use category::*;
+pub use entry::*;
+pub use report::*;
+
 pub type NativeCurrency = u64;

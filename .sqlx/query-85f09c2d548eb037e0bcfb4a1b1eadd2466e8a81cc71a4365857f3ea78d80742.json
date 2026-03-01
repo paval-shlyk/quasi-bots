@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO expense_categories (name) VALUES (?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "85f09c2d548eb037e0bcfb4a1b1eadd2466e8a81cc71a4365857f3ea78d80742"
+}

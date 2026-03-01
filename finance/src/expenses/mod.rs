@@ -1,11 +1,11 @@
 mod category;
 mod chart;
 mod entry;
-mod goal;
-mod limits;
+// mod goal;
+// mod limits;
 mod report;
 mod routes;
-mod wallet;
+// mod wallet;
 
 pub use category::*;
 pub use chart::*;

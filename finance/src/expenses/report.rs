@@ -1,4 +1,4 @@
-use crate::expenses::{chart, entry, NativeCurrency};
+use crate::expenses::{NativeCurrency, chart, entry};
 use serde::Serialize;
 use sqlx::SqlitePool;
 
@@ -40,14 +40,15 @@ pub async fn fetch_monthly_report(
 
     let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
 
-    let mut category_totals: std::collections::HashMap<i64, (String, NativeCurrency)> =
-        std::collections::HashMap::new();
+    let mut category_totals: std::collections::HashMap<
+        i64,
+        (String, NativeCurrency),
+    > = std::collections::HashMap::new();
 
     for e in entries {
-        let entry = category_totals.entry(e.category_id).or_insert((
-            e.category_name.clone(),
-            0,
-        ));
+        let entry = category_totals
+            .entry(e.category_id)
+            .or_insert((e.category_name.clone(), 0));
         entry.1 += e.amount;
     }
 
@@ -68,21 +69,25 @@ pub async fn fetch_monthly_report(
     })
 }
 
-pub async fn fetch_year_report(pool: &SqlitePool, year: i32) -> sqlx::Result<YearReport> {
+pub async fn fetch_year_report(
+    pool: &SqlitePool,
+    year: i32,
+) -> sqlx::Result<YearReport> {
     let entries = entry::list_by_year(pool, year).await?;
 
     let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
 
-    let mut category_totals: std::collections::HashMap<i64, (String, NativeCurrency)> =
-        std::collections::HashMap::new();
+    let mut category_totals: std::collections::HashMap<
+        i64,
+        (String, NativeCurrency),
+    > = std::collections::HashMap::new();
     let mut month_totals: std::collections::HashMap<u32, NativeCurrency> =
         std::collections::HashMap::new();
 
     for e in entries {
-        let cat_entry = category_totals.entry(e.category_id).or_insert((
-            e.category_name.clone(),
-            0,
-        ));
+        let cat_entry = category_totals
+            .entry(e.category_id)
+            .or_insert((e.category_name.clone(), 0));
         cat_entry.1 += e.amount;
 
         let month = e.date.format("%m").to_string().parse::<u32>().unwrap_or(1);
@@ -123,7 +128,8 @@ pub fn generate_year_chart(report: &YearReport) -> Option<Vec<u8>> {
     if report.by_month.is_empty() {
         return None;
     }
-    let data: Vec<(u32, u64)> = report.by_month.iter().map(|m| (m.month, m.total)).collect();
+    let data: Vec<(u32, u64)> =
+        report.by_month.iter().map(|m| (m.month, m.total)).collect();
     let title = format!("Expenses {}", report.year);
     chart::create_year_chart(&data, &title).ok()
 }

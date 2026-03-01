@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use sqlx::SqlitePool;
 
 #[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]

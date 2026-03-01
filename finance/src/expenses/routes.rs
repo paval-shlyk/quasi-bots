@@ -7,8 +7,7 @@ use axum::{
 };
 
 use crate::expenses::{
-    Category, ExpenseEntry, ExpenseEntryWithCategory, NativeCurrency, category,
-    entry,
+    NativeCurrency, category, entry,
     report::{self},
 };
 

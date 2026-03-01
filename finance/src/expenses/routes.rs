@@ -188,8 +188,9 @@ async fn weekly_report(
                     Some(svg) => (
                         StatusCode::OK,
                         [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg
-                    ).into_response(),
+                        svg,
+                    )
+                        .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),
                 }
             } else {
@@ -233,8 +234,9 @@ async fn monthly_report(
                     Some(svg) => (
                         StatusCode::OK,
                         [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg
-                    ).into_response(),
+                        svg,
+                    )
+                        .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),
                 }
             } else {
@@ -275,8 +277,9 @@ async fn yearly_report(
                     Some(svg) => (
                         StatusCode::OK,
                         [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
-                        svg
-                    ).into_response(),
+                        svg,
+                    )
+                        .into_response(),
                     None => (StatusCode::NO_CONTENT).into_response(),
                 }
             } else {

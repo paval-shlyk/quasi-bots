@@ -19,17 +19,26 @@ async fn test_expense_crud() {
     assert!(!categories.is_empty());
     let food_category = categories.iter().find(|c| c.name == "Food").unwrap();
 
-    let entry = finance::expenses::insert(&pool, "Test expense", 1000, food_category.id)
-        .await
-        .unwrap();
+    let entry = finance::expenses::insert(
+        &pool,
+        "Test expense",
+        1000,
+        food_category.id,
+    )
+    .await
+    .unwrap();
     assert_eq!(entry.description, "Test expense");
     assert_eq!(entry.amount, 1000);
     assert_eq!(entry.category_id, food_category.id);
 
     let now = chrono::Utc::now();
-    let entries = finance::expenses::list_by_month(&pool, now.format("%Y").to_string().parse().unwrap(), now.format("%m").to_string().parse().unwrap())
-        .await
-        .unwrap();
+    let entries = finance::expenses::list_by_month(
+        &pool,
+        now.format("%Y").to_string().parse().unwrap(),
+        now.format("%m").to_string().parse().unwrap(),
+    )
+    .await
+    .unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].category_name, "Food");
 

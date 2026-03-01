@@ -9,7 +9,7 @@ use axum::{
 use crate::expenses::{
     Category, ExpenseEntry, ExpenseEntryWithCategory, NativeCurrency, category,
     entry,
-    report::{self, MonthlyReport, YearReport},
+    report::{self, MonthlyReport, WeeklyReport, YearReport},
 };
 
 use crate::FinanceState;
@@ -22,6 +22,7 @@ pub fn router() -> Router<FinanceState> {
         .route("/entries", post(create_entry))
         .route("/report/monthly", get(monthly_report))
         .route("/report/yearly", get(yearly_report))
+        .route("/report/weekly", get(weekly_report))
 }
 
 #[utoipa::path(
@@ -152,10 +153,55 @@ struct CreateEntryRequest {
 }
 
 #[derive(utoipa::IntoParams, serde::Deserialize)]
-struct ReportParams {
+struct WeeklyReportParams {
     year: Option<i32>,
-    month: Option<u32>,
+    week: Option<u32>,
     format: Option<String>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/expenses-bank/report/weekly",
+    tag = "Finance",
+    params(WeeklyReportParams),
+    responses(
+        (status = 200, body = WeeklyReport),
+        (status = 200, description = "SVG chart", content_type = "image/svg+xml")
+    )
+)]
+async fn weekly_report(
+    State(state): State<FinanceState>,
+    Query(params): Query<WeeklyReportParams>,
+) -> impl IntoResponse {
+    let now = chrono::Utc::now();
+    let year = params
+        .year
+        .unwrap_or(now.format("%Y").to_string().parse().unwrap_or(2026));
+    let week = params
+        .week
+        .unwrap_or(now.format("%U").to_string().parse().unwrap_or(1));
+
+    match report::fetch_weekly_report(&state.pool, year, week).await {
+        Ok(report) => {
+            if params.format.as_deref() == Some("svg") {
+                match report::generate_weekly_chart(&report) {
+                    Some(svg) => (
+                        StatusCode::OK,
+                        [(axum::http::header::CONTENT_TYPE, "image/svg+xml")],
+                        svg
+                    ).into_response(),
+                    None => (StatusCode::NO_CONTENT).into_response(),
+                }
+            } else {
+                (StatusCode::OK, Json(report)).into_response()
+            }
+        }
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
 }
 
 #[utoipa::path(
@@ -243,4 +289,11 @@ async fn yearly_report(
         )
             .into_response(),
     }
+}
+
+#[derive(utoipa::IntoParams, serde::Deserialize)]
+struct ReportParams {
+    year: Option<i32>,
+    month: Option<u32>,
+    format: Option<String>,
 }

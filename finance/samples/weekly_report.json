@@ -1,0 +1,32 @@
+{
+  "year": 2026,
+  "week": 12,
+  "total": 450,
+  "by_category": [
+    {
+      "category_id": 1,
+      "category_name": "Food",
+      "total": 150
+    },
+    {
+      "category_id": 2,
+      "category_name": "Transport",
+      "total": 80
+    },
+    {
+      "category_id": 3,
+      "category_name": "Utilities",
+      "total": 50
+    },
+    {
+      "category_id": 4,
+      "category_name": "Entertainment",
+      "total": 120
+    },
+    {
+      "category_id": 5,
+      "category_name": "Health",
+      "total": 50
+    }
+  ]
+}

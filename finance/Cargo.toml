@@ -46,3 +46,7 @@ build-binaries = true
 [[bin]]
 name = "finance-cli"
 path = "src/bin/finance-cli.rs"
+
+[[bin]]
+name = "report-cli"
+path = "src/bin/report-cli.rs"

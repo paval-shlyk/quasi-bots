@@ -1,0 +1,45 @@
+{
+  "year": 2026,
+  "total": 18000,
+  "by_category": [
+    {
+      "category_id": 1,
+      "category_name": "Food",
+      "total": 7200
+    },
+    {
+      "category_id": 2,
+      "category_name": "Transport",
+      "total": 3600
+    },
+    {
+      "category_id": 3,
+      "category_name": "Utilities",
+      "total": 2400
+    },
+    {
+      "category_id": 4,
+      "category_name": "Entertainment",
+      "total": 3600
+    },
+    {
+      "category_id": 5,
+      "category_name": "Health",
+      "total": 1200
+    }
+  ],
+  "by_month": [
+    { "month": 1, "total": 1500 },
+    { "month": 2, "total": 1400 },
+    { "month": 3, "total": 1600 },
+    { "month": 4, "total": 1500 },
+    { "month": 5, "total": 1550 },
+    { "month": 6, "total": 1450 },
+    { "month": 7, "total": 1300 },
+    { "month": 8, "total": 1700 },
+    { "month": 9, "total": 1600 },
+    { "month": 10, "total": 1500 },
+    { "month": 11, "total": 1400 },
+    { "month": 12, "total": 1500 }
+  ]
+}

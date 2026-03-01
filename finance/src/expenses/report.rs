@@ -1,15 +1,15 @@
 use crate::expenses::{NativeCurrency, chart, entry};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CategoryTotal {
     pub category_id: i64,
     pub category_name: String,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MonthlyReport {
     pub year: i32,
     pub month: u32,
@@ -17,18 +17,32 @@ pub struct MonthlyReport {
     pub by_category: Vec<CategoryTotal>,
 }
 
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct MonthData {
     pub month: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct YearReport {
     pub year: i32,
     pub total: NativeCurrency,
     pub by_category: Vec<CategoryTotal>,
     pub by_month: Vec<MonthData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct WeekData {
+    pub week: u32,
+    pub total: NativeCurrency,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct WeeklyReport {
+    pub year: i32,
+    pub week: u32,
+    pub total: NativeCurrency,
+    pub by_category: Vec<CategoryTotal>,
 }
 
 pub async fn fetch_monthly_report(
@@ -116,6 +130,44 @@ pub async fn fetch_year_report(
     })
 }
 
+pub async fn fetch_weekly_report(
+    pool: &SqlitePool,
+    year: i32,
+    week: u32,
+) -> sqlx::Result<WeeklyReport> {
+    let entries = entry::list_by_week(pool, year, week).await?;
+
+    let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
+
+    let mut category_totals: std::collections::HashMap<
+        i64,
+        (String, NativeCurrency),
+    > = std::collections::HashMap::new();
+
+    for e in entries {
+        let entry = category_totals
+            .entry(e.category_id)
+            .or_insert((e.category_name.clone(), 0));
+        entry.1 += e.amount;
+    }
+
+    let by_category: Vec<CategoryTotal> = category_totals
+        .into_iter()
+        .map(|(id, (name, total))| CategoryTotal {
+            category_id: id,
+            category_name: name,
+            total,
+        })
+        .collect();
+
+    Ok(WeeklyReport {
+        year,
+        week,
+        total,
+        by_category,
+    })
+}
+
 pub fn generate_monthly_chart(report: &MonthlyReport) -> Option<Vec<u8>> {
     if report.by_category.is_empty() {
         return None;
@@ -132,4 +184,12 @@ pub fn generate_year_chart(report: &YearReport) -> Option<Vec<u8>> {
         report.by_month.iter().map(|m| (m.month, m.total)).collect();
     let title = format!("Expenses {}", report.year);
     chart::create_year_chart(&data, &title).ok()
+}
+
+pub fn generate_weekly_chart(report: &WeeklyReport) -> Option<Vec<u8>> {
+    if report.by_category.is_empty() {
+        return None;
+    }
+    let title = format!("Expenses {} W{}", report.year, report.week);
+    chart::create_bar_chart(&report.by_category, &title).ok()
 }

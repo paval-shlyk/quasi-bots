@@ -127,3 +127,21 @@ pub async fn list_by_year(
 
     list_by_date_range(pool, start, end).await
 }
+
+pub async fn list_by_week(
+    pool: &sqlx::SqlitePool,
+    year: i32,
+    week: u32,
+) -> sqlx::Result<Vec<ExpenseEntryWithCategory>> {
+    let days_offset = (week.saturating_sub(1)) * 7;
+    let start = chrono::NaiveDate::from_ymd_opt(year, 1, 1)
+        .unwrap()
+        .and_hms_opt(0, 0, 0)
+        .unwrap()
+        .and_utc()
+        + chrono::Duration::days(days_offset as i64);
+
+    let end = start + chrono::Duration::days(7);
+
+    list_by_date_range(pool, start, end).await
+}

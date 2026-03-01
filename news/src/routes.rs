@@ -20,6 +20,7 @@ pub async fn post_chosen_topic(
 #[utoipa::path(
     get,
     path = "/news-bank/topics",
+    tag = "News",
     responses(
         (status = 200, description = "Topics retrieved successfully", body = Vec<RssSource>)
     )
@@ -76,6 +77,7 @@ pub async fn get_broken_links(
 #[utoipa::path(
     get,
     path = "/news-bank/today",
+    tag = "News",
     responses(
         (status = 200, description = "Today's news retrieved successfully", body = Vec<ArticlesWithTopic>)
     )

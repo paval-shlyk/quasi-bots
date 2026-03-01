@@ -6,12 +6,10 @@ use axum::{
     routing::{get, post},
 };
 
-use utoipa::{IntoParams, ToSchema};
-
 use crate::expenses::{
-    NativeCurrency, category, entry,
+    Category, ExpenseEntry, ExpenseEntryWithCategory, NativeCurrency, category,
+    entry,
     report::{self, MonthlyReport, YearReport},
-    Category, ExpenseEntry, ExpenseEntryWithCategory,
 };
 
 use crate::FinanceState;
@@ -28,7 +26,8 @@ pub fn router() -> Router<FinanceState> {
 
 #[utoipa::path(
     get,
-    path = "/expenses/categories",
+    path = "/expenses-bank/categories",
+    tag = "Finance",
     responses(
         (status = 200, body = Vec<Category>)
     )
@@ -48,7 +47,8 @@ async fn list_categories(
 
 #[utoipa::path(
     post,
-    path = "/expenses/categories",
+    path = "/expenses-bank/categories",
+    tag = "Finance",
     request_body = CreateCategoryRequest,
     responses(
         (status = 201, body = Category)
@@ -68,14 +68,15 @@ async fn create_category(
     }
 }
 
-#[derive(serde::Deserialize, ToSchema)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 struct CreateCategoryRequest {
     name: String,
 }
 
 #[utoipa::path(
     get,
-    path = "/expenses/entries",
+    path = "/expenses-bank/entries",
+    tag = "Finance",
     params(ListEntriesParams),
     responses(
         (status = 200, body = Vec<ExpenseEntryWithCategory>)
@@ -107,7 +108,7 @@ async fn list_entries(
     }
 }
 
-#[derive(IntoParams, serde::Deserialize)]
+#[derive(utoipa::IntoParams, serde::Deserialize)]
 struct ListEntriesParams {
     year: Option<i32>,
     month: Option<u32>,
@@ -115,7 +116,8 @@ struct ListEntriesParams {
 
 #[utoipa::path(
     post,
-    path = "/expenses/entries",
+    path = "/expenses-bank/entries",
+    tag = "Finance",
     request_body = CreateEntryRequest,
     responses(
         (status = 201, body = ExpenseEntry)
@@ -142,7 +144,7 @@ async fn create_entry(
     }
 }
 
-#[derive(serde::Deserialize, ToSchema)]
+#[derive(serde::Deserialize, utoipa::ToSchema)]
 struct CreateEntryRequest {
     description: String,
     amount: NativeCurrency,
@@ -151,7 +153,8 @@ struct CreateEntryRequest {
 
 #[utoipa::path(
     get,
-    path = "/expenses/report/monthly",
+    path = "/expenses-bank/report/monthly",
+    tag = "Finance",
     params(ReportParams),
     responses(
         (status = 200, body = MonthlyReport)
@@ -181,7 +184,8 @@ async fn monthly_report(
 
 #[utoipa::path(
     get,
-    path = "/expenses/report/yearly",
+    path = "/expenses-bank/report/yearly",
+    tag = "Finance",
     params(ReportParams),
     responses(
         (status = 200, body = YearReport)
@@ -206,7 +210,7 @@ async fn yearly_report(
     }
 }
 
-#[derive(IntoParams, serde::Deserialize)]
+#[derive(utoipa::IntoParams, serde::Deserialize)]
 struct ReportParams {
     year: Option<i32>,
     month: Option<u32>,

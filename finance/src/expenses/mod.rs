@@ -3,7 +3,7 @@ mod chart;
 mod entry;
 // mod goal;
 // mod limits;
-mod report;
+pub mod report;
 mod routes;
 // mod wallet;
 

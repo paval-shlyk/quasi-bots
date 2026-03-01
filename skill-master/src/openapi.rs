@@ -30,6 +30,14 @@ use crate::{quotes, search};
         // Market Tracker
         finance::get_report,
         finance::get_market_recommendations,
+
+        // Expenses
+        finance::expenses::list_categories,
+        finance::expenses::create_category,
+        finance::expenses::list_entries,
+        finance::expenses::create_entry,
+        finance::expenses::monthly_report,
+        finance::expenses::yearly_report,
     ),
     components(
         schemas(
@@ -59,16 +67,25 @@ use crate::{quotes, search};
             finance::metrics::RsiSignal,
             finance::metrics::Volatility,
             finance::metrics::TechnicalReport,
+
+            // Expenses Schemas
+            finance::expenses::Category,
+            finance::expenses::ExpenseEntry,
+            finance::expenses::ExpenseEntryWithCategory,
+            finance::expenses::report::MonthlyReport,
+            finance::expenses::report::YearReport,
+            finance::expenses::report::CategoryTotal,
+            finance::expenses::report::MonthData,
         )
     ),
     tags(
         (name = "quotes", description = "Quotes Bank API"),
         (name = "knowledge", description = "Knowledge Bank API"),
-        (name = "news", description = "News Bank API"),
+        (name = "News", description = "News Bank API"),
 
         (name = "search", description = "Search API"),
 
-        (name = "finance", description = "Market Tracker API")
+        (name = "Finance", description = "Market Tracker & Expenses API")
     )
 )]
 #[rustfmt::skip]

@@ -1,16 +1,15 @@
 use crate::expenses::{NativeCurrency, chart, entry};
 use serde::Serialize;
 use sqlx::SqlitePool;
-use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct CategoryTotal {
     pub category_id: i64,
     pub category_name: String,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct MonthlyReport {
     pub year: i32,
     pub month: u32,
@@ -18,13 +17,13 @@ pub struct MonthlyReport {
     pub by_category: Vec<CategoryTotal>,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct MonthData {
     pub month: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct YearReport {
     pub year: i32,
     pub total: NativeCurrency,

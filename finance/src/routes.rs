@@ -19,6 +19,7 @@ pub struct AssetQuery {
 #[utoipa::path(
     get,
     path = "/market-tracker/report",
+    tag = "Finance",
     params(
         AssetQuery
     ),
@@ -71,6 +72,7 @@ pub async fn post_tracking_asset() -> impl IntoResponse {
 #[utoipa::path(
     get,
     path = "/market-tracker/recommendations",
+    tag = "Finance",
     responses(
         (status = 200, description = "Market recommendations retrieved successfully", body = Vec<String>),
         (status = 500, description = "Internal server error")

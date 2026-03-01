@@ -1,7 +1,6 @@
-use utoipa::ToSchema;
 use sqlx::SqlitePool;
 
-#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, ToSchema)]
+#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, utoipa::ToSchema)]
 pub struct Category {
     pub id: i64,
     pub name: String,

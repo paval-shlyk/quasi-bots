@@ -1,4 +1,4 @@
-mod expenses;
+pub mod expenses;
 pub mod metrics;
 pub mod model;
 pub mod portfolio;
@@ -28,6 +28,8 @@ pub async fn connect(
         config.provider.api_key.clone(),
         config.provider.api_secret.clone(),
     );
+
+    expenses::init_predefined(pool).await?;
 
     Ok(FinanceState {
         pool: pool.clone(),

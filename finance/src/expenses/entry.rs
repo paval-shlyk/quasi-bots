@@ -10,7 +10,7 @@ pub struct ExpenseEntry {
     pub category_id: i64,
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize)]
 pub struct ExpenseEntryWithCategory {
     pub id: i64,
     pub description: String,

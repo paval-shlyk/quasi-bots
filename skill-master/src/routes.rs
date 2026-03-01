@@ -49,6 +49,9 @@ pub fn create_routes(state: AppState) -> Router<()> {
             get(finance::get_portfolio),
         ).with_state(state.finance_state.clone());
 
+    let expenses_routes = finance::expenses::router()
+        .with_state(state.finance_state.clone());
+
     let news_routes = Router::new()
         .route("/today", get(news::get_today_news))
         .route("/broken-links", get(news::get_broken_links))
@@ -64,6 +67,7 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .nest("/knowledge-bank", knowledge_routes)
         .nest("/market-tracker", finance_routes)
         .nest("/news-bank", news_routes)
+        .nest("/expenses-bank", expenses_routes)
 
         .route("/openapi.json", get(get_openapi_json))
         .route("/metrics", get(get_metrics))

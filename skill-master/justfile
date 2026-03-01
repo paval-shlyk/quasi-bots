@@ -53,6 +53,21 @@ set_attempt:
 set_affinity:
     curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/affinity" --json '{"days": 0}'
 
+expense-categories:
+    curl -s -L "http://localhost:8080/expenses-bank/categories" | jq
+
+expense-entries:
+    curl -s -L "http://localhost:8080/expenses-bank/entries" | jq
+
+expense-monthly:
+    curl -s -L "http://localhost:8080/expenses-bank/report/monthly" | jq
+
+expense-yearly:
+    curl -s -L "http://localhost:8080/expenses-bank/report/yearly" | jq
+
+add-expense:
+    curl -X POST -s -L "http://localhost:8080/expenses-bank/entries" --json '{"description": "test", "amount": 100, "category_id": 1}' | jq
+
 lint:
     cargo fmt --all --check
     cargo clippy --all-targets -- -D warnings

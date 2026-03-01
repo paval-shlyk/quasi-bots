@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use sqlx::SqlitePool;
 
 #[derive(Debug, Clone, sqlx::FromRow, serde::Serialize)]
@@ -32,7 +34,10 @@ pub async fn list_all(pool: &SqlitePool) -> sqlx::Result<Vec<Category>> {
     .await
 }
 
-pub async fn find_by_id(pool: &SqlitePool, id: i64) -> sqlx::Result<Option<Category>> {
+pub async fn find_by_id(
+    pool: &SqlitePool,
+    id: i64,
+) -> sqlx::Result<Option<Category>> {
     sqlx::query_as!(
         Category,
         r#"
@@ -47,14 +52,23 @@ pub async fn find_by_id(pool: &SqlitePool, id: i64) -> sqlx::Result<Option<Categ
     .await
 }
 
-pub async fn create_new(pool: &SqlitePool, name: &str) -> sqlx::Result<Category> {
-    let result =
-        sqlx::query!(r#"INSERT INTO expense_categories (name) VALUES (?)"#, name)
-            .execute(pool)
-            .await?;
+pub async fn create_new(
+    pool: &SqlitePool,
+    name: &str,
+) -> sqlx::Result<Category> {
+    let category_id = sqlx::query!(
+        r#"
+            INSERT INTO expense_categories (name) VALUES (?)
+            RETURNING id as "id!"
+        "#,
+        name
+    )
+    .fetch_one(pool)
+    .await?
+    .id;
 
     Ok(Category {
-        id: result.last_insert_rowid(),
+        id: category_id,
         name: name.to_string(),
     })
 }

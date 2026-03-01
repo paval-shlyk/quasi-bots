@@ -1,4 +1,4 @@
-use crate::expenses::{entry, NativeCurrency};
+use crate::expenses::{chart, entry, NativeCurrency};
 use serde::Serialize;
 use sqlx::SqlitePool;
 
@@ -109,4 +109,21 @@ pub async fn fetch_year_report(pool: &SqlitePool, year: i32) -> sqlx::Result<Yea
         by_category,
         by_month,
     })
+}
+
+pub fn generate_monthly_chart(report: &MonthlyReport) -> Option<Vec<u8>> {
+    if report.by_category.is_empty() {
+        return None;
+    }
+    let title = format!("Expenses {}年{}月", report.year, report.month);
+    chart::create_bar_chart(&report.by_category, &title).ok()
+}
+
+pub fn generate_year_chart(report: &YearReport) -> Option<Vec<u8>> {
+    if report.by_month.is_empty() {
+        return None;
+    }
+    let data: Vec<(u32, u64)> = report.by_month.iter().map(|m| (m.month, m.total)).collect();
+    let title = format!("Expenses {}", report.year);
+    chart::create_year_chart(&data, &title).ok()
 }

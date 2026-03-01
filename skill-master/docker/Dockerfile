@@ -3,7 +3,7 @@ FROM rust:1.93-trixie AS chef
 WORKDIR /build
 
 RUN apt-get update && \
-    apt-get install -y protobuf-compiler libsqlite3-dev && \
+    apt-get install -y protobuf-compiler libsqlite3-dev pkg-config libfreetype6-dev libfontconfig1-dev && \
     rm -rf /var/lib/apt/lists/*
 
 RUN cargo install cargo-chef
@@ -31,7 +31,7 @@ FROM debian:trixie-slim AS runtime
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    ca-certificates && \
+    ca-certificates libfontconfig1 libfreetype6 && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

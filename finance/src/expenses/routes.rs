@@ -21,7 +21,10 @@ pub fn router() -> Router<FinanceState> {
         .route("/categories", post(create_category))
         .route("/entries", get(list_entries))
         .route("/entries", post(create_entry))
-        .route("/entries/{entry_id}", post(update_entry))
+        .route(
+            "/entries/{entry_id}",
+            post(update_entry).delete(delete_entry),
+        )
         .route("/report/monthly", get(monthly_report))
         .route("/report/yearly", get(yearly_report))
         .route("/report/weekly", get(weekly_report))
@@ -145,6 +148,37 @@ async fn create_entry(
     .await
     {
         Ok(entry) => (StatusCode::CREATED, Json(entry)).into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({ "error": e.to_string() })),
+        )
+            .into_response(),
+    }
+}
+
+#[utoipa::path(
+    delete,
+    path = "/expenses-bank/entries/{entry_id}",
+    tag = "Finance",
+    params(
+        ("entry_id" = i64, Path, description = "Expense entry ID to delete"),
+    ),
+    responses(
+        (status = 204, description = "Entry deleted successfully"),
+        (status = 404, description = "Entry not found")
+    )
+)]
+async fn delete_entry(
+    State(state): State<FinanceState>,
+    Path(entry_id): Path<i64>,
+) -> impl IntoResponse {
+    match entry::delete(&state.pool, entry_id).await {
+        Ok(is_deleted) => if is_deleted {
+            StatusCode::NO_CONTENT
+        } else {
+            StatusCode::NOT_FOUND
+        }
+        .into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(serde_json::json!({ "error": e.to_string() })),

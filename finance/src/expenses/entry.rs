@@ -97,6 +97,20 @@ pub async fn update(
     Ok(maybe_entry)
 }
 
+pub async fn delete(pool: &sqlx::SqlitePool, id: i64) -> sqlx::Result<bool> {
+    let result = sqlx::query(
+        r#"
+        DELETE FROM expense_entries
+        WHERE id = ?
+        "#,
+    )
+    .bind(id)
+    .execute(pool)
+    .await?;
+
+    Ok(result.rows_affected() > 0)
+}
+
 pub async fn list_by_date_range(
     pool: &sqlx::SqlitePool,
     start: DateTime<Utc>,

@@ -37,6 +37,7 @@ use crate::{quotes, search};
         finance::expenses::list_entries,
         finance::expenses::create_entry,
         finance::expenses::update_entry,
+        finance::expenses::delete_entry,
         finance::expenses::monthly_report,
         finance::expenses::yearly_report,
         finance::expenses::weekly_report,

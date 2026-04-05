@@ -18,9 +18,6 @@ use super::executor::PolymarketExecutor;
 use super::models::*;
 use super::strategy::PolymarketStrategy;
 
-// ---------------------------------------------------------------------------
-// Polymarket service (orchestrator for the prediction module)
-// ---------------------------------------------------------------------------
 
 pub struct PolymarketService {
     db: DatabaseConnection,
@@ -50,9 +47,7 @@ impl PolymarketService {
         }
     }
 
-    // -- public entry points ------------------------------------------------
 
-    /// One iteration: fetch markets → analyse each → execute signals.
     pub async fn tick(&self) -> Result<()> {
         let settings = self.settings.get().await;
         let markets = self.executor.fetch_active_markets().await?;
@@ -75,7 +70,6 @@ impl PolymarketService {
         Ok(())
     }
 
-    /// Refresh `current_price` and `unrealized_pnl` for all open predictions.
     pub async fn update_prediction_prices(&self) -> Result<()> {
         let preds = open_prediction::Entity::find().all(&self.db).await?;
 
@@ -97,7 +91,6 @@ impl PolymarketService {
         Ok(())
     }
 
-    /// All currently open predictions.
     pub async fn get_open_predictions(&self) -> Result<Vec<open_prediction::Model>> {
         Ok(open_prediction::Entity::find()
             .order_by_asc(open_prediction::Column::OpenedAt)
@@ -105,7 +98,6 @@ impl PolymarketService {
             .await?)
     }
 
-    /// Paginated prediction history (most recent first).
     pub async fn get_prediction_history(
         &self,
         page_size: u64,
@@ -117,7 +109,6 @@ impl PolymarketService {
             .await?)
     }
 
-    // -- private helpers ----------------------------------------------------
 
     async fn process_market(
         &self,
@@ -242,7 +233,6 @@ impl PolymarketService {
                     .await?;
 
                 if let Some(pos) = existing {
-                    // Average-in
                     let total_shares = pos.shares + result.filled_shares;
                     let total_cost =
                         (pos.avg_price * pos.shares) + (result.avg_price * result.filled_shares);

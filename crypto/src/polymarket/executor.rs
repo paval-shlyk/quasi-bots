@@ -5,9 +5,6 @@ use crate::error::Result;
 
 use super::models::*;
 
-// ---------------------------------------------------------------------------
-// Executor trait (backed by Polymarket CLOB SDK in production)
-// ---------------------------------------------------------------------------
 
 #[async_trait]
 pub trait PolymarketExecutor: Send + Sync {
@@ -24,9 +21,6 @@ pub trait PolymarketExecutor: Send + Sync {
     async fn fetch_active_markets(&self) -> Result<Vec<MarketInfo>>;
 }
 
-// ---------------------------------------------------------------------------
-// Paper-trading executor
-// ---------------------------------------------------------------------------
 
 pub struct PaperPolymarketExecutor;
 
@@ -79,7 +73,6 @@ impl PolymarketExecutor for PaperPolymarketExecutor {
     }
 
     async fn fetch_active_markets(&self) -> Result<Vec<MarketInfo>> {
-        // In production this calls the Polymarket REST / WS API.
         Ok(vec![])
     }
 }

@@ -7,11 +7,7 @@ use crate::settings::BotSettings;
 
 use super::models::*;
 
-// ---------------------------------------------------------------------------
-// Strategy trait
-// ---------------------------------------------------------------------------
 
-/// Analyses a Polymarket event and optionally emits a [`PredictionSignal`].
 #[async_trait]
 pub trait PolymarketStrategy: Send + Sync {
     async fn analyze(
@@ -22,9 +18,6 @@ pub trait PolymarketStrategy: Send + Sync {
     ) -> Result<Option<PredictionSignal>>;
 }
 
-// ---------------------------------------------------------------------------
-// Default LLM + edge-detection strategy
-// ---------------------------------------------------------------------------
 
 pub struct LlmPolymarketStrategy {
     decision_engine: Box<dyn DecisionEngine>,
@@ -59,7 +52,6 @@ impl LlmPolymarketStrategy {
         order_book: &MarketOrderBook,
         settings: &BotSettings,
     ) -> bool {
-        // Minimum edge threshold (5 %)
         let min_edge = Decimal::new(5, 2);
         if edge.edge.abs() < min_edge {
             tracing::info!(
@@ -70,7 +62,6 @@ impl LlmPolymarketStrategy {
             return false;
         }
 
-        // Liquidity filter
         if order_book.liquidity < settings.min_liquidity_threshold {
             tracing::info!(
                 market = %edge.market_id,
@@ -81,7 +72,6 @@ impl LlmPolymarketStrategy {
             return false;
         }
 
-        // Avoid extreme-priced markets (>0.95 or <0.05)
         let low = Decimal::new(5, 2);
         let high = Decimal::new(95, 2);
         if order_book.yes_price < low || order_book.yes_price > high {

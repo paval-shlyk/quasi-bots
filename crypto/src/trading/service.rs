@@ -18,9 +18,6 @@ use super::executor::TradeExecutor;
 use super::models::*;
 use super::strategy::TradingStrategy;
 
-// ---------------------------------------------------------------------------
-// Trading service  (orchestrator for the trading module)
-// ---------------------------------------------------------------------------
 
 pub struct TradingService {
     db: DatabaseConnection,
@@ -50,9 +47,7 @@ impl TradingService {
         }
     }
 
-    // -- public entry points ------------------------------------------------
 
-    /// One iteration of the trading loop: analyse → risk-check → execute → persist.
     pub async fn tick(
         &self,
         market_data: &MarketData,
@@ -64,13 +59,11 @@ impl TradingService {
             return Ok(());
         }
 
-        // Strategy
         let Some(mut signal) = self.strategy.analyze(market_data, indicators, &settings).await?
         else {
             return Ok(());
         };
 
-        // Position sizing
         let balance = self.portfolio.get_balance().await;
         let trading_budget = balance * settings.trading_allocation_pct / Decimal::new(100, 0);
         let position_cap = trading_budget * settings.max_position_size_pct / Decimal::new(100, 0);
@@ -79,19 +72,15 @@ impl TradingService {
             signal.quantity = position_cap / market_data.price;
         }
 
-        // Stop-loss
         signal.stop_loss = Some(
             market_data.price * (Decimal::ONE - settings.stop_loss_pct / Decimal::new(100, 0)),
         );
 
-        // Risk checks
         self.check_risk(&signal, &settings).await?;
 
-        // Reserve capital
         let capital = signal.quantity * market_data.price;
         self.portfolio.reserve_funds(capital, "trading").await?;
 
-        // Execute
         let result = match self.executor.execute(&signal).await {
             Ok(r) => r,
             Err(e) => {
@@ -102,7 +91,6 @@ impl TradingService {
             }
         };
 
-        // Persist
         self.record_trade(&signal, &result).await?;
 
         if result.status == TradeStatus::Filled || result.status == TradeStatus::PartiallyFilled {
@@ -120,7 +108,6 @@ impl TradingService {
         Ok(())
     }
 
-    /// Refresh `current_price` and `unrealized_pnl` for every open position.
     pub async fn update_position_prices(&self) -> Result<()> {
         let positions = open_position::Entity::find().all(&self.db).await?;
         let mut total_unrealized = Decimal::ZERO;
@@ -146,7 +133,6 @@ impl TradingService {
         Ok(())
     }
 
-    /// Walk all positions and auto-close any that hit their stop-loss.
     pub async fn check_stop_losses(&self) -> Result<()> {
         let positions = open_position::Entity::find().all(&self.db).await?;
 
@@ -210,7 +196,6 @@ impl TradingService {
         Ok(())
     }
 
-    /// All currently open positions.
     pub async fn get_open_positions(&self) -> Result<Vec<open_position::Model>> {
         Ok(open_position::Entity::find()
             .order_by_asc(open_position::Column::OpenedAt)
@@ -218,7 +203,6 @@ impl TradingService {
             .await?)
     }
 
-    /// Paginated trade history (most recent first).
     pub async fn get_trade_history(&self, page_size: u64) -> Result<Vec<trade_record::Model>> {
         Ok(trade_record::Entity::find()
             .order_by_desc(trade_record::Column::CreatedAt)
@@ -227,7 +211,6 @@ impl TradingService {
             .await?)
     }
 
-    // -- private helpers ----------------------------------------------------
 
     async fn check_risk(&self, signal: &TradeSignal, settings: &crate::settings::BotSettings) -> Result<()> {
         let open_count = open_position::Entity::find().count(&self.db).await?;

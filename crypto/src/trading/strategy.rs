@@ -7,11 +7,7 @@ use crate::settings::BotSettings;
 
 use super::models::*;
 
-// ---------------------------------------------------------------------------
-// Strategy trait
-// ---------------------------------------------------------------------------
 
-/// Analyses market data + indicators and optionally emits a [`TradeSignal`].
 #[async_trait]
 pub trait TradingStrategy: Send + Sync {
     async fn analyze(
@@ -22,9 +18,6 @@ pub trait TradingStrategy: Send + Sync {
     ) -> Result<Option<TradeSignal>>;
 }
 
-// ---------------------------------------------------------------------------
-// Default LLM + heuristic strategy
-// ---------------------------------------------------------------------------
 
 pub struct LlmTradingStrategy {
     decision_engine: Box<dyn DecisionEngine>,
@@ -41,7 +34,6 @@ impl LlmTradingStrategy {
         indicators: &TechnicalIndicators,
         settings: &BotSettings,
     ) -> bool {
-        // 1. Confidence gate
         if recommendation.confidence < settings.confidence_threshold {
             tracing::info!(
                 confidence = %recommendation.confidence,
@@ -51,7 +43,6 @@ impl LlmTradingStrategy {
             return false;
         }
 
-        // 2. RSI filter: avoid buying overbought / selling oversold
         if let Some(rsi) = indicators.rsi {
             match recommendation.action {
                 TradeAction::Buy if rsi > Decimal::new(75, 0) => {
@@ -66,7 +57,6 @@ impl LlmTradingStrategy {
             }
         }
 
-        // 3. Bollinger band-width sanity check
         if let Some(bb) = &indicators.bollinger {
             if bb.upper - bb.lower == Decimal::ZERO {
                 tracing::info!("Zero-width Bollinger bands – filtering");

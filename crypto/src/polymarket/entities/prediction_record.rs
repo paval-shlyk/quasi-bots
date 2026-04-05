@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Historical record of every prediction order (buy/sell of Yes/No shares).
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "prediction_records")]
 pub struct Model {

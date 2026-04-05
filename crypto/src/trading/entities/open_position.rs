@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Currently open trading positions, one row per pair.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "open_positions")]
 pub struct Model {

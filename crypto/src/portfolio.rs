@@ -6,11 +6,7 @@ use uuid::Uuid;
 use crate::entities::portfolio_snapshot;
 use crate::error::{CryptoError, Result};
 
-// ---------------------------------------------------------------------------
-// In-memory portfolio state
-// ---------------------------------------------------------------------------
 
-/// Unified view of the bot's capital across both modules.
 #[derive(Debug, Clone)]
 pub struct PortfolioState {
     pub total_balance: Decimal,
@@ -36,12 +32,8 @@ impl Default for PortfolioState {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Portfolio service (shared between Trading & Polymarket via Arc)
-// ---------------------------------------------------------------------------
 
 /// Manages the portfolio state with RwLock-protected concurrent access.
-///
 /// Both modules call [`reserve_funds`] before execution and
 /// [`release_funds`] when closing positions.  Snapshots are persisted
 /// periodically and on graceful shutdown.

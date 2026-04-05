@@ -2,11 +2,7 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Market data types
-// ---------------------------------------------------------------------------
 
-/// Real-time snapshot for a single pair (from Barter WS or REST).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketData {
     pub pair: String,
@@ -19,7 +15,6 @@ pub struct MarketData {
     pub timestamp: DateTime<Utc>,
 }
 
-/// Single OHLCV candle.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Candle {
     pub open: Decimal,
@@ -30,9 +25,6 @@ pub struct Candle {
     pub timestamp: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
-// Technical analysis
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TechnicalIndicators {
@@ -58,9 +50,6 @@ pub struct BollingerBands {
     pub lower: Decimal,
 }
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeSide {
@@ -128,11 +117,8 @@ impl std::fmt::Display for PositionSide {
     }
 }
 
-// ---------------------------------------------------------------------------
 // Trade signal & result
-// ---------------------------------------------------------------------------
 
-/// Signal emitted by [`TradingStrategy`] after LLM + heuristic analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeSignal {
     pub pair: String,
@@ -148,7 +134,6 @@ pub struct TradeSignal {
     pub timestamp: DateTime<Utc>,
 }
 
-/// Execution report returned by [`TradeExecutor`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TradeResult {
     pub order_id: String,

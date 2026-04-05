@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Single-row settings table storing all bot configuration as JSONB.
 /// This allows hot-modification of settings without schema changes.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "bot_settings")]

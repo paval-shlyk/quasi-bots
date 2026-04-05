@@ -47,8 +47,6 @@ pub enum BotEvent {
 }
 
 /// Broadcast-based internal event bus.
-///
-/// Enables loose coupling between the Trading and Polymarket modules:
 /// each module can publish events and any number of subscribers
 /// (including the API layer) can react.
 pub struct EventBus {

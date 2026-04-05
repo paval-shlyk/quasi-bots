@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Historical record of every trade executed by the trading module.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "trade_records")]
 pub struct Model {

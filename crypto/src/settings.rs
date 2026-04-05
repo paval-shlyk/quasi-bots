@@ -7,36 +7,26 @@ use crate::entities::bot_settings;
 use crate::error::{CryptoError, Result};
 use crate::llm::LlmProvider;
 
-// ---------------------------------------------------------------------------
-// Typed settings struct (serialized to JSONB in the DB)
-// ---------------------------------------------------------------------------
 
-/// All bot-wide configurable parameters.
-///
 /// Stored as a single JSONB blob in the `bot_settings` table so new fields
 /// can be added without schema migrations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BotSettings {
-    // -- Risk parameters --
     pub max_position_size_pct: Decimal,
     pub stop_loss_pct: Decimal,
     pub max_open_positions: i32,
-    /// Minimum LLM confidence to act (0.0 – 1.0).
+    /// Minimum LLM confidence to act (0.0 - 1.0).
     pub confidence_threshold: Decimal,
 
-    // -- Capital allocation --
     pub trading_allocation_pct: Decimal,
     pub polymarket_allocation_pct: Decimal,
 
-    // -- LLM --
     pub llm_provider: LlmProvider,
     pub llm_temperature: Decimal,
 
-    // -- Trading-specific --
     pub allowed_pairs: Vec<String>,
     pub trading_interval_secs: u64,
 
-    // -- Polymarket-specific --
     pub max_prediction_exposure: Decimal,
     pub min_liquidity_threshold: Decimal,
     pub polymarket_interval_secs: u64,
@@ -62,12 +52,7 @@ impl Default for BotSettings {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Settings service
-// ---------------------------------------------------------------------------
 
-/// Thread-safe settings manager with RwLock + PG persistence.
-///
 /// The in-memory copy is the hot path; changes are validated, applied, then
 /// persisted to the single-row `bot_settings` table.
 pub struct SettingsService {
@@ -105,7 +90,7 @@ impl SettingsService {
         }
     }
 
-    /// Read current settings (from memory — microsecond read lock).
+    /// Read current settings (from memory - microsecond read lock).
     pub async fn get(&self) -> BotSettings {
         self.settings.read().await.clone()
     }
@@ -125,7 +110,6 @@ impl SettingsService {
         Ok(snapshot)
     }
 
-    // -- private helpers --
 
     fn validate(s: &BotSettings) -> Result<()> {
         if s.trading_allocation_pct + s.polymarket_allocation_pct > Decimal::new(100, 0) {

@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
 
-// ---------------------------------------------------------------------------
-// Provider enum
-// ---------------------------------------------------------------------------
 
 /// Which LLM backend this bot instance uses (selected at startup via config).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -16,9 +13,6 @@ pub enum LlmProvider {
     Gemini,
 }
 
-// ---------------------------------------------------------------------------
-// Structured outputs — Trading
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TradeAction {
@@ -38,9 +32,6 @@ pub struct TradeRecommendation {
     pub timestamp: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
-// Structured outputs — Polymarket
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PredictionAction {
@@ -61,9 +52,6 @@ pub struct PredictionRecommendation {
     pub timestamp: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
-// Context payloads fed into the LLM prompt
-// ---------------------------------------------------------------------------
 
 /// Market + portfolio context assembled before calling the LLM for a trade.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,12 +81,8 @@ pub struct PredictionContext {
     pub open_predictions: Vec<serde_json::Value>,
 }
 
-// ---------------------------------------------------------------------------
-// Decision engine trait (backed by rig-core in production)
-// ---------------------------------------------------------------------------
 
 /// Abstraction over LLM providers.
-///
 /// In production each instance wires either xAI/Grok or Gemini behind this
 /// trait via `rig-core`.  A [`HeuristicFallback`] implementation is provided
 /// for when the LLM is unavailable.
@@ -117,12 +101,7 @@ pub trait DecisionEngine: Send + Sync {
     fn provider(&self) -> LlmProvider;
 }
 
-// ---------------------------------------------------------------------------
-// Fallback heuristic engine
-// ---------------------------------------------------------------------------
 
-/// Baseline decision engine that always returns Hold.
-///
 /// Used when the LLM is unreachable (rate-limited, network error, etc.).
 pub struct HeuristicFallback;
 

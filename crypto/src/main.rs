@@ -18,13 +18,11 @@ use sea_orm::Database;
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
 
-    // ---- database ---------------------------------------------------------
     let database_url = std::env::var("DATABASE_URL")
         .unwrap_or_else(|_| "postgres://localhost/crypto_bot".into());
     let db = Database::connect(&database_url).await?;
     tracing::info!("Connected to database");
 
-    // ---- shared services --------------------------------------------------
     let event_bus = Arc::new(EventBus::default());
 
     let initial_balance = std::env::var("INITIAL_BALANCE")
@@ -50,11 +48,9 @@ async fn main() -> anyhow::Result<()> {
     settings.load_or_create().await?;
     tracing::info!("Settings loaded");
 
-    // ---- LLM decision engines (fallback until rig-core is wired) ----------
     let trading_engine: Box<dyn crypto::llm::DecisionEngine> = Box::new(HeuristicFallback);
     let polymarket_engine: Box<dyn crypto::llm::DecisionEngine> = Box::new(HeuristicFallback);
 
-    // ---- trading module ---------------------------------------------------
     let trading_service = Arc::new(TradingService::new(
         db.clone(),
         Box::new(LlmTradingStrategy::new(trading_engine)),
@@ -64,7 +60,6 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&event_bus),
     ));
 
-    // ---- polymarket module ------------------------------------------------
     let polymarket_service = Arc::new(PolymarketService::new(
         db.clone(),
         Box::new(LlmPolymarketStrategy::new(polymarket_engine)),
@@ -74,7 +69,6 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&event_bus),
     ));
 
-    // ---- spawn parallel module tasks --------------------------------------
     let trading_handle = {
         let svc = Arc::clone(&trading_service);
         let cfg = Arc::clone(&settings);
@@ -90,7 +84,6 @@ async fn main() -> anyhow::Result<()> {
                 if let Err(e) = svc.check_stop_losses().await {
                     tracing::error!(error = %e, "Failed to check stop-losses");
                 }
-                // In production: receive MarketData from Barter WS → call svc.tick()
             }
         })
     };
@@ -126,7 +119,6 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Bot running — press Ctrl+C to stop");
 
-    // ---- graceful shutdown ------------------------------------------------
     tokio::signal::ctrl_c().await?;
     tracing::info!("Shutdown signal received");
 

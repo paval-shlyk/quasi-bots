@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Currently held prediction positions (one row per market+side).
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "open_predictions")]
 pub struct Model {

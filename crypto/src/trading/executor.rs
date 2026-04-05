@@ -5,9 +5,6 @@ use crate::error::Result;
 
 use super::models::{TradeResult, TradeSignal, TradeStatus};
 
-// ---------------------------------------------------------------------------
-// Executor trait (backed by Barter / exchange SDK in production)
-// ---------------------------------------------------------------------------
 
 #[async_trait]
 pub trait TradeExecutor: Send + Sync {
@@ -21,9 +18,6 @@ pub trait TradeExecutor: Send + Sync {
     async fn get_price(&self, pair: &str) -> Result<Decimal>;
 }
 
-// ---------------------------------------------------------------------------
-// Paper-trading executor (Phase 1 / testing)
-// ---------------------------------------------------------------------------
 
 pub struct PaperTradeExecutor;
 

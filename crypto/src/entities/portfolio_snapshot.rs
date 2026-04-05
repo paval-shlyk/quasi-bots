@@ -1,6 +1,5 @@
 use sea_orm::entity::prelude::*;
 
-/// Periodic snapshots of the bot's portfolio state.
 /// Persisted to DB for recovery and historical tracking.
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
 #[sea_orm(table_name = "portfolio_snapshots")]

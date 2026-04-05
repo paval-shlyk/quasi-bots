@@ -2,11 +2,7 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-// ---------------------------------------------------------------------------
-// Market data types
-// ---------------------------------------------------------------------------
 
-/// Metadata for a single Polymarket event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketInfo {
     pub market_id: String,
@@ -18,7 +14,6 @@ pub struct MarketInfo {
     pub active: bool,
 }
 
-/// Current CLOB state for a market.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketOrderBook {
     pub market_id: String,
@@ -33,9 +28,6 @@ pub struct MarketOrderBook {
     pub timestamp: DateTime<Utc>,
 }
 
-// ---------------------------------------------------------------------------
-// Enums
-// ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PredictionSide {
@@ -86,11 +78,7 @@ impl std::fmt::Display for PredictionStatus {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Signal & result types
-// ---------------------------------------------------------------------------
 
-/// Signal emitted by [`PolymarketStrategy`] after LLM + heuristic analysis.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictionSignal {
     pub market_id: String,
@@ -104,7 +92,6 @@ pub struct PredictionSignal {
     pub timestamp: DateTime<Utc>,
 }
 
-/// Execution report returned by [`PolymarketExecutor`].
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictionResult {
     pub order_id: String,

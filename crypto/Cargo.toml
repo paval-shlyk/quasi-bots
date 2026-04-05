@@ -1,0 +1,45 @@
+[package]
+name = "crypto"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# Core async runtime & utilities
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+
+# Database (PostgreSQL via sea-orm)
+sea-orm = { version = "1", features = [
+    "sqlx-postgres",
+    "runtime-tokio-rustls",
+    "with-chrono",
+    "with-rust_decimal",
+    "with-uuid",
+    "with-json",
+    "macros",
+] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Data types
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+rust_decimal = { version = "1", features = ["serde-with-str"] }
+
+# Error handling
+thiserror = "2"
+
+# Trait abstractions
+async-trait = "0.1"
+
+# Logging (binary)
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Exchange integration (to be wired into executor traits)
+# barter = "0.12.4"
+
+# Technical analysis (to be wired into strategy)
+# ta = "0.5"

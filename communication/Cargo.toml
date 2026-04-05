@@ -8,5 +8,10 @@ tonic = "0.13"
 prost = "0.13"
 prost-types = "0.13"
 
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time"] }
+tokio-stream = "0.1"
+prost-types = "0.13"
+
 [build-dependencies]
 tonic-build = "0.13"

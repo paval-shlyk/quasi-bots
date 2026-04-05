@@ -43,6 +43,12 @@ communication = { path = "../communication" }
 tonic = "0.13"
 prost-types = "0.13"
 
+# HTTP client for exchange / Polymarket APIs
+reqwest = { workspace = true }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
 # Exchange integration (to be wired into executor traits)
 # barter = "0.12.4"
 

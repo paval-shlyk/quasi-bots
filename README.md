@@ -6,6 +6,9 @@
 
 ## Members
 
+- **crypto**: Autonomous crypto trading worker (Binance spot + Polymarket predictions).
+- **crypto-master**: Supervisor service that manages a fleet of crypto workers via gRPC.
+- **communication**: Shared protobuf definitions and generated Rust types for gRPC.
 - **skill-master**: Data collection and processing service (News, Knowledge, Finance).
 - **finance**: Financial tracking and reporting logic.
 - **monitor**: Monitoring service.
@@ -94,4 +97,80 @@ The API includes endpoints for:
 - **Knowledge Bank**: Spaced repetition learning.
 - **News Bank**: Aggregated news feeds.
 - **Quotes Bank**: Inspirational quotes.
+
+## Crypto Trading Bot
+
+A master-worker architecture for autonomous crypto trading and Polymarket prediction.
+
+### Architecture
+
+```
+crypto-cli --> crypto-master (gRPC :50050) --> worker-grok  (gRPC :50051)
+                                           --> worker-gemini (gRPC :50051)
+                                                    |
+                                                PostgreSQL
+```
+
+- **Workers** (`crypto` binary) run two parallel loops: trading (Binance spot) and predictions (Polymarket CLOB). Each worker uses an LLM decision engine with heuristic fallback filters (RSI, Bollinger bands, edge detection, liquidity checks).
+- **Master** (`crypto-master` binary) discovers workers from `WORKER_ADDRS`, proxies all RPCs, and computes performance metrics (P&L, win rate, Sharpe ratio, max drawdown, prediction accuracy).
+- **CLI** (`crypto-cli` binary) talks to the master and provides subcommands for fleet management.
+
+### Environment Variables
+
+| Variable | Used by | Description |
+|---|---|---|
+| `DATABASE_URL` | worker | PostgreSQL connection string |
+| `GRPC_ADDR` | worker | Worker gRPC listen address (default `0.0.0.0:50051`) |
+| `WORKER_ID` | worker | Unique identifier for the worker instance |
+| `LLM_PROVIDER` | worker | `grok` or `gemini` |
+| `BINANCE_API_KEY` | worker | Binance API key |
+| `BINANCE_SECRET_KEY` | worker | Binance HMAC secret |
+| `POLYMARKET_API_KEY` | worker | Polymarket CLOB API key |
+| `MASTER_GRPC_ADDR` | master | Master gRPC listen address (default `0.0.0.0:50050`) |
+| `WORKER_ADDRS` | master | Comma-separated `id=url` pairs (e.g. `grok=http://worker-grok:50051`) |
+| `MASTER_GRPC_URL` | CLI | Master endpoint (default `http://localhost:50050`) |
+| `RUST_LOG` | all | Tracing filter (e.g. `info,crypto=debug`) |
+
+### Running with Docker
+
+```bash
+# Set API keys in .env
+echo "BINANCE_API_KEY=..." >> .env
+echo "BINANCE_SECRET_KEY=..." >> .env
+echo "POLYMARKET_API_KEY=..." >> .env
+
+# Start the fleet
+docker compose up -d postgres worker-grok worker-gemini master
+
+# Use the CLI
+docker compose run --rm master crypto-cli -e http://master:50050 workers
+docker compose run --rm master crypto-cli -e http://master:50050 aggregate
+```
+
+### CLI Subcommands
+
+```
+workers              List connected workers
+status <id>          Worker status
+portfolio <id>       Worker portfolio
+trades <id>          Open trading positions
+predictions <id>     Open predictions
+trade-history <id>   Closed trade records
+prediction-history   Closed prediction records
+performance <id>     Performance report (P&L, Sharpe, drawdown)
+aggregate            Aggregate fleet performance
+update-settings      Push new BotSettings to a worker
+```
+
+### Performance Tracking
+
+The master computes per-worker and fleet-wide metrics from trade/prediction history:
+
+- **P&L**: Total, realized, and unrealized profit/loss
+- **Win rate**: Fraction of profitable trades
+- **Sharpe ratio**: Risk-adjusted return
+- **Max drawdown**: Worst peak-to-trough decline
+- **Prediction accuracy**: Fraction of correct prediction outcomes
+
+Use `crypto-cli aggregate` to compare workers side by side. The best-performing worker ID is highlighted in the aggregate report.
 

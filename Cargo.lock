@@ -752,6 +752,8 @@ version = "0.1.0"
 dependencies = [
  "prost 0.13.5",
  "prost-types 0.13.5",
+ "tokio",
+ "tokio-stream",
  "tonic",
  "tonic-build",
 ]
@@ -1017,11 +1019,15 @@ dependencies = [
  "async-trait",
  "chrono",
  "communication",
+ "hex",
+ "hmac",
  "prost-types 0.13.5",
+ "reqwest 0.13.2",
  "rust_decimal",
  "sea-orm",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror 2.0.18",
  "tokio",
  "tonic",
@@ -1045,9 +1051,13 @@ name = "crypto-master"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
+ "clap",
  "communication",
  "prost-types 0.13.5",
  "rust_decimal",
+ "serde",
+ "serde_json",
  "tokio",
  "tonic",
  "tracing",

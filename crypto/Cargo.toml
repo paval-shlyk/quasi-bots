@@ -38,6 +38,11 @@ async-trait = "0.1"
 # Logging (binary)
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+# gRPC (worker server)
+communication = { path = "../communication" }
+tonic = "0.13"
+prost-types = "0.13"
+
 # Exchange integration (to be wired into executor traits)
 # barter = "0.12.4"
 

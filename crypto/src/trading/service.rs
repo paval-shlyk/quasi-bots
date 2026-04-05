@@ -53,7 +53,7 @@ impl TradingService {
         market_data: &MarketData,
         indicators: &TechnicalIndicators,
     ) -> Result<()> {
-        let settings = self.settings.get().await;
+        let settings = self.settings.get();
 
         if !settings.allowed_pairs.contains(&market_data.pair) {
             return Ok(());
@@ -209,6 +209,100 @@ impl TradingService {
             .paginate(&self.db, page_size)
             .fetch_page(0)
             .await?)
+    }
+
+
+    /// Re-check all open positions against updated settings. Called after a
+    /// settings push from the master.
+    ///
+    /// 1. Close positions whose pair was removed from `allowed_pairs`.
+    /// 2. Recalculate stop-loss prices using the new `stop_loss_pct`.
+    /// 3. If position count exceeds the new `max_open_positions`, close the
+    ///    newest positions first (LIFO) until compliant.
+    pub async fn reevaluate_positions(&self, settings: &crate::settings::BotSettings) -> Result<()> {
+        let mut positions = open_position::Entity::find()
+            .order_by_asc(open_position::Column::OpenedAt)
+            .all(&self.db)
+            .await?;
+
+        // 1. Close positions for removed pairs
+        let mut kept = Vec::new();
+        for pos in positions.drain(..) {
+            if !settings.allowed_pairs.contains(&pos.pair) {
+                tracing::warn!(pair = %pos.pair, "Closing position: pair removed from allowed list");
+                self.force_close_position(&pos).await?;
+            } else {
+                kept.push(pos);
+            }
+        }
+
+        // 2. Recalculate stop-losses on remaining positions
+        let stop_factor = Decimal::ONE - settings.stop_loss_pct / Decimal::new(100, 0);
+        for pos in &kept {
+            let new_stop = pos.entry_price * stop_factor;
+            let mut active: open_position::ActiveModel = pos.clone().into();
+            active.stop_loss_price = Set(Some(new_stop));
+            active.updated_at = Set(Utc::now());
+            active.update(&self.db).await?;
+        }
+
+        // 3. Close excess positions (LIFO: newest first)
+        let max = settings.max_open_positions as usize;
+        if kept.len() > max {
+            let excess = &kept[max..];
+            for pos in excess.iter().rev() {
+                tracing::warn!(
+                    pair = %pos.pair,
+                    "Closing position: max_open_positions reduced to {}",
+                    max
+                );
+                self.force_close_position(pos).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Market-sell a position and release its capital.
+    async fn force_close_position(&self, pos: &open_position::Model) -> Result<()> {
+        let signal = TradeSignal {
+            pair: pos.pair.clone(),
+            side: TradeSide::Sell,
+            order_type: OrderType::Market,
+            quantity: pos.quantity,
+            price: None,
+            stop_loss: None,
+            take_profit: None,
+            confidence: Decimal::ONE,
+            rationale: "Settings reevaluation: force close".into(),
+            timestamp: Utc::now(),
+        };
+
+        match self.executor.execute(&signal).await {
+            Ok(result) => {
+                let pnl = match pos.side.as_str() {
+                    "long" => (result.avg_fill_price - pos.entry_price) * pos.quantity - result.fee,
+                    "short" => (pos.entry_price - result.avg_fill_price) * pos.quantity - result.fee,
+                    _ => Decimal::ZERO,
+                };
+                self.portfolio
+                    .release_funds(pos.allocated_capital, pnl, "trading")
+                    .await?;
+                open_position::Entity::delete_by_id(pos.id)
+                    .exec(&self.db)
+                    .await?;
+                self.record_trade(&signal, &result).await?;
+            }
+            Err(e) => {
+                tracing::error!(pair = %pos.pair, error = %e, "Force-close execution failed");
+                self.event_bus.publish(BotEvent::ModuleError {
+                    module: "trading".into(),
+                    error: format!("Force-close failed for {}: {e}", pos.pair),
+                });
+            }
+        }
+
+        Ok(())
     }
 
 

@@ -1,0 +1,251 @@
+syntax = "proto3";
+
+package crypto;
+
+import "google/protobuf/timestamp.proto";
+
+// ---------------------------------------------------------------------------
+// WorkerService: runs inside each crypto worker instance.
+// The master calls these RPCs to query state and push configuration.
+// ---------------------------------------------------------------------------
+
+service WorkerService {
+  rpc GetStatus(Empty) returns (WorkerStatus);
+  rpc GetPortfolio(Empty) returns (Portfolio);
+  rpc UpdateSettings(BotSettings) returns (UpdateSettingsResponse);
+  rpc GetOpenTrades(Empty) returns (OpenTradesResponse);
+  rpc GetOpenPredictions(Empty) returns (OpenPredictionsResponse);
+  rpc GetTradeHistory(HistoryRequest) returns (TradeHistoryResponse);
+  rpc GetPredictionHistory(HistoryRequest) returns (PredictionHistoryResponse);
+}
+
+// ---------------------------------------------------------------------------
+// MasterService: runs in crypto-master.
+// External clients (CLI, web UI) call these RPCs to manage the fleet.
+// ---------------------------------------------------------------------------
+
+service MasterService {
+  rpc ListWorkers(Empty) returns (WorkerList);
+  rpc GetWorkerStatus(WorkerId) returns (WorkerStatus);
+  rpc GetWorkerPortfolio(WorkerId) returns (Portfolio);
+  rpc UpdateWorkerSettings(UpdateWorkerSettingsRequest) returns (UpdateSettingsResponse);
+  rpc GetPerformanceReport(WorkerId) returns (PerformanceReport);
+  rpc GetAggregatePerformance(Empty) returns (AggregatePerformanceReport);
+  rpc GetWorkerOpenTrades(WorkerId) returns (OpenTradesResponse);
+  rpc GetWorkerOpenPredictions(WorkerId) returns (OpenPredictionsResponse);
+  rpc GetWorkerTradeHistory(WorkerHistoryRequest) returns (TradeHistoryResponse);
+  rpc GetWorkerPredictionHistory(WorkerHistoryRequest) returns (PredictionHistoryResponse);
+}
+
+// ---------------------------------------------------------------------------
+// Common
+// ---------------------------------------------------------------------------
+
+message Empty {}
+
+message WorkerId {
+  string id = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Worker status
+// ---------------------------------------------------------------------------
+
+message WorkerStatus {
+  string worker_id = 1;
+  string llm_provider = 2;
+  bool trading_active = 3;
+  bool polymarket_active = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp last_heartbeat = 6;
+  int32 open_trade_count = 7;
+  int32 open_prediction_count = 8;
+}
+
+message WorkerList {
+  repeated WorkerStatus workers = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------
+
+message Portfolio {
+  string total_balance = 1;
+  string available_balance = 2;
+  string trading_allocated = 3;
+  string polymarket_allocated = 4;
+  string unrealized_pnl = 5;
+  string realized_pnl = 6;
+  string base_currency = 7;
+}
+
+// ---------------------------------------------------------------------------
+// Settings
+// ---------------------------------------------------------------------------
+
+message BotSettings {
+  string max_position_size_pct = 1;
+  string stop_loss_pct = 2;
+  int32 max_open_positions = 3;
+  string confidence_threshold = 4;
+  string trading_allocation_pct = 5;
+  string polymarket_allocation_pct = 6;
+  string llm_provider = 7;
+  string llm_temperature = 8;
+  repeated string allowed_pairs = 9;
+  uint64 trading_interval_secs = 10;
+  string max_prediction_exposure = 11;
+  string min_liquidity_threshold = 12;
+  uint64 polymarket_interval_secs = 13;
+}
+
+message UpdateSettingsResponse {
+  bool success = 1;
+  string message = 2;
+  BotSettings applied_settings = 3;
+}
+
+message UpdateWorkerSettingsRequest {
+  string worker_id = 1;
+  BotSettings settings = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Trading: open positions
+// ---------------------------------------------------------------------------
+
+message OpenPosition {
+  string id = 1;
+  string pair = 2;
+  string side = 3;
+  string entry_price = 4;
+  string quantity = 5;
+  string current_price = 6;
+  string unrealized_pnl = 7;
+  string stop_loss_price = 8;
+  string take_profit_price = 9;
+  string allocated_capital = 10;
+  google.protobuf.Timestamp opened_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message OpenTradesResponse {
+  repeated OpenPosition positions = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Trading: history
+// ---------------------------------------------------------------------------
+
+message TradeRecord {
+  string id = 1;
+  string pair = 2;
+  string side = 3;
+  string order_type = 4;
+  string quantity = 5;
+  string price = 6;
+  string filled_quantity = 7;
+  string avg_fill_price = 8;
+  string fee = 9;
+  string status = 10;
+  string llm_rationale = 11;
+  string llm_confidence = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message TradeHistoryResponse {
+  repeated TradeRecord records = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Polymarket: open predictions
+// ---------------------------------------------------------------------------
+
+message OpenPrediction {
+  string id = 1;
+  string market_id = 2;
+  string market_title = 3;
+  string side = 4;
+  string shares = 5;
+  string avg_price = 6;
+  string current_price = 7;
+  string unrealized_pnl = 8;
+  string allocated_capital = 9;
+  google.protobuf.Timestamp opened_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message OpenPredictionsResponse {
+  repeated OpenPrediction predictions = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Polymarket: history
+// ---------------------------------------------------------------------------
+
+message PredictionRecord {
+  string id = 1;
+  string market_id = 2;
+  string market_title = 3;
+  string side = 4;
+  string action = 5;
+  string shares = 6;
+  string price_per_share = 7;
+  string total_cost = 8;
+  string status = 9;
+  string resolution = 10;
+  string llm_rationale = 11;
+  string llm_confidence = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message PredictionHistoryResponse {
+  repeated PredictionRecord records = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Query parameters
+// ---------------------------------------------------------------------------
+
+message HistoryRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message WorkerHistoryRequest {
+  string worker_id = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+// ---------------------------------------------------------------------------
+// Performance
+// ---------------------------------------------------------------------------
+
+message PerformanceReport {
+  string worker_id = 1;
+  string llm_provider = 2;
+  string total_pnl = 3;
+  string realized_pnl = 4;
+  string unrealized_pnl = 5;
+  string win_rate = 6;
+  int32 total_trades = 7;
+  int32 winning_trades = 8;
+  int32 losing_trades = 9;
+  string sharpe_ratio = 10;
+  string max_drawdown = 11;
+  int32 total_predictions = 12;
+  int32 correct_predictions = 13;
+  string prediction_accuracy = 14;
+  google.protobuf.Timestamp period_start = 15;
+  google.protobuf.Timestamp period_end = 16;
+}
+
+message AggregatePerformanceReport {
+  repeated PerformanceReport workers = 1;
+  string best_worker_id = 2;
+  string total_fleet_pnl = 3;
+}

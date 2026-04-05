@@ -1,6 +1,7 @@
 pub mod entities;
 pub mod error;
 pub mod events;
+pub mod grpc;
 pub mod llm;
 pub mod polymarket;
 pub mod portfolio;

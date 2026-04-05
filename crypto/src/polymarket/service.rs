@@ -49,7 +49,7 @@ impl PolymarketService {
 
 
     pub async fn tick(&self) -> Result<()> {
-        let settings = self.settings.get().await;
+        let settings = self.settings.get();
         let markets = self.executor.fetch_active_markets().await?;
 
         for market in &markets {
@@ -107,6 +107,92 @@ impl PolymarketService {
             .paginate(&self.db, page_size)
             .fetch_page(0)
             .await?)
+    }
+
+
+    /// Re-check all open predictions against updated settings. Called after a
+    /// settings push from the master.
+    ///
+    /// If total exposure exceeds the new `max_prediction_exposure`, sell
+    /// predictions starting from the smallest position until compliant.
+    pub async fn reevaluate_predictions(
+        &self,
+        settings: &crate::settings::BotSettings,
+    ) -> Result<()> {
+        let mut predictions = open_prediction::Entity::find()
+            .order_by_desc(open_prediction::Column::AllocatedCapital)
+            .all(&self.db)
+            .await?;
+
+        let mut total_exposure: Decimal = predictions.iter().map(|p| p.allocated_capital).sum();
+
+        // Sell smallest positions first until within limits
+        predictions.reverse();
+        while total_exposure > settings.max_prediction_exposure {
+            let Some(pred) = predictions.first() else {
+                break;
+            };
+
+            tracing::warn!(
+                market_id = %pred.market_id,
+                capital = %pred.allocated_capital,
+                "Closing prediction: total exposure {} exceeds limit {}",
+                total_exposure,
+                settings.max_prediction_exposure,
+            );
+
+            self.force_close_prediction(pred).await?;
+            total_exposure -= pred.allocated_capital;
+            predictions.remove(0);
+        }
+
+        Ok(())
+    }
+
+    /// Market-sell a prediction and release its capital.
+    async fn force_close_prediction(&self, pred: &open_prediction::Model) -> Result<()> {
+        let side = match pred.side.as_str() {
+            "yes" => PredictionSide::Yes,
+            _ => PredictionSide::No,
+        };
+
+        let signal = PredictionSignal {
+            market_id: pred.market_id.clone(),
+            market_title: pred.market_title.clone(),
+            side,
+            action: PredictionOrderAction::Sell,
+            shares: pred.shares,
+            limit_price: None,
+            confidence: Decimal::ONE,
+            rationale: "Settings reevaluation: force close".into(),
+            timestamp: Utc::now(),
+        };
+
+        match self.executor.execute(&signal).await {
+            Ok(result) => {
+                let pnl = (result.avg_price - pred.avg_price) * result.filled_shares;
+                self.portfolio
+                    .release_funds(pred.allocated_capital, pnl, "polymarket")
+                    .await?;
+                open_prediction::Entity::delete_by_id(pred.id)
+                    .exec(&self.db)
+                    .await?;
+                self.record_prediction(&signal, &result).await?;
+            }
+            Err(e) => {
+                tracing::error!(
+                    market_id = %pred.market_id,
+                    error = %e,
+                    "Force-close prediction failed"
+                );
+                self.event_bus.publish(BotEvent::ModuleError {
+                    module: "polymarket".into(),
+                    error: format!("Force-close failed for {}: {e}", pred.market_id),
+                });
+            }
+        }
+
+        Ok(())
     }
 
 

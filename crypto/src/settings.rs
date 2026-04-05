@@ -2,6 +2,7 @@ use chrono::Utc;
 use rust_decimal::Decimal;
 use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, Set};
 use serde::{Deserialize, Serialize};
+use tokio::sync::watch;
 
 use crate::entities::bot_settings;
 use crate::error::{CryptoError, Result};
@@ -53,19 +54,19 @@ impl Default for BotSettings {
 }
 
 
-/// The in-memory copy is the hot path; changes are validated, applied, then
-/// persisted to the single-row `bot_settings` table.
+/// Settings hub backed by a `watch` channel so that any task holding a
+/// `Receiver` can `.changed().await` to react to pushes from the master.
+///
+/// The `Sender` lives here; [`subscribe`] hands out receivers.
 pub struct SettingsService {
     db: DatabaseConnection,
-    settings: tokio::sync::RwLock<BotSettings>,
+    tx: watch::Sender<BotSettings>,
 }
 
 impl SettingsService {
-    pub fn new(db: DatabaseConnection, initial: BotSettings) -> Self {
-        Self {
-            db,
-            settings: tokio::sync::RwLock::new(initial),
-        }
+    pub fn new(db: DatabaseConnection, initial: BotSettings) -> (Self, watch::Receiver<BotSettings>) {
+        let (tx, rx) = watch::channel(initial);
+        (Self { db, tx }, rx)
     }
 
     /// Load settings from DB or persist defaults if none exist yet.
@@ -78,21 +79,26 @@ impl SettingsService {
                     serde_json::from_value(model.settings_json).map_err(|e| {
                         CryptoError::Settings(format!("Failed to parse settings: {e}"))
                     })?;
-                *self.settings.write().await = settings.clone();
+                self.tx.send_replace(settings.clone());
                 Ok(settings)
             }
             None => {
                 let settings = BotSettings::default();
                 self.persist(&settings).await?;
-                *self.settings.write().await = settings.clone();
+                self.tx.send_replace(settings.clone());
                 Ok(settings)
             }
         }
     }
 
-    /// Read current settings (from memory - microsecond read lock).
-    pub async fn get(&self) -> BotSettings {
-        self.settings.read().await.clone()
+    /// Read current settings (synchronous -- no await needed).
+    pub fn get(&self) -> BotSettings {
+        self.tx.borrow().clone()
+    }
+
+    /// Hand out a new receiver that wakes on every settings change.
+    pub fn subscribe(&self) -> watch::Receiver<BotSettings> {
+        self.tx.subscribe()
     }
 
     /// Atomically update settings via a closure, validate, and persist.
@@ -100,14 +106,20 @@ impl SettingsService {
     where
         F: FnOnce(&mut BotSettings),
     {
-        let mut guard = self.settings.write().await;
-        updater(&mut guard);
-        Self::validate(&guard)?;
-        let snapshot = guard.clone();
-        drop(guard);
-
+        let mut snapshot = self.tx.borrow().clone();
+        updater(&mut snapshot);
+        Self::validate(&snapshot)?;
         self.persist(&snapshot).await?;
+        self.tx.send_replace(snapshot.clone());
         Ok(snapshot)
+    }
+
+    /// Full replacement used by the gRPC UpdateSettings handler.
+    pub async fn replace(&self, new_settings: BotSettings) -> Result<BotSettings> {
+        Self::validate(&new_settings)?;
+        self.persist(&new_settings).await?;
+        self.tx.send_replace(new_settings.clone());
+        Ok(new_settings)
     }
 
 

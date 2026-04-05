@@ -4,3 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+communication = { path = "../communication" }
+tonic = "0.13"
+prost-types = "0.13"
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = { workspace = true }
+rust_decimal = { version = "1", features = ["serde-with-str"] }

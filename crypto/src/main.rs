@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
+use communication::WorkerServiceServer;
 use crypto::events::EventBus;
+use crypto::grpc::WorkerGrpcServer;
 use crypto::llm::HeuristicFallback;
 use crypto::polymarket::{
     executor::PaperPolymarketExecutor, service::PolymarketService,
@@ -13,6 +15,7 @@ use crypto::trading::{
 };
 use rust_decimal::Decimal;
 use sea_orm::Database;
+use tonic::transport::Server;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -22,6 +25,11 @@ async fn main() -> anyhow::Result<()> {
         .unwrap_or_else(|_| "postgres://localhost/crypto_bot".into());
     let db = Database::connect(&database_url).await?;
     tracing::info!("Connected to database");
+
+    let worker_id = std::env::var("WORKER_ID").unwrap_or_else(|_| "worker-1".into());
+    let grpc_addr = std::env::var("GRPC_ADDR")
+        .unwrap_or_else(|_| "0.0.0.0:50051".into())
+        .parse()?;
 
     let event_bus = Arc::new(EventBus::default());
 
@@ -39,12 +47,12 @@ async fn main() -> anyhow::Result<()> {
         },
     ));
 
-    // Restore from DB if a prior snapshot exists
     if let Some(saved) = portfolio.load_latest().await? {
         tracing::info!(balance = %saved.total_balance, "Restored portfolio from database");
     }
 
-    let settings = Arc::new(SettingsService::new(db.clone(), BotSettings::default()));
+    let (settings_svc, settings_rx) = SettingsService::new(db.clone(), BotSettings::default());
+    let settings = Arc::new(settings_svc);
     settings.load_or_create().await?;
     tracing::info!("Settings loaded");
 
@@ -69,14 +77,49 @@ async fn main() -> anyhow::Result<()> {
         Arc::clone(&event_bus),
     ));
 
+    // gRPC server
+    let grpc_server = WorkerGrpcServer::new(
+        worker_id.clone(),
+        Arc::clone(&trading_service),
+        Arc::clone(&polymarket_service),
+        Arc::clone(&portfolio),
+        Arc::clone(&settings),
+    );
+
+    let grpc_handle = tokio::spawn(async move {
+        tracing::info!(%grpc_addr, "gRPC WorkerService listening");
+        if let Err(e) = Server::builder()
+            .add_service(WorkerServiceServer::new(grpc_server))
+            .serve(grpc_addr)
+            .await
+        {
+            tracing::error!(error = %e, "gRPC server failed");
+        }
+    });
+
+    // Trading loop: wakes on interval OR when settings change
     let trading_handle = {
         let svc = Arc::clone(&trading_service);
         let cfg = Arc::clone(&settings);
+        let mut rx = settings_rx.clone();
         tokio::spawn(async move {
             tracing::info!("Trading module started");
             loop {
-                let s = cfg.get().await;
-                tokio::time::sleep(std::time::Duration::from_secs(s.trading_interval_secs)).await;
+                let interval_secs = cfg.get().trading_interval_secs;
+                let sleep = tokio::time::sleep(std::time::Duration::from_secs(interval_secs));
+                tokio::pin!(sleep);
+
+                tokio::select! {
+                    () = &mut sleep => {}
+                    _ = rx.changed() => {
+                        let new_settings = rx.borrow_and_update().clone();
+                        tracing::info!("Trading: settings changed, reevaluating positions");
+                        if let Err(e) = svc.reevaluate_positions(&new_settings).await {
+                            tracing::error!(error = %e, "Failed to reevaluate positions on settings change");
+                        }
+                        continue;
+                    }
+                }
 
                 if let Err(e) = svc.update_position_prices().await {
                     tracing::error!(error = %e, "Failed to update position prices");
@@ -88,15 +131,29 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
+    // Polymarket loop: wakes on interval OR when settings change
     let polymarket_handle = {
         let svc = Arc::clone(&polymarket_service);
         let cfg = Arc::clone(&settings);
+        let mut rx = settings_rx.clone();
         tokio::spawn(async move {
             tracing::info!("Polymarket module started");
             loop {
-                let s = cfg.get().await;
-                tokio::time::sleep(std::time::Duration::from_secs(s.polymarket_interval_secs))
-                    .await;
+                let interval_secs = cfg.get().polymarket_interval_secs;
+                let sleep = tokio::time::sleep(std::time::Duration::from_secs(interval_secs));
+                tokio::pin!(sleep);
+
+                tokio::select! {
+                    () = &mut sleep => {}
+                    _ = rx.changed() => {
+                        let new_settings = rx.borrow_and_update().clone();
+                        tracing::info!("Polymarket: settings changed, reevaluating predictions");
+                        if let Err(e) = svc.reevaluate_predictions(&new_settings).await {
+                            tracing::error!(error = %e, "Failed to reevaluate predictions on settings change");
+                        }
+                        continue;
+                    }
+                }
 
                 if let Err(e) = svc.tick().await {
                     tracing::error!(error = %e, "Polymarket tick failed");
@@ -117,7 +174,7 @@ async fn main() -> anyhow::Result<()> {
         })
     };
 
-    tracing::info!("Bot running — press Ctrl+C to stop");
+    tracing::info!(worker_id, "Bot running -- press Ctrl+C to stop");
 
     tokio::signal::ctrl_c().await?;
     tracing::info!("Shutdown signal received");
@@ -128,6 +185,7 @@ async fn main() -> anyhow::Result<()> {
     trading_handle.abort();
     polymarket_handle.abort();
     snapshot_handle.abort();
+    grpc_handle.abort();
 
     Ok(())
 }

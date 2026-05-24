@@ -1,0 +1,38 @@
+#!/bin/bash
+set -e
+
+# Reload systemd to pick up the new Quadlet file
+if systemctl daemon-reload; then
+    echo "Systemd daemon reloaded successfully."
+else
+    echo "Warning: Failed to reload systemd daemon."
+fi
+
+# Enable Podman auto-update timer (if available)
+if systemctl list-unit-files | grep -q podman-auto-update.timer; then
+    echo "Enabling Podman auto-update timer..."
+    systemctl enable --now podman-auto-update.timer || true
+else
+    echo "Note: podman-auto-update.timer not found. Automatic updates will not run."
+fi
+
+echo ""
+echo "=========================================================================="
+echo "Finance MCP has been installed successfully!"
+echo ""
+echo "IMPORTANT: The service is NOT started automatically."
+echo "You must edit the configuration file first:"
+echo "  sudo nano /etc/finance-mcp/config.toml"
+echo ""
+echo "Set a strong password and your DZENGI.com API key/secret, then:"
+echo "  sudo systemctl start finance-mcp.service"
+echo ""
+echo "To enable it to start on boot:"
+echo "  sudo systemctl enable finance-mcp.service"
+echo ""
+echo "MCP endpoint will be available at: http://<host>:9191/mcp"
+echo "OAuth metadata:                    http://<host>:9191/.well-known/oauth-authorization-server"
+echo "=========================================================================="
+echo ""
+
+exit 0

@@ -20,6 +20,7 @@ tokio     = { workspace = true, features = [
     "net",
     "rt",
     "rt-multi-thread",
+    "signal",
     "sync",
 ] }
 
@@ -40,6 +41,8 @@ chrono       = "0.4"
 rand         = "0.9"
 sha2         = "0.10"
 base64       = "0.22"
+serde_urlencoded = "0.7"
+schemars         = "1.0"
 tower-http   = { version = "0.6", features = ["cors"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

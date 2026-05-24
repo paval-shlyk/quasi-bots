@@ -1590,6 +1590,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
+ "base64",
  "chrono",
  "clap",
  "finance",
@@ -1597,6 +1598,7 @@ dependencies = [
  "rmcp",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
  "toml",
  "tower-http",

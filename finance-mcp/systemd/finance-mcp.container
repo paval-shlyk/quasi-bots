@@ -1,0 +1,19 @@
+[Unit]
+Description=Finance MCP Podman Container
+After=network.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/paval-shlyk/quasi-bots/finance-mcp:IMAGE_TAG
+ContainerName=finance-mcp
+Volume=/etc/finance-mcp:/config:ro
+Volume=/etc/localtime:/etc/localtime:ro
+Environment=RUST_LOG=info
+PublishPort=9191:9191
+AutoUpdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

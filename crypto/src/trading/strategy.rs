@@ -125,3 +125,153 @@ impl TradingStrategy for LlmTradingStrategy {
         }))
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::TradeRecommendation;
+    use crate::trading::models::BollingerBands;
+    use chrono::Utc;
+
+    fn default_settings() -> BotSettings {
+        BotSettings::default()
+    }
+
+    fn default_indicators() -> TechnicalIndicators {
+        TechnicalIndicators {
+            rsi: Some(Decimal::new(50, 0)),
+            macd: None,
+            bollinger: Some(BollingerBands {
+                upper: Decimal::new(110, 0),
+                middle: Decimal::new(100, 0),
+                lower: Decimal::new(90, 0),
+            }),
+            sma_20: None,
+            ema_12: None,
+            ema_26: None,
+        }
+    }
+
+    fn buy_recommendation(confidence: Decimal) -> TradeRecommendation {
+        TradeRecommendation {
+            action: TradeAction::Buy,
+            pair: "BTC/USDC".into(),
+            size_percent: Decimal::new(10, 0),
+            confidence,
+            rationale: "test".into(),
+            timestamp: Utc::now(),
+        }
+    }
+
+    fn sell_recommendation(confidence: Decimal) -> TradeRecommendation {
+        TradeRecommendation {
+            action: TradeAction::Sell,
+            pair: "BTC/USDC".into(),
+            size_percent: Decimal::new(10, 0),
+            confidence,
+            rationale: "test".into(),
+            timestamp: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn passes_with_normal_indicators_and_high_confidence() {
+        let rec = buy_recommendation(Decimal::new(85, 2)); // 0.85
+        let indicators = default_indicators();
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rejects_low_confidence() {
+        let rec = buy_recommendation(Decimal::new(3, 1)); // 0.3, below 0.7 threshold
+        let indicators = default_indicators();
+        let settings = default_settings();
+        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rejects_buy_when_rsi_overbought() {
+        let rec = buy_recommendation(Decimal::new(9, 1)); // 0.9
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(80, 0)); // overbought (> 75)
+        let settings = default_settings();
+        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn allows_sell_when_rsi_overbought() {
+        let rec = sell_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(80, 0));
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rejects_sell_when_rsi_oversold() {
+        let rec = sell_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(20, 0)); // oversold (< 25)
+        let settings = default_settings();
+        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn allows_buy_when_rsi_oversold() {
+        let rec = buy_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(20, 0));
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rejects_zero_width_bollinger() {
+        let rec = buy_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.bollinger = Some(BollingerBands {
+            upper: Decimal::new(100, 0),
+            middle: Decimal::new(100, 0),
+            lower: Decimal::new(100, 0),
+        });
+        let settings = default_settings();
+        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn passes_without_optional_indicators() {
+        let rec = buy_recommendation(Decimal::new(85, 2));
+        let indicators = TechnicalIndicators {
+            rsi: None,
+            macd: None,
+            bollinger: None,
+            sma_20: None,
+            ema_12: None,
+            ema_26: None,
+        };
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rsi_at_boundary_75_allows_buy() {
+        // RSI exactly at 75 should pass (we filter > 75, not >=)
+        let rec = buy_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(75, 0));
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+
+    #[test]
+    fn rsi_at_boundary_25_allows_sell() {
+        // RSI exactly at 25 should pass (we filter < 25, not <=)
+        let rec = sell_recommendation(Decimal::new(9, 1));
+        let mut indicators = default_indicators();
+        indicators.rsi = Some(Decimal::new(25, 0));
+        let settings = default_settings();
+        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+    }
+}

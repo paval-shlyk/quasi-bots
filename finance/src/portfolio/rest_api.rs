@@ -5,7 +5,7 @@ use serde::de::DeserializeOwned;
 
 const API_KEY_HEADER: &str = "X-MBX-APIKEY";
 
-/// Lightweight REST client for dzengi-like API used by tests.
+/// Lightweight REST client for dzengi.com API
 #[derive(Clone)]
 pub struct RestClient {
     pub base_url: String,
@@ -53,7 +53,9 @@ impl RestClient {
     /// Fetch server time from the `/time` REST endpoint.
     pub async fn time(&self) -> anyhow::Result<u64> {
         let url = format!("{}/time", self.base_url);
+
         let resp: ServerTime = self.get(&url).await?;
+
         Ok(resp.server_time)
     }
 
@@ -76,6 +78,7 @@ impl RestClient {
     pub async fn depth(&self, symbol: &str) -> anyhow::Result<OrderBook> {
         let url = format!("{}/depth", self.base_url);
         let url = format!("{}?symbol={}", url, urlencoding::encode(symbol));
+
         self.get(&url).await
     }
 

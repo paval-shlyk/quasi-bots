@@ -161,3 +161,144 @@ impl PolymarketStrategy for LlmPolymarketStrategy {
         }))
     }
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::llm::PredictionAction;
+
+    fn default_settings() -> BotSettings {
+        BotSettings::default()
+    }
+
+    fn default_order_book() -> MarketOrderBook {
+        MarketOrderBook {
+            market_id: "mkt-1".into(),
+            yes_price: Decimal::new(60, 2),  // 0.60
+            no_price: Decimal::new(40, 2),   // 0.40
+            yes_bid: Decimal::new(59, 2),
+            yes_ask: Decimal::new(61, 2),
+            no_bid: Decimal::new(39, 2),
+            no_ask: Decimal::new(41, 2),
+            volume_24h: Decimal::new(100000, 0),
+            liquidity: Decimal::new(200, 0), // well above default threshold (50)
+            timestamp: chrono::Utc::now(),
+        }
+    }
+
+    #[test]
+    fn calculate_edge_buy_yes() {
+        let ob = default_order_book();
+        // LLM confidence 0.80 vs market yes price 0.60 -> edge 0.20
+        let edge = LlmPolymarketStrategy::calculate_edge(
+            Decimal::new(80, 2),
+            &PredictionAction::BuyYes,
+            &ob,
+        );
+        assert_eq!(edge.edge, Decimal::new(20, 2));
+        assert_eq!(edge.side, PredictionSide::Yes);
+        assert_eq!(edge.market_implied_probability, Decimal::new(60, 2));
+    }
+
+    #[test]
+    fn calculate_edge_buy_no() {
+        let ob = default_order_book();
+        // LLM confidence 0.70 vs market no price 0.40 -> edge 0.30
+        let edge = LlmPolymarketStrategy::calculate_edge(
+            Decimal::new(70, 2),
+            &PredictionAction::BuyNo,
+            &ob,
+        );
+        assert_eq!(edge.edge, Decimal::new(30, 2));
+        assert_eq!(edge.side, PredictionSide::No);
+    }
+
+    #[test]
+    fn heuristics_pass_with_adequate_edge_and_liquidity() {
+        let ob = default_order_book();
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(80, 2),
+            market_implied_probability: Decimal::new(60, 2),
+            edge: Decimal::new(20, 2), // 0.20, well above min 0.05
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+
+    #[test]
+    fn heuristics_reject_small_edge() {
+        let ob = default_order_book();
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(62, 2),
+            market_implied_probability: Decimal::new(60, 2),
+            edge: Decimal::new(2, 2), // 0.02, below min 0.05
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+
+    #[test]
+    fn heuristics_reject_low_liquidity() {
+        let mut ob = default_order_book();
+        ob.liquidity = Decimal::new(10, 0); // below default threshold of 50
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(80, 2),
+            market_implied_probability: Decimal::new(60, 2),
+            edge: Decimal::new(20, 2),
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+
+    #[test]
+    fn heuristics_reject_extreme_price_low() {
+        let mut ob = default_order_book();
+        ob.yes_price = Decimal::new(3, 2); // 0.03, below 0.05
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(80, 2),
+            market_implied_probability: Decimal::new(3, 2),
+            edge: Decimal::new(77, 2),
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+
+    #[test]
+    fn heuristics_reject_extreme_price_high() {
+        let mut ob = default_order_book();
+        ob.yes_price = Decimal::new(97, 2); // 0.97, above 0.95
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(99, 2),
+            market_implied_probability: Decimal::new(97, 2),
+            edge: Decimal::new(2, 2),
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+
+    #[test]
+    fn negative_edge_still_rejected_if_too_small() {
+        let ob = default_order_book();
+        // Negative edge with abs < 0.05
+        let edge = MarketEdge {
+            market_id: "mkt-1".into(),
+            llm_probability: Decimal::new(58, 2),
+            market_implied_probability: Decimal::new(60, 2),
+            edge: Decimal::new(-2, 2), // -0.02
+            side: PredictionSide::Yes,
+        };
+        let settings = default_settings();
+        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+    }
+}

@@ -192,3 +192,208 @@ fn decimal_sqrt(val: Decimal) -> Decimal {
     }
     guess
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_trade(
+        side: &str,
+        status: &str,
+        price: &str,
+        avg_fill: &str,
+        fee: &str,
+        filled_qty: &str,
+    ) -> proto::TradeRecord {
+        proto::TradeRecord {
+            id: "t-1".into(),
+            pair: "BTC/USDC".into(),
+            side: side.into(),
+            order_type: "limit".into(),
+            quantity: filled_qty.into(),
+            price: price.into(),
+            filled_quantity: filled_qty.into(),
+            avg_fill_price: avg_fill.into(),
+            fee: fee.into(),
+            status: status.into(),
+            llm_rationale: String::new(),
+            llm_confidence: "0.8".into(),
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    fn make_prediction(resolution: &str) -> proto::PredictionRecord {
+        proto::PredictionRecord {
+            id: "p-1".into(),
+            market_id: "mkt-1".into(),
+            market_title: "Test".into(),
+            side: "yes".into(),
+            action: "buy".into(),
+            shares: "10".into(),
+            price_per_share: "0.60".into(),
+            total_cost: "6.00".into(),
+            status: "filled".into(),
+            resolution: resolution.into(),
+            llm_rationale: String::new(),
+            llm_confidence: "0.75".into(),
+            created_at: None,
+            updated_at: None,
+        }
+    }
+
+    fn default_portfolio() -> proto::Portfolio {
+        proto::Portfolio {
+            total_balance: "10000".into(),
+            available_balance: "8000".into(),
+            trading_allocated: "1500".into(),
+            polymarket_allocated: "500".into(),
+            unrealized_pnl: "50".into(),
+            realized_pnl: "200".into(),
+            base_currency: "USDC".into(),
+        }
+    }
+
+    #[test]
+    fn count_outcomes_only_counts_filled_sells() {
+        let trades = vec![
+            make_trade("sell", "filled", "100", "110", "1", "1"), // win: 110-100-1=9 > 0
+            make_trade("sell", "filled", "100", "90", "1", "1"), // loss: 90-100-1=-11 < 0
+            make_trade("buy", "filled", "100", "110", "1", "1"), // buy, ignored
+            make_trade("sell", "pending", "100", "110", "1", "1"), // not filled, ignored
+        ];
+        let (w, l) = count_trade_outcomes(&trades);
+        assert_eq!(w, 1);
+        assert_eq!(l, 1);
+    }
+
+    #[test]
+    fn count_outcomes_empty() {
+        let (w, l) = count_trade_outcomes(&[]);
+        assert_eq!(w, 0);
+        assert_eq!(l, 0);
+    }
+
+    #[test]
+    fn count_prediction_outcomes_mixed() {
+        let preds = vec![
+            make_prediction("won"),
+            make_prediction("won"),
+            make_prediction("lost"),
+            make_prediction("pending"), // unresolved, ignored
+        ];
+        let (correct, total) = count_prediction_outcomes(&preds);
+        assert_eq!(correct, 2);
+        assert_eq!(total, 3);
+    }
+
+    #[test]
+    fn max_drawdown_basic() {
+        // Three winning sells then one big loss
+        let trades = vec![
+            make_trade("sell", "filled", "100", "110", "0", "1"), // pnl +10
+            make_trade("sell", "filled", "100", "120", "0", "1"), // pnl +20 (cum=30, peak=30)
+            make_trade("sell", "filled", "100", "70", "0", "1"), // pnl -30 (cum=0, dd=30)
+        ];
+        let dd = compute_max_drawdown(&trades);
+        assert_eq!(dd, Decimal::new(30, 0));
+    }
+
+    #[test]
+    fn max_drawdown_no_trades() {
+        assert_eq!(compute_max_drawdown(&[]), Decimal::ZERO);
+    }
+
+    #[test]
+    fn sharpe_insufficient_data() {
+        let trades = vec![make_trade("sell", "filled", "100", "110", "0", "1")];
+        assert_eq!(compute_sharpe(&trades), Decimal::ZERO);
+    }
+
+    #[test]
+    fn sharpe_with_data() {
+        // Two sell trades with different returns
+        let trades = vec![
+            make_trade("sell", "filled", "100", "120", "0", "1"), // return = 20/100 = 0.2
+            make_trade("sell", "filled", "100", "110", "0", "1"), // return = 10/100 = 0.1
+            make_trade("sell", "filled", "100", "130", "0", "1"), // return = 30/100 = 0.3
+        ];
+        let s = compute_sharpe(&trades);
+        // mean = 0.2, stddev = 0.1, sharpe = 2.0
+        assert!(s > Decimal::ONE, "Sharpe should be positive, got {s}");
+    }
+
+    #[test]
+    fn compute_performance_end_to_end() {
+        let portfolio = default_portfolio();
+        let trades = vec![
+            make_trade("sell", "filled", "100", "120", "1", "1"),
+            make_trade("sell", "filled", "100", "80", "1", "1"),
+        ];
+        let predictions = vec![make_prediction("won"), make_prediction("lost")];
+
+        let report = compute_performance(
+            "worker-1",
+            "grok",
+            &portfolio,
+            &trades,
+            &predictions,
+        );
+
+        assert_eq!(report.worker_id, "worker-1");
+        assert_eq!(report.llm_provider, "grok");
+        assert_eq!(report.total_trades, 2);
+        assert_eq!(report.winning_trades, 1);
+        assert_eq!(report.losing_trades, 1);
+        // total_pnl = realized(200) + unrealized(50) = 250
+        assert_eq!(report.total_pnl, "250");
+        assert_eq!(report.realized_pnl, "200");
+        assert_eq!(report.unrealized_pnl, "50");
+        assert_eq!(report.total_predictions, 2);
+        assert_eq!(report.correct_predictions, 1);
+        assert_eq!(report.prediction_accuracy, "0.50");
+        assert_eq!(report.win_rate, "0.50");
+    }
+
+    #[test]
+    fn compute_performance_no_data() {
+        let portfolio = proto::Portfolio {
+            total_balance: "0".into(),
+            available_balance: "0".into(),
+            trading_allocated: "0".into(),
+            polymarket_allocated: "0".into(),
+            unrealized_pnl: "0".into(),
+            realized_pnl: "0".into(),
+            base_currency: "USDC".into(),
+        };
+
+        let report = compute_performance("w-2", "gemini", &portfolio, &[], &[]);
+
+        assert_eq!(report.total_trades, 0);
+        assert_eq!(report.winning_trades, 0);
+        assert_eq!(report.losing_trades, 0);
+        assert_eq!(report.total_pnl, "0");
+        assert_eq!(report.win_rate, "0");
+        assert_eq!(report.sharpe_ratio, "0");
+        assert_eq!(report.max_drawdown, "0");
+        assert_eq!(report.total_predictions, 0);
+        assert_eq!(report.prediction_accuracy, "0");
+    }
+
+    #[test]
+    fn decimal_sqrt_basic() {
+        let result = decimal_sqrt(Decimal::new(4, 0));
+        // Should be very close to 2.0
+        let diff = (result - Decimal::TWO).abs();
+        assert!(
+            diff < Decimal::new(1, 10),
+            "sqrt(4) should be ~2.0, got {result}"
+        );
+    }
+
+    #[test]
+    fn decimal_sqrt_zero_and_negative() {
+        assert_eq!(decimal_sqrt(Decimal::ZERO), Decimal::ZERO);
+        assert_eq!(decimal_sqrt(Decimal::new(-5, 0)), Decimal::ZERO);
+    }
+}

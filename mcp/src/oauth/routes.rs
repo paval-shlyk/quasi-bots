@@ -64,20 +64,16 @@ pub async fn authorize(
 ) -> impl IntoResponse {
     let store = &state.store;
 
-    let clients = store.clients.read().await;
-    let valid = clients
-        .get(&params.client_id)
-        .map(|c| c.redirect_uris.contains(&params.redirect_uri))
-        .unwrap_or(false);
-    drop(clients);
-
-    if !valid {
-        return (
-            StatusCode::BAD_REQUEST,
-            Html("<h1>Unknown client or invalid redirect_uri</h1>"),
-        )
-            .into_response();
-    }
+    match store
+        .authorize_client(&params.client_id, &params.redirect_uri)
+        .await
+    {
+        Ok(()) => {}
+        Err(e) => {
+            return (StatusCode::BAD_REQUEST, Html(format!("<h1>{e}</h1>")))
+                .into_response();
+        }
+    };
 
     let hidden = format!(
         r#"<input type="hidden" name="client_id"      value="{cid}">

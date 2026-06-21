@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 
 use tokio::sync::RwLock;
 
@@ -64,6 +64,28 @@ impl OAuthStore {
             .get(token)
             .map(|t| !t.is_expired())
             .unwrap_or(false)
+    }
+
+    pub async fn authorize_client(
+        &self,
+        client_id: &str,
+        redirect_uri: &String,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let is_valid = self
+            .clients
+            .read()
+            .await
+            .get(client_id)
+            .map(|c| c.redirect_uris.contains(redirect_uri))
+            .unwrap_or(false);
+
+        if !is_valid {
+            return Err(
+                format!("Unknown client or invalid redirect_uri").into()
+            );
+        }
+
+        Ok(())
     }
 
     /// Save client and return its ID

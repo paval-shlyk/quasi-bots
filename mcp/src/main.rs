@@ -2,8 +2,6 @@ mod config;
 mod oauth;
 mod server;
 
-use std::net::SocketAddr;
-
 use anyhow::{Context, Result};
 use axum::{Router, middleware};
 use clap::Parser;
@@ -19,10 +17,7 @@ use tracing_subscriber::{
 use crate::{config::McpServerConfig, server::HelloWorldMcpServer};
 
 #[derive(Parser)]
-#[command(
-    name = "finance-mcp",
-    about = "MCP server for DZENGI.com exchange API"
-)]
+#[command(name = "mcp", about = "Standalone hello-world MCP server")]
 struct Args {
     /// Path to the TOML configuration file.
     #[arg(short, long, default_value = "config.toml")]
@@ -30,17 +25,23 @@ struct Args {
 }
 
 fn create_routes(cfg: McpServerConfig) -> Router<()> {
+    let mut http_cfg = StreamableHttpServerConfig::default()
+        .with_allowed_hosts(cfg.allowed_hosts());
+
+    if !cfg.allowed_origins.is_empty() {
+        http_cfg = http_cfg.with_allowed_origins(cfg.allowed_origins.clone());
+    }
+
     let mcp_service = StreamableHttpService::new(
         move || Ok(HelloWorldMcpServer::new()),
         LocalSessionManager::default().into(),
-        StreamableHttpServerConfig::default(),
+        http_cfg,
     );
 
-    let oauth_state = oauth::state(cfg);
+    let oauth_state = oauth::state(cfg.clone());
 
     let oauth_router = oauth::router();
 
-    // ── Protected MCP route ───────────────────────────────────────────────────
     let mcp_router = Router::new().nest_service("/mcp", mcp_service).layer(
         middleware::from_fn_with_state(
             oauth_state.clone(),
@@ -75,15 +76,19 @@ async fn main() -> Result<()> {
     let cfg: McpServerConfig =
         toml::from_str(&raw).context("failed to parse config.toml")?;
 
-    let addr: SocketAddr = cfg
-        .addr
-        .parse()
-        .with_context(|| format!("invalid server.addr: {}", cfg.addr))?;
+    let addr = cfg
+        .socket_addr()
+        .context("invalid addr after validation")?;
 
-    info!("finance-mcp listening on {addr}");
-    info!("MCP endpoint: http://{addr}/mcp");
+    info!("mcp listening on {addr}");
+    info!("MCP endpoint: {}/mcp", cfg.resource_url());
     info!(
-        "OAuth metadata: http://{addr}/.well-known/oauth-authorization-server"
+        "Protected resource metadata: {}",
+        cfg.protected_resource_metadata_url()
+    );
+    info!(
+        "OAuth AS metadata: {}/.well-known/oauth-authorization-server",
+        cfg.issuer_url()
     );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
@@ -93,7 +98,7 @@ async fn main() -> Result<()> {
     axum::serve(listener, app)
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();
-            info!("shutting down finance-mcp");
+            info!("shutting down mcp");
         })
         .await?;
 

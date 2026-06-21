@@ -1,7 +1,6 @@
 mod config;
 mod oauth;
 mod server;
-mod tools;
 
 use std::net::SocketAddr;
 
@@ -18,8 +17,6 @@ use tracing_subscriber::{
 };
 
 use crate::{config::McpServerConfig, server::HelloWorldMcpServer};
-
-// ── CLI ───────────────────────────────────────────────────────────────────────
 
 #[derive(Parser)]
 #[command(

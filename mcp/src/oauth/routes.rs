@@ -14,7 +14,6 @@ use super::SharedOAuthState;
 
 mod authorize;
 mod request;
-mod response;
 
 pub use authorize::authorize_or_refresh_token;
 

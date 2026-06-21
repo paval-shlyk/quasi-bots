@@ -1,5 +1,17 @@
 [workspace]
-members = ["communication","crypto", "crypto-master","finance", "finance-mcp", "knowledge", "migration", "monitor", "news", "skill-master", "telemetry"]
+members = [
+	"communication",
+	"crypto",
+	"crypto-master",
+	"finance",
+	"mcp",
+	"knowledge",
+	"migration",
+	"monitor",
+	"news",
+	"skill-master",
+	"telemetry",
+]
 resolver = "3"
 
 [workspace.dependencies]

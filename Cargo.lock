@@ -2717,7 +2717,6 @@ dependencies = [
  "base64",
  "chrono",
  "clap",
- "rand 0.9.2",
  "rmcp",
  "schemars",
  "serde",
@@ -2729,6 +2728,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "url",
  "uuid",
 ]
 

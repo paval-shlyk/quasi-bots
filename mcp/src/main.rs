@@ -3,28 +3,21 @@ mod oauth;
 mod server;
 mod tools;
 
-use std::{net::SocketAddr, sync::Arc};
+use std::net::SocketAddr;
 
 use anyhow::{Context, Result};
-use axum::{
-    Router, middleware,
-    routing::{get, post},
-};
+use axum::{Router, middleware};
 use clap::Parser;
 use rmcp::transport::streamable_http_server::{
     StreamableHttpServerConfig, session::local::LocalSessionManager,
     tower::StreamableHttpService,
 };
-use tower_http::cors::{Any, CorsLayer};
 use tracing::info;
 use tracing_subscriber::{
     EnvFilter, layer::SubscriberExt, util::SubscriberInitExt,
 };
 
-use config::Config;
-use finance::portfolio::RestClient;
-use oauth::{McpOAuthStore, bearer_auth_middleware};
-use server::FinanceMcpServer;
+use crate::{config::McpServerConfig, server::HelloWorldMcpServer};
 
 // ── CLI ───────────────────────────────────────────────────────────────────────
 
@@ -39,7 +32,30 @@ struct Args {
     config: String,
 }
 
-// ── Entry point ───────────────────────────────────────────────────────────────
+fn create_routes(cfg: McpServerConfig) -> Router<()> {
+    let mcp_service = StreamableHttpService::new(
+        move || Ok(HelloWorldMcpServer::new()),
+        LocalSessionManager::default().into(),
+        StreamableHttpServerConfig::default(),
+    );
+
+    let oauth_state = oauth::state(cfg);
+
+    let oauth_router = oauth::router();
+
+    // ── Protected MCP route ───────────────────────────────────────────────────
+    let mcp_router = Router::new().nest_service("/mcp", mcp_service).layer(
+        middleware::from_fn_with_state(
+            oauth_state.clone(),
+            oauth::bearer_auth_middleware,
+        ),
+    );
+
+    Router::new()
+        .merge(oauth_router)
+        .merge(mcp_router)
+        .with_state(oauth_state.clone())
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -59,65 +75,15 @@ async fn main() -> Result<()> {
                 format!("failed to read config file: {}", args.config)
             })?;
 
-    let cfg: Config =
+    let cfg: McpServerConfig =
         toml::from_str(&raw).context("failed to parse config.toml")?;
 
-    let addr: SocketAddr =
-        cfg.server.addr.parse().with_context(|| {
-            format!("invalid server.addr: {}", cfg.server.addr)
-        })?;
-
-    // ── Build stateless REST client ───────────────────────────────────────────
-    let api = Arc::new(RestClient::new(
-        &cfg.provider.base_url,
-        &cfg.provider.api_key,
-        &cfg.provider.api_secret,
-    ));
-
-    // ── Build OAuth store ─────────────────────────────────────────────────────
-    let oauth_store = Arc::new(McpOAuthStore::new(cfg.server.clone()));
+    let addr: SocketAddr = cfg
+        .addr
+        .parse()
+        .with_context(|| format!("invalid server.addr: {}", cfg.addr))?;
 
     // ── Build MCP Streamable HTTP service ─────────────────────────────────────
-    let mcp_service: StreamableHttpService<
-        FinanceMcpServer,
-        LocalSessionManager,
-    > = StreamableHttpService::new(
-        {
-            let api = api.clone();
-            move || Ok(FinanceMcpServer::new(api.clone()))
-        },
-        LocalSessionManager::default().into(),
-        StreamableHttpServerConfig::default(),
-    );
-
-    // ── CORS — required so browser-based OAuth callbacks work ─────────────────
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
-
-    // ── OAuth public routes (no auth needed) ──────────────────────────────────
-    let oauth_router = Router::new()
-        .route(
-            "/.well-known/oauth-authorization-server",
-            get(oauth::oauth_metadata),
-        )
-        .route("/oauth/register", post(oauth::oauth_register))
-        .route("/oauth/authorize", get(oauth::oauth_authorize))
-        .route("/oauth/approve", post(oauth::oauth_approve))
-        .route("/oauth/token", post(oauth::oauth_token))
-        .layer(cors)
-        .with_state(oauth_store.clone());
-
-    // ── Protected MCP route ───────────────────────────────────────────────────
-    let mcp_router = Router::new().nest_service("/mcp", mcp_service).layer(
-        middleware::from_fn_with_state(
-            oauth_store.clone(),
-            bearer_auth_middleware,
-        ),
-    );
-
-    let app = Router::new().merge(oauth_router).merge(mcp_router);
 
     info!("finance-mcp listening on {addr}");
     info!("MCP endpoint: http://{addr}/mcp");
@@ -126,6 +92,9 @@ async fn main() -> Result<()> {
     );
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
+
+    let app = create_routes(cfg);
+
     axum::serve(listener, app)
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c().await.ok();

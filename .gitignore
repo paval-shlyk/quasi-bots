@@ -1,5 +1,8 @@
 /target
 
+# MCP server secrets (copy from mcp/config.toml.example)
+mcp/config.toml
+
 # Database files
 *.db
 *.sqlite

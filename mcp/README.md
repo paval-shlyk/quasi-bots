@@ -15,7 +15,11 @@ Standalone hello-world MCP server on **Streamable HTTP** with **OAuth 2.1** auth
 
 ## Configuration
 
-Edit `config.toml` before starting:
+Copy and edit local config before starting:
+
+```bash
+cp mcp/config.toml.example mcp/config.toml
+```
 
 ```toml
 addr = "0.0.0.0:9191"

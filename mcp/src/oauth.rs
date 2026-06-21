@@ -19,20 +19,12 @@ use axum::{
     response::Response,
     routing::{get, post},
 };
-use rand::Rng;
-
 use crate::config::McpServerConfig;
 
+mod metadata;
 mod routes;
 mod store;
-
-fn random_string(len: usize) -> String {
-    rand::rng()
-        .sample_iter(rand::distr::Alphanumeric)
-        .take(len)
-        .map(char::from)
-        .collect()
-}
+mod token;
 
 pub struct OAuthState {
     pub store: store::OAuthStore,
@@ -57,6 +49,14 @@ pub fn router() -> Router<SharedOAuthState> {
         .allow_headers(Any);
 
     Router::new()
+        .route(
+            "/.well-known/oauth-protected-resource",
+            get(routes::protected_resource_metadata),
+        )
+        .route(
+            "/.well-known/oauth-protected-resource/mcp",
+            get(routes::protected_resource_metadata),
+        )
         .route(
             "/.well-known/oauth-authorization-server",
             get(routes::metadata),
@@ -85,15 +85,17 @@ pub async fn bearer_auth_middleware(
     match token {
         Some(t) if store.validate_token(&t).await => next.run(request).await,
         _ => {
-            let mut resp = Response::new(Body::from(
-                r#"{"error":"unauthorized","error_description":"valid Bearer token required"}"#,
-            ));
+            let challenge = metadata::www_authenticate_challenge(&state.config);
+            let body = serde_json::json!({
+                "error": "invalid_token",
+                "error_description": "valid Bearer token required"
+            });
+            let mut resp = Response::new(Body::from(body.to_string()));
             *resp.status_mut() = StatusCode::UNAUTHORIZED;
             resp.headers_mut().insert(
                 axum::http::header::WWW_AUTHENTICATE,
-                axum::http::HeaderValue::from_static(
-                    r#"Bearer realm="finance-mcp""#,
-                ),
+                axum::http::HeaderValue::from_str(&challenge)
+                    .unwrap_or_else(|_| axum::http::HeaderValue::from_static("Bearer")),
             );
             resp.headers_mut().insert(
                 axum::http::header::CONTENT_TYPE,

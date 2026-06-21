@@ -4,11 +4,8 @@ use axum::{
     http::StatusCode,
     response::{Html, IntoResponse, Redirect},
 };
-use rmcp::transport::auth::{
-    AuthorizationMetadata, ClientRegistrationResponse,
-};
 
-use crate::oauth::random_string;
+use crate::oauth::metadata::{self, ProtectedResourceMetadata};
 
 use super::SharedOAuthState;
 
@@ -25,6 +22,14 @@ fn he(s: &str) -> String {
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
+}
+
+// RFC 9728
+pub async fn protected_resource_metadata(
+    State(state): State<SharedOAuthState>,
+) -> impl IntoResponse {
+    let meta = ProtectedResourceMetadata::from_config(&state.config);
+    (StatusCode::OK, Json(meta))
 }
 
 pub async fn register(
@@ -44,15 +49,20 @@ pub async fn register(
             .into_response();
     }
 
-    let client_secret = random_string(32);
     let client_id = store
         .save_client(req.client_name.clone(), req.redirect_uris.clone())
         .await;
 
-    let mut resp =
-        ClientRegistrationResponse::new(client_id, req.redirect_uris);
-    resp.client_secret = Some(client_secret);
-    resp.client_name = req.client_name;
+    let mut resp = serde_json::json!({
+        "client_id": client_id,
+        "redirect_uris": req.redirect_uris,
+        "token_endpoint_auth_method": "none",
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+    });
+    if let Some(name) = req.client_name {
+        resp["client_name"] = serde_json::Value::String(name);
+    }
 
     (StatusCode::CREATED, Json(resp)).into_response()
 }
@@ -62,6 +72,21 @@ pub async fn authorize(
     State(state): State<SharedOAuthState>,
 ) -> impl IntoResponse {
     let store = &state.store;
+    let config = &state.config;
+
+    if let Err(msg) = validate_pkce(&params.code_challenge, &params.code_challenge_method) {
+        return (StatusCode::BAD_REQUEST, Html(format!("<h1>{msg}</h1>"))).into_response();
+    }
+
+    if let Some(resource) = params.resource.as_deref() {
+        if !metadata::resource_matches(config, resource) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Html("<h1>Invalid resource parameter</h1>".to_string()),
+            )
+                .into_response();
+        }
+    }
 
     match store
         .authorize_client(&params.client_id, &params.redirect_uri)
@@ -79,12 +104,14 @@ pub async fn authorize(
            <input type="hidden" name="redirect_uri"   value="{ruri}">
            <input type="hidden" name="scope"          value="{scope}">
            <input type="hidden" name="state"          value="{state}">
-           <input type="hidden" name="code_challenge" value="{cc}">"#,
+           <input type="hidden" name="code_challenge" value="{cc}">
+           <input type="hidden" name="resource"       value="{resource}">"#,
         cid = he(&params.client_id),
         ruri = he(&params.redirect_uri),
-        scope = he(&params.scope.unwrap_or_default()),
+        scope = he(&params.scope.as_deref().unwrap_or(&config.scope)),
         state = he(&params.state.unwrap_or_default()),
-        cc = he(&params.code_challenge.unwrap_or_default()),
+        cc = he(params.code_challenge.as_deref().unwrap_or_default()),
+        resource = he(params.resource.as_deref().unwrap_or(&config.resource_url())),
     );
 
     Html(
@@ -99,19 +126,7 @@ pub async fn authorize(
 pub async fn metadata(
     State(state): State<SharedOAuthState>,
 ) -> impl IntoResponse {
-    let config = &state.config;
-
-    let base = format!("http://{}", config.addr);
-    let mut meta = AuthorizationMetadata::default();
-
-    meta.authorization_endpoint = format!("{base}/oauth/authorize");
-    meta.token_endpoint = format!("{base}/oauth/token");
-    meta.registration_endpoint = Some(format!("{base}/oauth/register"));
-    meta.scopes_supported = Some(vec!["mcp".into()]);
-    meta.response_types_supported = Some(vec!["code".into()]);
-    meta.code_challenge_methods_supported = Some(vec!["S256".into()]);
-    meta.issuer = Some(base);
-
+    let meta = metadata::authorization_metadata(&state.config);
     (StatusCode::OK, Json(meta))
 }
 
@@ -124,8 +139,6 @@ pub async fn approve(
     let store = &state.store;
 
     if form.username != config.username || form.password != config.password {
-        // Re-render login page with an error banner — hidden fields are gone
-        // (client must restart the flow), so we return 401.
         return (
             StatusCode::UNAUTHORIZED,
             Html(LOGIN_HTML.replace("{{HIDDEN_FIELDS}}", "").replace(
@@ -145,4 +158,18 @@ pub async fn approve(
     }
 
     Redirect::to(&url).into_response()
+}
+
+fn validate_pkce(
+    code_challenge: &Option<String>,
+    code_challenge_method: &Option<String>,
+) -> Result<(), &'static str> {
+    let challenge = code_challenge.as_deref().filter(|s| !s.is_empty());
+    match challenge {
+        None => Err("PKCE code_challenge is required"),
+        Some(_) if code_challenge_method.as_deref() != Some("S256") => {
+            Err("PKCE code_challenge_method must be S256")
+        }
+        Some(_) => Ok(()),
+    }
 }

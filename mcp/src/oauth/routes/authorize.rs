@@ -8,7 +8,7 @@ use axum::{
 
 use crate::{
     config::McpServerConfig,
-    oauth::{SharedOAuthState, store::OAuthStore},
+    oauth::{SharedOAuthState, metadata, store::OAuthStore},
 };
 
 #[derive(Debug, serde::Deserialize)]
@@ -22,6 +22,9 @@ pub struct Token {
     pub code_verifier: Option<String>,
     #[serde(default)]
     pub refresh_token: String,
+    /// RFC 8707 resource indicator.
+    #[serde(default)]
+    pub resource: Option<String>,
 }
 
 //  POST /oauth/token
@@ -61,9 +64,9 @@ pub async fn authorize_or_refresh_token(
 
     match token_req.grant_type.as_str() {
         "authorization_code" => {
-            handle_auth_code(store, token_req, &config).await
+            handle_auth_code(store, token_req, config).await
         }
-        "refresh_token" => handle_refresh(store, token_req, &config).await,
+        "refresh_token" => handle_refresh(store, token_req, config).await,
         _ => (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({"error":"unsupported_grant_type"})),
@@ -77,6 +80,19 @@ async fn handle_auth_code(
     req: Token,
     config: &McpServerConfig,
 ) -> Response {
+    if let Some(resource) = req.resource.as_deref() {
+        if !metadata::resource_matches(config, resource) {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "invalid_target",
+                    "error_description": "resource parameter mismatch"
+                })),
+            )
+                .into_response();
+        }
+    }
+
     let session = store.sessions.write().await.remove(&req.code);
     let session = match session {
         Some(s) => s,
@@ -103,28 +119,16 @@ async fn handle_auth_code(
             .into_response();
     }
 
-    // PKCE S256 verification.
-    if let Some(challenge) =
-        session.code_challenge.as_deref().filter(|s| !s.is_empty())
-    {
-        match req.code_verifier.as_deref() {
-            Some(verifier) if pkce_s256_matches(verifier, challenge) => {}
-            Some(_) => {
+    if let Some(resource) = req.resource.as_deref() {
+        if let Some(session_resource) = session.resource.as_deref() {
+            if !metadata::resource_matches(config, session_resource)
+                || normalize(resource) != normalize(session_resource)
+            {
                 return (
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({
                         "error": "invalid_grant",
-                        "error_description": "code_verifier mismatch"
-                    })),
-                )
-                    .into_response();
-            }
-            None => {
-                return (
-                    StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({
-                        "error": "invalid_grant",
-                        "error_description": "code_verifier required"
+                        "error_description": "resource parameter mismatch with authorization session"
                     })),
                 )
                     .into_response();
@@ -132,7 +136,55 @@ async fn handle_auth_code(
         }
     }
 
-    let token = store.issue_token(config.token_ttl(), session.scope).await;
+    let challenge = match session
+        .code_challenge
+        .as_deref()
+        .filter(|s| !s.is_empty())
+    {
+        Some(c) => c,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "invalid_grant",
+                    "error_description": "PKCE code_challenge missing from session"
+                })),
+            )
+                .into_response();
+        }
+    };
+
+    match req.code_verifier.as_deref() {
+        Some(verifier) if pkce_s256_matches(verifier, challenge) => {}
+        Some(_) => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "invalid_grant",
+                    "error_description": "code_verifier mismatch"
+                })),
+            )
+                .into_response();
+        }
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "invalid_grant",
+                    "error_description": "code_verifier required"
+                })),
+            )
+                .into_response();
+        }
+    }
+
+    let token = store
+        .issue_token(
+            config.token_ttl(),
+            session.scope,
+            Some(config.issuer_url()),
+        )
+        .await;
 
     (StatusCode::OK, Json(token)).into_response()
 }
@@ -165,11 +217,21 @@ async fn handle_refresh(
         )
             .into_response(),
         Some(prev) => {
-            let token = store.issue_token(config.token_ttl(), prev.scope).await;
+            let token = store
+                .issue_token(
+                    config.token_ttl(),
+                    prev.scope,
+                    Some(config.issuer_url()),
+                )
+                .await;
 
             (StatusCode::OK, Json(token)).into_response()
         }
     }
+}
+
+fn normalize(uri: &str) -> String {
+    uri.trim_end_matches('/').to_lowercase()
 }
 
 /// Returns true when SHA-256(verifier) base64url-no-pad == challenge.

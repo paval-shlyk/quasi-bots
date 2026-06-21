@@ -15,8 +15,9 @@ pub struct AuthorizeQuery {
     pub scope: Option<String>,
     pub state: Option<String>,
     pub code_challenge: Option<String>,
-    #[allow(dead_code)]
     pub code_challenge_method: Option<String>,
+    /// RFC 8707 resource indicator — canonical MCP server URI.
+    pub resource: Option<String>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize)]
@@ -29,6 +30,8 @@ pub struct ApprovalForm {
     pub state: Option<String>,
     #[serde(default)]
     pub code_challenge: Option<String>,
+    #[serde(default)]
+    pub resource: Option<String>,
     pub username: String,
     pub password: String,
 }
@@ -40,6 +43,7 @@ impl From<ApprovalForm> for crate::oauth::store::AuthSession {
             state: value.state,
             scope: value.scope,
             redirect_uri: value.redirect_uri,
+            resource: value.resource,
         }
     }
 }

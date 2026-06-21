@@ -1,6 +1,8 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use tokio::sync::RwLock;
+
+use super::token::{StoredToken, TokenResponse, new_stored_token};
 
 #[derive(Clone, Debug)]
 pub struct AuthSession {
@@ -8,30 +10,7 @@ pub struct AuthSession {
     pub scope: Option<String>,
     pub state: Option<String>,
     pub code_challenge: Option<String>,
-}
-
-#[derive(Clone, Debug, serde::Serialize)]
-pub struct AccessToken {
-    pub exp: chrono::DateTime<chrono::Utc>,
-    #[serde(skip)]
-    pub iat: chrono::DateTime<chrono::Utc>,
-
-    pub access_token: String,
-    pub token_type: String,
-    pub refresh_token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub scope: Option<String>,
-    #[serde(skip)]
-    pub ttl_secs: u64,
-}
-
-impl AccessToken {
-    fn is_expired(&self) -> bool {
-        chrono::Utc::now()
-            .signed_duration_since(self.iat)
-            .num_seconds()
-            >= self.ttl_secs as i64
-    }
+    pub resource: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -46,7 +25,7 @@ pub struct OAuthStore {
     /// auth_code → session (consumed on first use)
     pub sessions: Arc<RwLock<HashMap<String, AuthSession>>>,
     /// access_token → record
-    pub tokens: Arc<RwLock<HashMap<String, AccessToken>>>,
+    pub tokens: Arc<RwLock<HashMap<String, StoredToken>>>,
 }
 
 impl OAuthStore {
@@ -57,6 +36,7 @@ impl OAuthStore {
             tokens: Arc::new(RwLock::new(HashMap::new())),
         }
     }
+
     pub async fn validate_token(&self, token: &str) -> bool {
         self.tokens
             .read()
@@ -118,30 +98,21 @@ impl OAuthStore {
         code
     }
 
+    /// Issue a new token pair and return the RFC 6749 wire response.
+    ///
+    /// Refresh rotation: each call generates a new access and refresh token.
     pub async fn issue_token(
         &self,
         ttl: Duration,
         scope: Option<String>,
-    ) -> AccessToken {
-        let token = format!("mcp-{}", uuid::Uuid::new_v4());
-
-        let iat = chrono::Utc::now();
-        let exp = iat + ttl;
-
-        let record = AccessToken {
-            access_token: token.clone(),
-            token_type: "Bearer".to_string(),
-
-            exp,
-            iat,
-
-            refresh_token: format!("refresh-{}", uuid::Uuid::new_v4()),
-            scope,
-            ttl_secs: ttl.as_secs(),
-        };
-
-        self.tokens.write().await.insert(token, record.clone());
-
-        record
+        issuer: Option<String>,
+    ) -> TokenResponse {
+        let record = new_stored_token(ttl, scope, issuer);
+        let response = record.to_response();
+        self.tokens
+            .write()
+            .await
+            .insert(record.access_token.clone(), record);
+        response
     }
 }

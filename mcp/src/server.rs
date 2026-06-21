@@ -1,19 +1,19 @@
 use rmcp::{
     ErrorData as McpError, RoleServer, ServerHandler,
-    handler::server::router::{
-        prompt::PromptRouter,
-        tool::ToolRouter,
-    },
+    handler::server::router::{prompt::PromptRouter, tool::ToolRouter},
     model::{
         AnnotateAble, CompleteRequestParams, CompleteResult, CompletionInfo,
-        GetPromptRequestParams, GetPromptResult, Implementation, ListPromptsResult,
-        ListResourcesResult, LoggingMessageNotificationParam, PaginatedRequestParams,
-        PromptMessage, PromptMessageRole, ProtocolVersion, RawResource,
-        ReadResourceRequestParams, ReadResourceResult, Reference, ResourceContents,
-        ServerCapabilities, ServerInfo, SetLevelRequestParams,
+        GetPromptRequestParams, GetPromptResult, Implementation,
+        ListPromptsResult, ListResourcesResult,
+        LoggingMessageNotificationParam, PaginatedRequestParams, PromptMessage,
+        PromptMessageRole, ProtocolVersion, RawResource,
+        ReadResourceRequestParams, ReadResourceResult, Reference,
+        ResourceContents, ServerCapabilities, ServerInfo,
+        SetLevelRequestParams,
     },
-    prompt, prompt_handler, prompt_router, service::RequestContext, tool,
-    tool_handler, tool_router,
+    prompt, prompt_handler, prompt_router,
+    service::RequestContext,
+    tool, tool_handler, tool_router,
 };
 
 const SERVER_INFO_URI: &str = "mcp://hello-world/server-info";
@@ -33,9 +33,9 @@ impl HelloWorldMcpServer {
         }
     }
 
-    #[tool(description = "Get MCP server name")]
-    async fn get_name(&self) -> String {
-        "hello-world-mcp".to_string()
+    #[tool(description = "Get random value")]
+    async fn generate_random_value(&self) -> String {
+        42.to_string()
     }
 }
 
@@ -82,11 +82,13 @@ impl ServerHandler for HelloWorldMcpServer {
         _context: RequestContext<RoleServer>,
     ) -> Result<ListResourcesResult, McpError> {
         Ok(ListResourcesResult {
-            resources: vec![RawResource::new(SERVER_INFO_URI, "server-info")
-                .with_title("Server Info")
-                .with_description("Static hello-world server metadata")
-                .with_mime_type("application/json")
-                .no_annotation()],
+            resources: vec![
+                RawResource::new(SERVER_INFO_URI, "server-info")
+                    .with_title("Server Info")
+                    .with_description("Static hello-world server metadata")
+                    .with_mime_type("application/json")
+                    .no_annotation(),
+            ],
             next_cursor: None,
             meta: None,
         })
@@ -104,11 +106,13 @@ impl ServerHandler for HelloWorldMcpServer {
             ));
         }
 
-        Ok(ReadResourceResult::new(vec![ResourceContents::text(
-            SERVER_INFO_URI,
-            r#"{"name":"hello-world-mcp","status":"ok"}"#,
-        )
-        .with_mime_type("application/json")]))
+        Ok(ReadResourceResult::new(vec![
+            ResourceContents::text(
+                SERVER_INFO_URI,
+                r#"{"name":"hello-world-mcp","status":"ok"}"#,
+            )
+            .with_mime_type("application/json"),
+        ]))
     }
 
     async fn set_level(
@@ -137,7 +141,8 @@ impl ServerHandler for HelloWorldMcpServer {
     ) -> Result<CompleteResult, McpError> {
         let suggestions = match &request.r#ref {
             Reference::Prompt(prompt)
-                if prompt.name == "hello" && request.argument.name == "tone" =>
+                if prompt.name == "hello"
+                    && request.argument.name == "tone" =>
             {
                 vec!["friendly".into(), "formal".into(), "playful".into()]
             }
@@ -149,10 +154,10 @@ impl ServerHandler for HelloWorldMcpServer {
             .filter(|s: &String| s.starts_with(&request.argument.value))
             .collect();
 
-        let completion = CompletionInfo::new(values).map_err(|e| {
-            McpError::internal_error(e, None)
-        })?;
+        let completion = CompletionInfo::new(values)
+            .map_err(|e| McpError::internal_error(e, None))?;
 
         Ok(CompleteResult::new(completion))
     }
 }
+

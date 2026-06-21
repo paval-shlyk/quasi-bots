@@ -9,6 +9,7 @@ use rmcp::transport::streamable_http_server::{
     StreamableHttpServerConfig, session::local::LocalSessionManager,
     tower::StreamableHttpService,
 };
+use tokio_util::sync::CancellationToken;
 use tracing::info;
 use tracing_subscriber::{
     EnvFilter, layer::SubscriberExt, util::SubscriberInitExt,
@@ -24,9 +25,14 @@ struct Args {
     config: String,
 }
 
-fn create_routes(cfg: McpServerConfig) -> Router<()> {
+fn create_routes(cfg: McpServerConfig) -> (Router<()>, CancellationToken) {
+    let cancel = CancellationToken::new();
+
     let mut http_cfg = StreamableHttpServerConfig::default()
-        .with_allowed_hosts(cfg.allowed_hosts());
+        .with_allowed_hosts(cfg.allowed_hosts())
+        .with_cancellation_token(cancel.clone())
+        .with_stateful_mode(cfg.stateful_mode)
+        .with_json_response(cfg.json_response);
 
     if !cfg.allowed_origins.is_empty() {
         http_cfg = http_cfg.with_allowed_origins(cfg.allowed_origins.clone());
@@ -49,10 +55,41 @@ fn create_routes(cfg: McpServerConfig) -> Router<()> {
         ),
     );
 
-    Router::new()
+    let router = Router::new()
         .merge(oauth_router)
         .merge(mcp_router)
-        .with_state(oauth_state.clone())
+        .with_state(oauth_state);
+
+    (router, cancel)
+}
+
+async fn shutdown_signal(cancel: CancellationToken) {
+    let ctrl_c = async {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to listen for Ctrl+C");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(
+            tokio::signal::unix::SignalKind::terminate(),
+        )
+        .expect("failed to listen for SIGTERM")
+        .recv()
+        .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {}
+        _ = terminate => {}
+    }
+
+    info!("shutting down mcp");
+    cancel.cancel();
 }
 
 #[tokio::main]
@@ -76,12 +113,14 @@ async fn main() -> Result<()> {
     let cfg: McpServerConfig =
         toml::from_str(&raw).context("failed to parse config.toml")?;
 
-    let addr = cfg
-        .socket_addr()
-        .context("invalid addr after validation")?;
+    let addr = cfg.socket_addr().context("invalid addr after validation")?;
 
     info!("mcp listening on {addr}");
-    info!("MCP endpoint: {}/mcp", cfg.resource_url());
+    info!("MCP endpoint: {}", cfg.resource_url());
+    info!(
+        "streamable http: stateful_mode={}, json_response={}",
+        cfg.stateful_mode, cfg.json_response
+    );
     info!(
         "Protected resource metadata: {}",
         cfg.protected_resource_metadata_url()
@@ -93,14 +132,12 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    let app = create_routes(cfg);
+    let (app, cancel) = create_routes(cfg);
 
     axum::serve(listener, app)
-        .with_graceful_shutdown(async {
-            tokio::signal::ctrl_c().await.ok();
-            info!("shutting down mcp");
-        })
+        .with_graceful_shutdown(shutdown_signal(cancel))
         .await?;
 
     Ok(())
 }
+

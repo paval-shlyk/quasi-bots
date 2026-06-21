@@ -2,6 +2,9 @@ addr = "0.0.0.0:9191"
 public_url = "http://127.0.0.1:9191"
 username = "Paval"
 password = "1234"
-token_ttl_secs = 120
+token_ttl_secs = 3600
 scope = "mcp"
 allowed_origins = []
+stateful_mode = false
+json_response = true
+

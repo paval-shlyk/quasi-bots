@@ -38,6 +38,12 @@ pub struct McpServerConfig {
         deserialize_with = "validate::deserialize_allowed_origins"
     )]
     pub allowed_origins: Vec<String>,
+    /// Streamable HTTP session mode. `false` allows stateless per-request tool calls.
+    #[serde(default = "validate::default_stateful_mode")]
+    pub stateful_mode: bool,
+    /// Return `application/json` directly instead of SSE (only when `stateful_mode = false`).
+    #[serde(default = "validate::default_json_response")]
+    pub json_response: bool,
 }
 
 impl McpServerConfig {
@@ -91,3 +97,4 @@ impl McpServerConfig {
         hosts
     }
 }
+

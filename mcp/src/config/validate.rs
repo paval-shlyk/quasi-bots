@@ -205,6 +205,14 @@ pub fn default_scope() -> String {
     "mcp".into()
 }
 
+pub fn default_stateful_mode() -> bool {
+    false
+}
+
+pub fn default_json_response() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

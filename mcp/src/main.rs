@@ -80,8 +80,6 @@ async fn main() -> Result<()> {
         .parse()
         .with_context(|| format!("invalid server.addr: {}", cfg.addr))?;
 
-    // ── Build MCP Streamable HTTP service ─────────────────────────────────────
-
     info!("finance-mcp listening on {addr}");
     info!("MCP endpoint: http://{addr}/mcp");
     info!(

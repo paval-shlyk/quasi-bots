@@ -24,11 +24,4 @@ impl HelloWorldMcpServer {
     }
 }
 #[tool_handler(router = self.tool_router)]
-impl ServerHandler for HelloWorldMcpServer {
-    fn get_info(&self) -> ServerInfo {
-        ServerInfo::default().with_server_info(Implementation::new(
-            "hello-world-mcp",
-            env!("CARGO_PKG_VERSION"),
-        ))
-    }
-}
+impl ServerHandler for HelloWorldMcpServer {}

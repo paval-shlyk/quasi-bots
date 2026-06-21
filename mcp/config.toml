@@ -1,0 +1,4 @@
+addr = "0.0.0.0:9191"
+username = "Paval"
+password = "1234"
+token_ttl_secs = 120

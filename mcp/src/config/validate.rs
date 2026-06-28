@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use serde::{Deserialize, Deserializer, de::Error as DeError};
 use url::Url;
 
+// one day
 const MAX_TOKEN_TTL_SECS: u64 = 86_400;
 
 /// Validate and normalize a bind address string.
@@ -26,7 +27,11 @@ pub fn validate_public_url(value: &str) -> Result<String, String> {
 
     match url.scheme() {
         "http" | "https" => {}
-        scheme => return Err(format!("public_url scheme must be http or https, got {scheme}")),
+        scheme => {
+            return Err(format!(
+                "public_url scheme must be http or https, got {scheme}"
+            ));
+        }
     }
 
     if url.host().is_none() {
@@ -60,21 +65,31 @@ pub fn validate_public_url(value: &str) -> Result<String, String> {
     Ok(normalized)
 }
 
-/// Validate a non-empty username (trimmed).
-pub fn validate_username(value: &str) -> Result<String, String> {
+/// Validate Google OAuth client ID (trimmed, non-empty).
+pub fn validate_google_client_id(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err("username must not be empty".into());
+        return Err("auth.google.client_id must not be empty".into());
     }
     Ok(trimmed.to_string())
 }
 
-/// Validate a non-empty password (not trimmed — spaces may be intentional).
-pub fn validate_password(value: &str) -> Result<String, String> {
-    if value.is_empty() {
-        return Err("password must not be empty".into());
+/// Validate allowlisted Google `sub` values.
+pub fn validate_allowed_google_subs(
+    values: Vec<String>,
+) -> Result<Vec<String>, String> {
+    let mut subs = Vec::new();
+    for value in values {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err(
+                "auth.google.allowed_google_subs must not contain empty values"
+                    .into(),
+            );
+        }
+        subs.push(trimmed.to_string());
     }
-    Ok(value.to_string())
+    Ok(subs)
 }
 
 /// Validate access-token TTL in seconds.
@@ -118,11 +133,16 @@ pub fn validate_origin(value: &str) -> Result<String, String> {
         return Err("origin must not be empty".into());
     }
 
-    let url = Url::parse(trimmed).map_err(|e| format!("invalid origin URL: {e}"))?;
+    let url =
+        Url::parse(trimmed).map_err(|e| format!("invalid origin URL: {e}"))?;
 
     match url.scheme() {
         "http" | "https" => {}
-        scheme => return Err(format!("origin scheme must be http or https, got {scheme}")),
+        scheme => {
+            return Err(format!(
+                "origin scheme must be http or https, got {scheme}"
+            ));
+        }
     }
 
     if url.host().is_none() {
@@ -144,7 +164,9 @@ where
     validate_addr(&value).map_err(D::Error::custom)
 }
 
-pub fn deserialize_public_url<'de, D>(deserializer: D) -> Result<String, D::Error>
+pub fn deserialize_public_url<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -152,23 +174,29 @@ where
     validate_public_url(&value).map_err(D::Error::custom)
 }
 
-pub fn deserialize_username<'de, D>(deserializer: D) -> Result<String, D::Error>
+pub fn deserialize_google_client_id<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
     let value = String::deserialize(deserializer)?;
-    validate_username(&value).map_err(D::Error::custom)
+    validate_google_client_id(&value).map_err(D::Error::custom)
 }
 
-pub fn deserialize_password<'de, D>(deserializer: D) -> Result<String, D::Error>
+pub fn deserialize_allowed_google_subs<'de, D>(
+    deserializer: D,
+) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let value = String::deserialize(deserializer)?;
-    validate_password(&value).map_err(D::Error::custom)
+    let values = Vec::<String>::deserialize(deserializer)?;
+    validate_allowed_google_subs(values).map_err(D::Error::custom)
 }
 
-pub fn deserialize_token_ttl_secs<'de, D>(deserializer: D) -> Result<u64, D::Error>
+pub fn deserialize_token_ttl_secs<'de, D>(
+    deserializer: D,
+) -> Result<u64, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -217,18 +245,22 @@ pub fn default_json_response() -> bool {
 mod tests {
     use super::*;
 
-    fn parse_config(toml: &str) -> Result<crate::config::McpServerConfig, toml::de::Error> {
+    fn parse_config(
+        toml: &str,
+    ) -> Result<crate::config::McpServerConfig, toml::de::Error> {
         toml::from_str(toml)
     }
 
     const VALID: &str = r#"
 addr = "0.0.0.0:9191"
 public_url = "http://127.0.0.1:9191"
-username = "Paval"
-password = "1234"
 token_ttl_secs = 120
 scope = "mcp"
 allowed_origins = []
+
+[auth.google]
+client_id = "123.apps.googleusercontent.com"
+allowed_google_subs = []
 "#;
 
     #[test]
@@ -245,26 +277,30 @@ allowed_origins = []
 
     #[test]
     fn rejects_public_url_with_path() {
-        let err = parse_config(&VALID.replace(
-            "http://127.0.0.1:9191",
-            "http://127.0.0.1:9191/mcp",
-        ))
+        let err = parse_config(
+            &VALID
+                .replace("http://127.0.0.1:9191", "http://127.0.0.1:9191/mcp"),
+        )
         .expect_err("path in public_url");
         assert!(err.to_string().contains("public_url"));
     }
 
     #[test]
-    fn rejects_empty_username() {
-        let err = parse_config(&VALID.replace("username = \"Paval\"", "username = \"   \""))
-            .expect_err("empty username");
-        assert!(err.to_string().contains("username"));
+    fn rejects_empty_google_client_id() {
+        let err = parse_config(&VALID.replace(
+            "client_id = \"123.apps.googleusercontent.com\"",
+            "client_id = \"   \"",
+        ))
+        .expect_err("empty client_id");
+        assert!(err.to_string().contains("client_id"));
     }
 
     #[test]
     fn rejects_zero_token_ttl() {
-        let err =
-            parse_config(&VALID.replace("token_ttl_secs = 120", "token_ttl_secs = 0"))
-                .expect_err("zero ttl");
+        let err = parse_config(
+            &VALID.replace("token_ttl_secs = 120", "token_ttl_secs = 0"),
+        )
+        .expect_err("zero ttl");
         assert!(err.to_string().contains("token_ttl_secs"));
     }
 

@@ -1,8 +1,10 @@
+#![cfg(unix)]
+
 mod config;
 mod oauth;
 mod server;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
 use axum::{Router, middleware};
 use clap::Parser;
 use rmcp::transport::streamable_http_server::{
@@ -63,37 +65,36 @@ fn create_routes(cfg: McpServerConfig) -> (Router<()>, CancellationToken) {
     (router, cancel)
 }
 
-async fn shutdown_signal(cancel: CancellationToken) {
-    let ctrl_c = async {
-        tokio::signal::ctrl_c()
-            .await
-            .expect("failed to listen for Ctrl+C");
+async fn shutdown_signal(
+    cancel: CancellationToken,
+) -> std::io::Result<impl Future<Output = ()>> {
+    use tokio::signal::unix::{SignalKind, signal};
+
+    let mut sig_term = signal(SignalKind::terminate())?;
+    let mut sig_int = signal(SignalKind::interrupt())?;
+    let mut sig_quit = signal(SignalKind::quit())?;
+
+    let signal = async move {
+        tokio::select! {
+            _ = sig_term.recv() => {
+                info!("SIGTERM caught. Exiting");
+            }
+            _ = sig_int.recv() => {
+                info!("SIGINT caught. Exiting");
+            }
+            _ = sig_quit.recv() => {
+                info!("SIGQUIT caught. Exiting");
+            }
+        }
+
+        cancel.cancel();
     };
 
-    #[cfg(unix)]
-    let terminate = async {
-        tokio::signal::unix::signal(
-            tokio::signal::unix::SignalKind::terminate(),
-        )
-        .expect("failed to listen for SIGTERM")
-        .recv()
-        .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {}
-        _ = terminate => {}
-    }
-
-    info!("shutting down mcp");
-    cancel.cancel();
+    Ok(signal)
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(
             EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
@@ -132,10 +133,12 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    let (app, cancel) = create_routes(cfg);
+    let (app, cancel) = create_routes(cfg).await?;
+
+    let signal = shutdown_signal(cancel).await?;
 
     axum::serve(listener, app)
-        .with_graceful_shutdown(shutdown_signal(cancel))
+        .with_graceful_shutdown(signal)
         .await?;
 
     Ok(())

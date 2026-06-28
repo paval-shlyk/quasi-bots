@@ -253,6 +253,7 @@ pub async fn callback(
     let auth_code = state
         .store
         .save_session(AuthSession {
+            client_id: pending.client_id.clone(),
             redirect_uri: pending.redirect_uri.clone(),
             scope: pending.scope.clone(),
             state: pending.state.clone(),

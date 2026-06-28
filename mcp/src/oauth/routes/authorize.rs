@@ -25,6 +25,9 @@ pub struct Token {
     /// RFC 8707 resource indicator.
     #[serde(default)]
     pub resource: Option<String>,
+    /// Client identifier (required for public clients / code exchange).
+    #[serde(default)]
+    pub client_id: Option<String>,
 }
 
 //  POST /oauth/token
@@ -119,6 +122,31 @@ async fn handle_auth_code(
             .into_response();
     }
 
+    // Bind the authorization code to the client that started the flow (RFC 6749 §4.1.3, OAuth 2.1 security).
+    let client_id = match req.client_id.as_deref() {
+        Some(cid) if !cid.is_empty() => cid,
+        _ => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({
+                    "error": "invalid_grant",
+                    "error_description": "client_id required"
+                })),
+            )
+                .into_response();
+        }
+    };
+    if client_id != session.client_id {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "invalid_grant",
+                "error_description": "client_id mismatch"
+            })),
+        )
+            .into_response();
+    }
+
     if let Some(resource) = req.resource.as_deref() {
         if let Some(session_resource) = session.resource.as_deref() {
             if !metadata::resource_matches(config, session_resource)
@@ -184,6 +212,7 @@ async fn handle_auth_code(
             session.scope,
             Some(config.issuer_url()),
             session.owner_sub,
+            Some(session.client_id.clone()),
         )
         .await;
 
@@ -195,6 +224,19 @@ async fn handle_refresh(
     req: Token,
     config: &McpServerConfig,
 ) -> Response {
+    // For public clients, client_id must be provided and must match the token's bound client.
+    let Some(client_id) = req.client_id.as_ref().filter(|cid| !cid.is_empty())
+    else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "invalid_grant",
+                "error_description": "client_id required"
+            })),
+        )
+            .into_response();
+    };
+
     let old = store.take_token_by_refresh(&req.refresh_token).await;
 
     match old {
@@ -207,12 +249,24 @@ async fn handle_refresh(
         )
             .into_response(),
         Some(prev) => {
+            if prev.client_id.as_deref() != Some(client_id) {
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({
+                        "error": "invalid_grant",
+                        "error_description": "client_id mismatch"
+                    })),
+                )
+                    .into_response();
+            }
+
             let token = store
                 .issue_token(
                     config.token_ttl(),
                     prev.scope,
                     Some(config.issuer_url()),
                     prev.owner_sub,
+                    prev.client_id.clone(),
                 )
                 .await;
 
@@ -234,4 +288,3 @@ fn pkce_s256_matches(verifier: &str, challenge: &str) -> bool {
 
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(digest) == challenge
 }
-

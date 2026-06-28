@@ -7,8 +7,11 @@ use super::token::{StoredToken, TokenResponse, new_stored_token};
 
 #[derive(Clone, Debug)]
 pub struct AuthSession {
+    pub client_id: String,
     pub redirect_uri: String,
     pub scope: Option<String>,
+    // round-trip state from PendingAuth (used only for redirect, not after)
+    #[allow(unused)]
     pub state: Option<String>,
     pub code_challenge: Option<String>,
     pub resource: Option<String>,
@@ -38,6 +41,7 @@ impl PendingAuth {
 #[derive(Clone, Debug)]
 struct RegisteredClient {
     redirect_uris: Vec<String>,
+    #[allow(unused)]
     client_name: Option<String>,
 }
 
@@ -134,9 +138,11 @@ impl OAuthStore {
         scope: Option<String>,
         issuer: Option<String>,
         owner_sub: Option<String>,
+        client_id: Option<String>,
     ) -> TokenResponse {
         let mut record = new_stored_token(ttl, scope, issuer);
         record.owner_sub = owner_sub;
+        record.client_id = client_id;
         let response = record.to_response();
         self.tokens
             .write()

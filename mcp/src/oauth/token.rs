@@ -29,6 +29,8 @@ pub struct StoredToken {
     pub issuer: Option<String>,
     /// Google OIDC `sub` of the owner who approved access.
     pub owner_sub: Option<String>,
+    /// Client that this token (and its refresh token) was issued to.
+    pub client_id: Option<String>,
 }
 
 impl StoredToken {
@@ -83,6 +85,7 @@ pub fn new_stored_token(
         scope,
         issuer,
         owner_sub: None,
+        client_id: None,
     }
 }
 

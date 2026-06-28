@@ -13,8 +13,10 @@ pub use state::*;
 pub use llm::*;
 
 pub use articles::*;
+pub use links::*;
 pub use routes::*;
 pub use sync_task::*;
+pub use topics::*;
 
 pub async fn connect(
     config: Config,

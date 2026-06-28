@@ -21,6 +21,7 @@ impl SkillMasterMcpServer {
             state,
             tool_router: Self::knowledge_tool_router()
                 + Self::quotes_tool_router()
+                + Self::search_tool_router()
                 + Self::news_tool_router()
                 + Self::finance_tool_router(),
         }
@@ -42,7 +43,8 @@ impl ServerHandler for SkillMasterMcpServer {
         ))
         .with_protocol_version(ProtocolVersion::V_2025_11_25)
         .with_instructions(
-            "Skill-master MCP server. Domain tools call knowledge, quotes, news, and finance libraries directly.",
+            "Skill-master MCP server. Call knowledge, quotes, news, and finance libraries directly.",
         )
     }
 }
+

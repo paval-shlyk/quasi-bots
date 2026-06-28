@@ -6,8 +6,17 @@ use crate::{Config, portfolio};
 pub struct FinanceState {
     pub(crate) config: Arc<Config>,
 
-    #[allow(unused)]
     pub(crate) pool: sqlx::SqlitePool,
 
     pub(crate) api: portfolio::RestClient,
+}
+
+impl FinanceState {
+    pub fn pool(&self) -> &sqlx::SqlitePool {
+        &self.pool
+    }
+
+    pub fn api(&self) -> &portfolio::RestClient {
+        &self.api
+    }
 }

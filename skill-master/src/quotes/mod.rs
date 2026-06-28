@@ -1,84 +1,38 @@
 mod model;
 pub mod sync_task;
 
-use axum::{Json, extract::State, response::IntoResponse};
-use reqwest::StatusCode;
-
 use crate::AppState;
 
 pub use model::*;
 
-#[utoipa::path(
-    get,
-    path = "/quotes-bank/authors",
-    responses(
-        (status = 200, description = "Known authors retrieved successfully", body = Vec<QuoteAuthor>)
-    )
-)]
-pub async fn get_known_authors(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    let authors = sqlx::query_as!(
+pub async fn fetch_known_authors(
+    pool: &sqlx::SqlitePool,
+) -> sqlx::Result<Vec<QuoteAuthor>> {
+    sqlx::query_as!(
         QuoteAuthor,
         r#"
             SELECT name, quotes_count as "quotes_count: u64"
             FROM (
                 SELECT
-                    a.name as name, 
+                    a.name as name,
                     COUNT(q.id) as quotes_count
                 FROM author as a
                 LEFT JOIN quote as q ON a.id = q.author_id
                 GROUP BY a.id
             )
             WHERE quotes_count > 0
-	    ORDER BY quotes_count DESC
+            ORDER BY quotes_count DESC
         "#
     )
-    .fetch_all(&state.pool)
+    .fetch_all(pool)
     .await
-    .unwrap_or_default();
-
-    Json(authors)
 }
 
-#[utoipa::path(
-    post,
-    path = "/quotes-bank/next",
-    responses(
-        (status = 200, description = "Next famous quote retrieved successfully", body = FamousQuote),
-        (status = 404, description = "No fresh quotes available, try again later"),
-        (status = 500, description = "Internal server error")
-    )
-)]
-pub async fn post_next_unused_quote(
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    match fetch_famous_quote(&state.pool).await {
-        Ok(maybe_quote) => match maybe_quote {
-            Some(quote) => (StatusCode::OK, Json(quote)).into_response(),
-            None => {
-                state.needs_more_quotes.notify_one();
-                (
-                    StatusCode::NOT_FOUND,
-                    "No fresh quotes available, please try again later",
-                )
-                    .into_response()
-            }
-        },
-        Err(e) => {
-            tracing::error!("Failed to fetch quote: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to fetch quote")
-                .into_response()
-        }
-    }
-}
-
-async fn fetch_famous_quote(
+pub async fn fetch_next_unused_quote(
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<Option<FamousQuote>> {
     let mut tx = pool.begin().await?;
 
-    // Try to get a quote from DB that hasn't been used in 6 months or ever
     let maybe_quote = sqlx::query_as!(
         FamousQuote,
         r#"
@@ -94,7 +48,6 @@ async fn fetch_famous_quote(
 
     match maybe_quote {
         Some(quote) => {
-            // Mark as used
             sqlx::query!(
                 r#"
             UPDATE quote
@@ -107,9 +60,13 @@ async fn fetch_famous_quote(
             .await?;
 
             tx.commit().await?;
-
             Ok(Some(quote))
         }
         None => Ok(None),
     }
 }
+
+pub fn notify_needs_more_quotes(state: &AppState) {
+    state.needs_more_quotes.notify_one();
+}
+

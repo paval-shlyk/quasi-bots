@@ -1,20 +1,13 @@
 use anyhow::Context;
-use axum::{
-    Json,
-    extract::{Query, State},
-    response::IntoResponse,
-};
-use reqwest::StatusCode;
 
-use crate::AppState;
+pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-#[derive(serde::Deserialize, utoipa::IntoParams)]
+#[derive(serde::Deserialize, serde::Serialize, schemars::JsonSchema)]
 pub struct SearchQuery {
-    #[serde(alias = "q")]
     pub query: String,
 }
 
-#[derive(serde::Serialize, utoipa::ToSchema)]
+#[derive(serde::Serialize, schemars::JsonSchema)]
 pub struct FetchedArticle {
     pub title: String,
     pub link: String,
@@ -22,13 +15,13 @@ pub struct FetchedArticle {
     pub snippet: String,
 }
 
-#[derive(serde::Serialize, utoipa::ToSchema)]
+#[derive(serde::Serialize, schemars::JsonSchema)]
 pub struct KnowledgeGraph {
     pub description: String,
     pub source_url: String,
 }
 
-#[derive(serde::Serialize, utoipa::ToSchema)]
+#[derive(serde::Serialize, schemars::JsonSchema)]
 pub struct SearchResult {
     pub answer: Option<String>,
     /// knowledge graph information about the search query, e.g. a short description of the topic
@@ -37,7 +30,7 @@ pub struct SearchResult {
     pub articles: Vec<FetchedArticle>,
 }
 
-async fn perform_search(
+pub async fn perform_search(
     client: &reqwest::Client,
     api_key: &str,
     query: &str,
@@ -92,9 +85,7 @@ async fn perform_search(
 
     let parse_answer = || {
         let answer_box = results["answer_box"].as_object()?;
-
         let answer = answer_box.get("answer")?.as_str()?.to_string();
-
         Some(answer)
     };
 
@@ -105,34 +96,10 @@ async fn perform_search(
     })
 }
 
-#[utoipa::path(
-    get,
-    path = "/search",
-    params(
-        SearchQuery
-    ),
-    responses(
-        (status = 200, description = "Search performed successfully", body = SearchResult),
-        (status = 500, description = "Internal server error")
-    )
-)]
-pub async fn get_search(
-    search: Query<SearchQuery>,
-    State(state): State<AppState>,
-) -> impl IntoResponse {
-    const APP_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-    let api_key = &state.config.serp_api_key;
-    let client = reqwest::Client::builder()
-        .user_agent(APP_AGENT)
+pub fn client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(USER_AGENT)
         .build()
-        .expect("Failed to build HTTP client");
-
-    match perform_search(&client, api_key, &search.query).await {
-        Ok(results) => (StatusCode::OK, Json(results)).into_response(),
-        Err(e) => {
-            tracing::error!("Search failed: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Search failed").into_response()
-        }
-    }
+        .expect("Failed to build HTTP client")
 }
+

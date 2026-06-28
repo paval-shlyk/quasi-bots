@@ -22,7 +22,7 @@ use axum::{
 };
 use tracing::warn;
 
-use crate::config::McpServerConfig;
+use crate::config::McpAuthConfig;
 
 mod google;
 mod metadata;
@@ -32,14 +32,14 @@ mod token;
 
 pub struct OAuthState {
     pub store: store::OAuthStore,
-    pub config: McpServerConfig,
+    pub config: McpAuthConfig,
     pub google: Option<google::GoogleAuth>,
 }
 
 pub type SharedOAuthState = Arc<OAuthState>;
 
 pub async fn state(
-    config: McpServerConfig,
+    config: McpAuthConfig,
 ) -> anyhow::Result<SharedOAuthState> {
     let store = store::OAuthStore::new();
 

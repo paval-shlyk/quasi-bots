@@ -2920,28 +2920,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
-name = "mcp"
+name = "mcp-auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum",
  "base64 0.22.1",
  "chrono",
- "clap",
  "openidconnect",
  "reqwest 0.12.28",
  "rmcp",
- "schemars 1.2.1",
  "serde",
  "serde_json",
  "serde_urlencoded",
  "sha2 0.11.0",
  "tokio",
- "tokio-util",
  "toml 1.1.2+spec-1.1.0",
  "tower-http 0.7.0",
  "tracing",
- "tracing-subscriber",
  "url",
  "uuid",
 ]
@@ -6001,14 +5997,18 @@ dependencies = [
  "finance",
  "knowledge",
  "libsqlite3-sys",
+ "mcp-auth",
  "news",
  "proptest",
  "reqwest 0.13.2",
+ "rmcp",
+ "schemars 1.2.1",
  "serde",
  "serde_json",
  "sqlx",
  "telemetry",
  "tokio",
+ "tokio-util",
  "toml 0.9.11+spec-1.1.0",
  "tracing",
  "tracing-subscriber",

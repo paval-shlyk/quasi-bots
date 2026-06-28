@@ -23,6 +23,7 @@ tokio = { workspace = true, features = [
 	"rt",
 	"rt-multi-thread",
 	"sync",
+	"signal",
 ] }
 
 chrono = "0.4.43"
@@ -43,6 +44,16 @@ news = { version = "0.1.0", path = "../news" }
 finance = { version = "0.1.0", path = "../finance" }
 knowledge = { version = "0.1.0", path = "../knowledge" }
 telemetry = { version = "0.1.0", path = "../telemetry" }
+mcp-auth = { version = "0.1.0", path = "../mcp-auth" }
+
+rmcp = { version = "1.7", features = [
+	"server",
+	"macros",
+	"schemars",
+	"transport-streamable-http-server",
+] }
+schemars = "1.0"
+tokio-util = "0.7"
 
 [dev-dependencies]
 proptest = "1.10.0"

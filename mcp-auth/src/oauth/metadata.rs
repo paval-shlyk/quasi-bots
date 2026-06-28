@@ -1,7 +1,7 @@
 use rmcp::transport::auth::AuthorizationMetadata;
 use serde::Serialize;
 
-use crate::config::McpServerConfig;
+use crate::config::McpAuthConfig;
 
 /// RFC 9728 OAuth 2.0 Protected Resource Metadata.
 #[derive(Debug, Clone, Serialize)]
@@ -13,7 +13,7 @@ pub struct ProtectedResourceMetadata {
 }
 
 impl ProtectedResourceMetadata {
-    pub fn from_config(config: &McpServerConfig) -> Self {
+    pub fn from_config(config: &McpAuthConfig) -> Self {
         Self {
             resource: config.resource_url(),
             authorization_servers: vec![config.issuer_url()],
@@ -23,7 +23,7 @@ impl ProtectedResourceMetadata {
 }
 
 pub fn authorization_metadata(
-    config: &McpServerConfig,
+    config: &McpAuthConfig,
 ) -> AuthorizationMetadata {
     let base = config.issuer_url();
     let mut meta = AuthorizationMetadata::default();
@@ -53,7 +53,7 @@ pub fn authorization_metadata(
 }
 
 /// Build the `WWW-Authenticate` challenge required by MCP authorization discovery.
-pub fn www_authenticate_challenge(config: &McpServerConfig) -> String {
+pub fn www_authenticate_challenge(config: &McpAuthConfig) -> String {
     format!(
         r#"Bearer realm="mcp", resource_metadata="{}", scope="{}""#,
         config.protected_resource_metadata_url(),
@@ -62,7 +62,7 @@ pub fn www_authenticate_challenge(config: &McpServerConfig) -> String {
 }
 
 /// Returns true when `candidate` matches the configured canonical MCP resource URI.
-pub fn resource_matches(config: &McpServerConfig, candidate: &str) -> bool {
+pub fn resource_matches(config: &McpAuthConfig, candidate: &str) -> bool {
     normalize_resource_uri(candidate)
         == normalize_resource_uri(&config.resource_url())
 }

@@ -22,7 +22,7 @@ pub async fn get_openapi_json() -> impl IntoResponse {
 }
 
 #[rustfmt::skip]
-pub fn create_routes(state: AppState) -> Router<()> {
+pub async fn create_routes(state: AppState) -> Router<()> {
     let knowledge_routes = Router::new()
                 .route("/next", post(knowledge::post_next_daily_question))
                 .route("/topics", get(knowledge::get_all_topics))
@@ -62,7 +62,7 @@ pub fn create_routes(state: AppState) -> Router<()> {
         )
         .with_state(state.news_state.clone());
 
-    Router::new()
+    let router = Router::new()
         .merge(Scalar::with_url("/scalar", ApiDoc::openapi()))
         .nest("/knowledge-bank", knowledge_routes)
         .nest("/market-tracker", finance_routes)
@@ -81,7 +81,22 @@ pub fn create_routes(state: AppState) -> Router<()> {
         .route("/quotes-bank/authors", get(quotes::get_known_authors))
         .route("/quotes-bank/next", post(quotes::post_next_unused_quote))
 
-        .with_state(state.clone())
+        .with_state(state.clone());
+
+    let oauth_state = crate::mcp::oauth_state(&state.config.mcp)
+        .await
+        .expect("failed to initialize MCP OAuth state");
+    let mcp_router = crate::mcp::mount(
+        state.clone(),
+        oauth_state.clone(),
+        &state.config.mcp,
+        tokio_util::sync::CancellationToken::new(),
+    );
+
+    Router::new()
+        .merge(router)
+        .merge(mcp_auth::oauth::router().with_state(oauth_state))
+        .merge(mcp_router)
 }
 
 async fn health_check() -> impl IntoResponse {

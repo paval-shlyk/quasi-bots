@@ -5,7 +5,7 @@ members = [
 	"crypto-master",
 	"finance",
 	"knowledge",
-	"mcp",
+	"mcp-auth",
 	"migration",
 	"monitor",
 	"news",

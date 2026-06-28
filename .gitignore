@@ -1,7 +1,7 @@
 /target
 
-# MCP server secrets (copy from mcp/config.toml.example)
-mcp/config.toml
+# MCP auth secrets (copy from mcp-auth/config.toml.example)
+mcp-auth/config.toml
 
 # Database files
 *.db

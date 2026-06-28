@@ -1,18 +1,8 @@
-use std::net::SocketAddr;
-
 use serde::{Deserialize, Deserializer, de::Error as DeError};
 use url::Url;
 
 // one day
 const MAX_TOKEN_TTL_SECS: u64 = 86_400;
-
-/// Validate and normalize a bind address string.
-pub fn validate_addr(value: &str) -> Result<String, String> {
-    value
-        .parse::<SocketAddr>()
-        .map(|_| value.to_string())
-        .map_err(|e| format!("invalid socket address: {e}"))
-}
 
 /// Validate and normalize a public base URL (RFC 3986).
 ///
@@ -156,14 +146,6 @@ pub fn validate_origin(value: &str) -> Result<String, String> {
     Ok(trimmed.to_string())
 }
 
-pub fn deserialize_addr<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = String::deserialize(deserializer)?;
-    validate_addr(&value).map_err(D::Error::custom)
-}
-
 pub fn deserialize_public_url<'de, D>(
     deserializer: D,
 ) -> Result<String, D::Error>
@@ -247,13 +229,12 @@ mod tests {
 
     fn parse_config(
         toml: &str,
-    ) -> Result<crate::config::McpServerConfig, toml::de::Error> {
+    ) -> Result<crate::config::McpAuthConfig, toml::de::Error> {
         toml::from_str(toml)
     }
 
     const VALID: &str = r#"
-addr = "0.0.0.0:9191"
-public_url = "http://127.0.0.1:9191"
+public_url = "http://127.0.0.1:8080"
 token_ttl_secs = 120
 scope = "mcp"
 allowed_origins = []
@@ -269,17 +250,10 @@ allowed_google_subs = []
     }
 
     #[test]
-    fn rejects_invalid_addr() {
-        let err = parse_config(&VALID.replace("0.0.0.0:9191", "not-an-addr"))
-            .expect_err("bad addr");
-        assert!(err.to_string().contains("addr"));
-    }
-
-    #[test]
     fn rejects_public_url_with_path() {
         let err = parse_config(
             &VALID
-                .replace("http://127.0.0.1:9191", "http://127.0.0.1:9191/mcp"),
+                .replace("http://127.0.0.1:8080", "http://127.0.0.1:8080/mcp"),
         )
         .expect_err("path in public_url");
         assert!(err.to_string().contains("public_url"));

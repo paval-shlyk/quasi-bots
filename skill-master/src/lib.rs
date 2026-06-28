@@ -1,7 +1,9 @@
+pub mod mcp;
 pub mod openapi;
 pub mod quotes;
 pub mod routes;
 pub mod search;
+pub mod tools;
 
 mod state;
 

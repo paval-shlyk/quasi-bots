@@ -12,6 +12,30 @@ struct Args {
     port: u16,
 }
 
+fn shutdown_signal() -> std::io::Result<impl Future<Output = ()>> {
+    use tokio::signal::unix::{SignalKind, signal};
+
+    let mut sig_term = signal(SignalKind::terminate())?;
+    let mut sig_int = signal(SignalKind::interrupt())?;
+    let mut sig_quit = signal(SignalKind::quit())?;
+
+    let signal = async move {
+        tokio::select! {
+            _ = sig_term.recv() => {
+                tracing::info!("SIGTERM caught. Exiting");
+            }
+            _ = sig_int.recv() => {
+                tracing::info!("SIGINT caught. Exiting");
+            }
+            _ = sig_quit.recv() => {
+                tracing::info!("SIGQUIT caught. Exiting");
+            }
+        }
+    };
+
+    Ok(signal)
+}
+
 #[tokio::main]
 pub async fn main() {
     let args = Args::parse();
@@ -47,15 +71,20 @@ pub async fn main() {
         git_commit
     );
 
-    let app = skill_master::routes::create_routes(state);
+    let app = skill_master::routes::create_routes(state).await;
+
+    let signal =
+        shutdown_signal().expect("Failed to construct shutdown signal");
 
     let addr: std::net::SocketAddr = format!("0.0.0.0:{}", args.port)
         .parse()
         .expect("Failed to parse address");
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
+
     tracing::info!("Starting server on {}", addr);
 
     axum::serve(listener, app.into_make_service())
+        .with_graceful_shutdown(signal)
         .await
         .expect("Failed to start server");
 }

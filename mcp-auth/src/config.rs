@@ -1,11 +1,9 @@
-mod validate;
-
-use std::net::SocketAddr;
+pub mod validate;
 
 use serde::Deserialize;
 
 /// Google OIDC settings for owner authentication.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GoogleAuthConfig {
     /// Google OAuth client ID (Web application).
@@ -23,7 +21,7 @@ pub struct GoogleAuthConfig {
 }
 
 /// Pre-approved owner entry (alternative to `allowed_google_subs`).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AllowedOwner {
     pub sub: String,
@@ -32,7 +30,7 @@ pub struct AllowedOwner {
 }
 
 /// Owner authentication settings (loaded from config.toml).
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct AuthConfig {
     pub google: GoogleAuthConfig,
@@ -85,14 +83,11 @@ impl AuthConfig {
     }
 }
 
-/// HTTP server and OAuth settings.
-#[derive(Debug, Clone, Deserialize)]
+/// OAuth and MCP transport hints for a host application (e.g. skill-master).
+#[derive(Debug, Clone, serde::Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct McpServerConfig {
-    /// Bind address, e.g. "0.0.0.0:9191"
-    #[serde(deserialize_with = "validate::deserialize_addr")]
-    pub addr: String,
-    /// Public base URL used in OAuth metadata (no trailing slash), e.g. "http://127.0.0.1:9191"
+pub struct McpAuthConfig {
+    /// Public base URL used in OAuth metadata (no trailing slash), e.g. "http://127.0.0.1:8080"
     #[serde(deserialize_with = "validate::deserialize_public_url")]
     pub public_url: String,
     pub auth: AuthConfig,
@@ -122,11 +117,7 @@ pub struct McpServerConfig {
     pub json_response: bool,
 }
 
-impl McpServerConfig {
-    pub fn socket_addr(&self) -> Result<SocketAddr, std::net::AddrParseError> {
-        self.addr.parse()
-    }
-
+impl McpAuthConfig {
     pub fn token_ttl(&self) -> std::time::Duration {
         std::time::Duration::from_secs(self.token_ttl_secs)
     }
@@ -153,16 +144,13 @@ impl McpServerConfig {
     pub fn allowed_hosts(&self) -> Vec<String> {
         let mut hosts = Vec::new();
         if let Ok(url) = url::Url::parse(&self.public_url) {
-            let mut authority = url.host_str().unwrap_or_default().to_string();
-            if let Some(port) = url.port() {
-                authority.push(':');
-                authority.push_str(&port.to_string());
-            }
-            hosts.push(authority);
-        }
-        if let Some((host, port)) = self.addr.rsplit_once(':') {
-            if host != "0.0.0.0" {
-                hosts.push(format!("{host}:{port}"));
+            if let Some(host) = url.host_str() {
+                let mut authority = host.to_string();
+                if let Some(port) = url.port() {
+                    authority.push(':');
+                    authority.push_str(&port.to_string());
+                }
+                hosts.push(authority);
                 hosts.push(host.to_string());
             }
         }

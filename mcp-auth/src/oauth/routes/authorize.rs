@@ -7,7 +7,7 @@ use axum::{
 };
 
 use crate::{
-    config::McpServerConfig,
+    config::McpAuthConfig,
     oauth::{SharedOAuthState, metadata, store::OAuthStore},
 };
 
@@ -81,7 +81,7 @@ pub async fn authorize_or_refresh_token(
 async fn handle_auth_code(
     store: &OAuthStore,
     req: Token,
-    config: &McpServerConfig,
+    config: &McpAuthConfig,
 ) -> Response {
     if let Some(resource) = req.resource.as_deref() {
         if !metadata::resource_matches(config, resource) {
@@ -222,7 +222,7 @@ async fn handle_auth_code(
 async fn handle_refresh(
     store: &OAuthStore,
     req: Token,
-    config: &McpServerConfig,
+    config: &McpAuthConfig,
 ) -> Response {
     // For public clients, client_id must be provided and must match the token's bound client.
     let Some(client_id) = req.client_id.as_ref().filter(|cid| !cid.is_empty())

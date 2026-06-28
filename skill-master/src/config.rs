@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+pub use mcp_auth::McpAuthConfig;
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct KnowledgeConfig {
     /// Where yaml configuration files are loaded
@@ -18,4 +20,6 @@ pub struct Config {
 
     /// SerpAPI key for fetching news from Google News
     pub serp_api_key: String,
+
+    pub mcp: McpAuthConfig,
 }

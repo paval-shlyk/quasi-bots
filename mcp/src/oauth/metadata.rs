@@ -22,7 +22,9 @@ impl ProtectedResourceMetadata {
     }
 }
 
-pub fn authorization_metadata(config: &McpServerConfig) -> AuthorizationMetadata {
+pub fn authorization_metadata(
+    config: &McpServerConfig,
+) -> AuthorizationMetadata {
     let base = config.issuer_url();
     let mut meta = AuthorizationMetadata::default();
 
@@ -61,9 +63,11 @@ pub fn www_authenticate_challenge(config: &McpServerConfig) -> String {
 
 /// Returns true when `candidate` matches the configured canonical MCP resource URI.
 pub fn resource_matches(config: &McpServerConfig, candidate: &str) -> bool {
-    normalize_resource_uri(candidate) == normalize_resource_uri(&config.resource_url())
+    normalize_resource_uri(candidate)
+        == normalize_resource_uri(&config.resource_url())
 }
 
 fn normalize_resource_uri(uri: &str) -> String {
     uri.trim_end_matches('/').to_lowercase()
 }
+

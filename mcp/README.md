@@ -24,23 +24,43 @@ cp mcp/config.toml.example mcp/config.toml
 ```toml
 addr = "0.0.0.0:9191"
 public_url = "http://127.0.0.1:9191"
-username = "Paval"
-password = "1234"
-token_ttl_secs = 120
+token_ttl_secs = 3600
 scope = "mcp"
 allowed_origins = []
+stateful_mode = false
+json_response = true
+
+[auth.google]
+client_id = "YOUR_ID.apps.googleusercontent.com"
+allowed_google_subs = ["your-google-sub"]
 ```
 
 | Field | Description |
 |-------|-------------|
 | `addr` | Bind address (e.g. `127.0.0.1:9191` behind a reverse proxy) |
 | `public_url` | Public origin for OAuth metadata — **scheme + host + port only, no path** |
-| `username` / `password` | Single-owner credentials for the OAuth consent page |
+| `auth.google.client_id` | Google OAuth Web client ID |
+| `auth.google.allowed_google_subs` | Allowlisted Google `sub` values (owners who may approve MCP clients) |
+| `GOOGLE_CLIENT_SECRET` | Env var for client secret (preferred over putting secret in config) |
 | `token_ttl_secs` | Access-token lifetime in seconds |
 | `scope` | OAuth scope advertised to clients |
 | `allowed_origins` | Browser origins for Streamable HTTP Origin validation (empty = default) |
 
+### Google OAuth setup
+
+1. Create a **Web application** OAuth client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
+2. Add authorized redirect URI:
+   - Dev: `http://127.0.0.1:9191/oauth/google/callback`
+   - Prod: `https://your-domain.com/oauth/google/callback` (must match `public_url`)
+3. Set `auth.google.client_id` in `config.toml`.
+4. Export `GOOGLE_CLIENT_SECRET` (or set `auth.google.client_secret`).
+5. Seed the allowlist:
+   - Leave `allowed_google_subs = []` for dev — after first Google sign-in the server logs and displays your `sub`.
+   - Add that `sub` to `allowed_google_subs` before production.
+
 `allowed_hosts` is derived automatically from `public_url` and `addr`.
+
+OAuth clients, sessions, and bearer tokens are held **in memory** — restart clears them and MCP clients must re-authenticate. Owner policy (Google credentials and allowlist) lives only in `config.toml`.
 
 ## Running
 
@@ -66,6 +86,7 @@ Startup logs include:
 | OAuth discovery (AS) | `http://127.0.0.1:9191/.well-known/oauth-authorization-server` |
 | Protected resource (RFC 9728) | `http://127.0.0.1:9191/.well-known/oauth-protected-resource/mcp` |
 | Login / consent | `http://127.0.0.1:9191/oauth/authorize` |
+| Google OIDC callback | `http://127.0.0.1:9191/oauth/google/callback` |
 
 Every MCP request requires `Authorization: Bearer <token>`.
 
@@ -76,7 +97,7 @@ Every MCP request requires `Authorization: Bearer <token>`.
 1. Start the server.
 2. Run the inspector (see MCP docs for the current command).
 3. Set server URL to `http://127.0.0.1:9191/mcp`.
-4. Complete OAuth when prompted (login with `username` / `password` from config).
+4. Complete OAuth when prompted (sign in with Google).
 5. Inspector obtains a token and talks MCP over Streamable HTTP.
 
 ### IDE / OAuth-capable clients
@@ -126,7 +147,7 @@ sequenceDiagram
     Client->>Server: POST /mcp (no token)
     Server-->>Client: 401 WWW-Authenticate
     Client->>Server: GET /.well-known/oauth-protected-resource/mcp
-    Client->>OAuth: OAuth PKCE flow + login
+    Client->>OAuth: OAuth PKCE flow + Google sign-in
     OAuth-->>Client: access_token
     Client->>Server: POST /mcp + Bearer token
     Server-->>Client: initialize / tools / etc.
@@ -191,11 +212,13 @@ Caddy terminates TLS. The Rust server stays on loopback without TLS.
 ```toml
 addr = "127.0.0.1:9191"
 public_url = "https://example.com"
-username = "your-user"
-password = "your-strong-password"
 token_ttl_secs = 3600
 scope = "mcp"
 allowed_origins = []
+
+[auth.google]
+client_id = "YOUR_ID.apps.googleusercontent.com"
+allowed_google_subs = ["your-google-sub"]
 ```
 
 - Bind to `127.0.0.1`, not `0.0.0.0`, when only Caddy is public.
@@ -206,7 +229,7 @@ allowed_origins = []
 
 ```caddyfile
 example.com {
-    # OAuth login page + consent form
+    # OAuth (register, authorize, Google callback, token)
     handle /oauth/* {
         reverse_proxy 127.0.0.1:9191 {
             flush_interval -1
@@ -251,7 +274,7 @@ sudo systemctl reload caddy
 | Path | Purpose |
 |------|---------|
 | `/mcp` | MCP Streamable HTTP endpoint |
-| `/oauth/*` | Register, authorize, approve, token |
+| `/oauth/*` | Register, authorize, Google OIDC, token |
 | `/.well-known/oauth-authorization-server` | OAuth AS metadata |
 | `/.well-known/oauth-protected-resource` | RFC 9728 (root) |
 | `/.well-known/oauth-protected-resource/mcp` | RFC 9728 (path-scoped) |
@@ -275,7 +298,7 @@ After OAuth, the same request with `Authorization: Bearer <token>` should return
 
 MCP clients register redirect URIs like `http://127.0.0.1:<port>/callback` or `http://localhost:<port>/callback`. Those go to the client, not Caddy — no extra Caddy config for them.
 
-The browser login flow hits `https://example.com/oauth/authorize`, so `public_url` must be `https://example.com`.
+The browser login flow hits `https://example.com/oauth/authorize` and Google redirects to `https://example.com/oauth/google/callback`, so `public_url` must be `https://example.com`.
 
 ### systemd example
 

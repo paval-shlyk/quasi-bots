@@ -27,7 +27,9 @@ struct Args {
     config: String,
 }
 
-fn create_routes(cfg: McpServerConfig) -> (Router<()>, CancellationToken) {
+async fn create_routes(
+    cfg: McpServerConfig,
+) -> anyhow::Result<(Router<()>, CancellationToken)> {
     let cancel = CancellationToken::new();
 
     let mut http_cfg = StreamableHttpServerConfig::default()
@@ -46,7 +48,7 @@ fn create_routes(cfg: McpServerConfig) -> (Router<()>, CancellationToken) {
         http_cfg,
     );
 
-    let oauth_state = oauth::state(cfg.clone());
+    let oauth_state = oauth::state(cfg.clone()).await?;
 
     let oauth_router = oauth::router();
 
@@ -62,7 +64,7 @@ fn create_routes(cfg: McpServerConfig) -> (Router<()>, CancellationToken) {
         .merge(mcp_router)
         .with_state(oauth_state);
 
-    (router, cancel)
+    Ok((router, cancel))
 }
 
 async fn shutdown_signal(
@@ -143,4 +145,3 @@ async fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-

@@ -93,7 +93,7 @@ async fn handle_auth_code(
         }
     }
 
-    let session = store.sessions.write().await.remove(&req.code);
+    let session = store.take_session(&req.code).await;
     let session = match session {
         Some(s) => s,
         None => {
@@ -183,6 +183,7 @@ async fn handle_auth_code(
             config.token_ttl(),
             session.scope,
             Some(config.issuer_url()),
+            session.owner_sub,
         )
         .await;
 
@@ -194,18 +195,7 @@ async fn handle_refresh(
     req: Token,
     config: &McpServerConfig,
 ) -> Response {
-    let old_key = {
-        let tokens = store.tokens.read().await;
-        tokens
-            .iter()
-            .find(|(_, v)| v.refresh_token == req.refresh_token)
-            .map(|(k, _)| k.clone())
-    };
-
-    let old = match old_key {
-        Some(k) => store.tokens.write().await.remove(&k),
-        None => None,
-    };
+    let old = store.take_token_by_refresh(&req.refresh_token).await;
 
     match old {
         None => (
@@ -222,6 +212,7 @@ async fn handle_refresh(
                     config.token_ttl(),
                     prev.scope,
                     Some(config.issuer_url()),
+                    prev.owner_sub,
                 )
                 .await;
 
@@ -243,3 +234,4 @@ fn pkce_s256_matches(verifier: &str, challenge: &str) -> bool {
 
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(digest) == challenge
 }
+

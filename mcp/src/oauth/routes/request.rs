@@ -5,7 +5,7 @@ pub struct ReqistrationBody {
     pub redirect_uris: Vec<String>,
 }
 
-// GET /oauth/authorize — Login + consent page
+// GET /oauth/authorize — consent page before Google sign-in
 #[derive(Debug, serde::Deserialize)]
 pub struct AuthorizeQuery {
     #[allow(dead_code)]
@@ -20,30 +20,3 @@ pub struct AuthorizeQuery {
     pub resource: Option<String>,
 }
 
-#[derive(Clone, Debug, serde::Deserialize)]
-pub struct ApprovalForm {
-    pub client_id: String,
-    pub redirect_uri: String,
-    #[serde(default)]
-    pub scope: Option<String>,
-    #[serde(default)]
-    pub state: Option<String>,
-    #[serde(default)]
-    pub code_challenge: Option<String>,
-    #[serde(default)]
-    pub resource: Option<String>,
-    pub username: String,
-    pub password: String,
-}
-
-impl From<ApprovalForm> for crate::oauth::store::AuthSession {
-    fn from(value: ApprovalForm) -> Self {
-        Self {
-            code_challenge: value.code_challenge,
-            state: value.state,
-            scope: value.scope,
-            redirect_uri: value.redirect_uri,
-            resource: value.resource,
-        }
-    }
-}

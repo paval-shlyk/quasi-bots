@@ -160,4 +160,3 @@ impl ServerHandler for HelloWorldMcpServer {
         Ok(CompleteResult::new(completion))
     }
 }
-

@@ -1,8 +1,8 @@
 use axum::{
-    Form, Json,
+    Json,
     extract::{Query, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Redirect},
+    response::{Html, IntoResponse},
 };
 
 use crate::oauth::metadata::{self, ProtectedResourceMetadata};
@@ -74,8 +74,11 @@ pub async fn authorize(
     let store = &state.store;
     let config = &state.config;
 
-    if let Err(msg) = validate_pkce(&params.code_challenge, &params.code_challenge_method) {
-        return (StatusCode::BAD_REQUEST, Html(format!("<h1>{msg}</h1>"))).into_response();
+    if let Err(msg) =
+        validate_pkce(&params.code_challenge, &params.code_challenge_method)
+    {
+        return (StatusCode::BAD_REQUEST, Html(format!("<h1>{msg}</h1>")))
+            .into_response();
     }
 
     if let Some(resource) = params.resource.as_deref() {
@@ -99,25 +102,33 @@ pub async fn authorize(
         }
     };
 
-    let hidden = format!(
-        r#"<input type="hidden" name="client_id"      value="{cid}">
-           <input type="hidden" name="redirect_uri"   value="{ruri}">
-           <input type="hidden" name="scope"          value="{scope}">
-           <input type="hidden" name="state"          value="{state}">
-           <input type="hidden" name="code_challenge" value="{cc}">
-           <input type="hidden" name="resource"       value="{resource}">"#,
-        cid = he(&params.client_id),
-        ruri = he(&params.redirect_uri),
-        scope = he(&params.scope.as_deref().unwrap_or(&config.scope)),
-        state = he(&params.state.unwrap_or_default()),
-        cc = he(params.code_challenge.as_deref().unwrap_or_default()),
-        resource = he(params.resource.as_deref().unwrap_or(&config.resource_url())),
-    );
+    let pending_id = store
+        .save_pending_auth(super::store::PendingAuth {
+            client_id: params.client_id.clone(),
+            redirect_uri: params.redirect_uri.clone(),
+            scope: params.scope.clone().or_else(|| Some(config.scope.clone())),
+            state: params.state.clone(),
+            code_challenge: params.code_challenge.clone(),
+            resource: params
+                .resource
+                .clone()
+                .or_else(|| Some(config.resource_url())),
+            created_at: chrono::Utc::now(),
+        })
+        .await;
+
+    let google_href =
+        format!("/oauth/google/login?pending={}", he(&pending_id));
+    let config_notice = if config.auth.google_configured() {
+        String::new()
+    } else {
+        r#"<div class="error">Google OAuth is not configured yet. Set auth.google.client_id and GOOGLE_CLIENT_SECRET.</div>"#.into()
+    };
 
     Html(
         LOGIN_HTML
-            .replace("{{HIDDEN_FIELDS}}", &hidden)
-            .replace("{{ERROR_BLOCK}}", ""),
+            .replace("{{GOOGLE_HREF}}", &google_href)
+            .replace("{{ERROR_BLOCK}}", &config_notice),
     )
     .into_response()
 }
@@ -128,36 +139,6 @@ pub async fn metadata(
 ) -> impl IntoResponse {
     let meta = metadata::authorization_metadata(&state.config);
     (StatusCode::OK, Json(meta))
-}
-
-// POST /oauth/approve
-pub async fn approve(
-    State(state): State<SharedOAuthState>,
-    Form(form): Form<request::ApprovalForm>,
-) -> impl IntoResponse {
-    let config = &state.config;
-    let store = &state.store;
-
-    if form.username != config.username || form.password != config.password {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Html(LOGIN_HTML.replace("{{HIDDEN_FIELDS}}", "").replace(
-                "{{ERROR_BLOCK}}",
-                r#"<div class="error">Invalid username or password.</div>"#,
-            )),
-        )
-            .into_response();
-    }
-
-    let code = store.save_session(form.clone()).await;
-
-    let mut url = format!("{}?code={}", form.redirect_uri, code);
-
-    if let Some(s) = form.state.filter(|s| !s.is_empty()) {
-        url.push_str(&format!("&state={s}"));
-    }
-
-    Redirect::to(&url).into_response()
 }
 
 fn validate_pkce(
@@ -173,3 +154,4 @@ fn validate_pkce(
         Some(_) => Ok(()),
     }
 }
+

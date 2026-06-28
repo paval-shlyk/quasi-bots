@@ -27,6 +27,8 @@ pub struct StoredToken {
     pub ttl_secs: u64,
     pub scope: Option<String>,
     pub issuer: Option<String>,
+    /// Google OIDC `sub` of the owner who approved access.
+    pub owner_sub: Option<String>,
 }
 
 impl StoredToken {
@@ -80,6 +82,7 @@ pub fn new_stored_token(
         ttl_secs: ttl.as_secs(),
         scope,
         issuer,
+        owner_sub: None,
     }
 }
 
@@ -109,3 +112,4 @@ mod tests {
         assert_eq!(obj["expires_in"], 120);
     }
 }
+

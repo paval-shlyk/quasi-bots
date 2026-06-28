@@ -3,11 +3,12 @@
 /// The MCP server acts as its own Authorization Server:
 ///   GET  /.well-known/oauth-authorization-server  — RFC8414 metadata
 ///   POST /oauth/register                          — RFC7591 dynamic client reg
-///   GET  /oauth/authorize                         — login + consent HTML
-///   POST /oauth/approve                           — form submit → auth code
+///   GET  /oauth/authorize                         — consent + Google sign-in
+///   GET  /oauth/google/login                      — redirect to Google OIDC
+///   GET  /oauth/google/callback                   — Google OIDC callback
 ///   POST /oauth/token                             — code/refresh → Bearer token
 ///
-/// Only one owner account is supported; credentials come from config.toml.
+/// Owner authentication uses Google OIDC; only allowlisted `sub` values may approve access.
 use std::sync::Arc;
 
 use axum::{
@@ -19,8 +20,11 @@ use axum::{
     response::Response,
     routing::{get, post},
 };
+use tracing::warn;
+
 use crate::config::McpServerConfig;
 
+mod google;
 mod metadata;
 mod routes;
 mod store;
@@ -29,15 +33,49 @@ mod token;
 pub struct OAuthState {
     pub store: store::OAuthStore,
     pub config: McpServerConfig,
+    pub google: Option<google::GoogleAuth>,
 }
 
 pub type SharedOAuthState = Arc<OAuthState>;
 
-pub fn state(config: McpServerConfig) -> SharedOAuthState {
-    Arc::new(OAuthState {
-        store: store::OAuthStore::new(),
+pub async fn state(
+    config: McpServerConfig,
+) -> anyhow::Result<SharedOAuthState> {
+    let store = store::OAuthStore::new();
+
+    let google = if config.auth.google_configured() {
+        let redirect_uri = config.auth.google_redirect_uri(&config.public_url);
+        match google::build_google_auth(
+            &config.auth.google.client_id,
+            &config.auth.resolve_client_secret().expect("checked"),
+            &redirect_uri,
+        )
+        .await
+        {
+            Ok(g) => Some(g),
+            Err(e) => {
+                warn!(error = %e, "failed to initialize Google OIDC client");
+                None
+            }
+        }
+    } else {
+        warn!(
+            "Google OAuth not fully configured; set auth.google.client_id and GOOGLE_CLIENT_SECRET"
+        );
+        None
+    };
+
+    if config.auth.dev_allowlist_mode() {
+        warn!(
+            "auth allowlist is empty — any Google account can authorize (dev mode); add auth.google.allowed_google_subs for production"
+        );
+    }
+
+    Ok(Arc::new(OAuthState {
+        store,
         config,
-    })
+        google,
+    }))
 }
 
 pub fn router() -> Router<SharedOAuthState> {
@@ -63,7 +101,8 @@ pub fn router() -> Router<SharedOAuthState> {
         )
         .route("/oauth/register", post(routes::register))
         .route("/oauth/authorize", get(routes::authorize))
-        .route("/oauth/approve", post(routes::approve))
+        .route("/oauth/google/login", get(google::login))
+        .route("/oauth/google/callback", get(google::callback))
         .route("/oauth/token", post(routes::authorize_or_refresh_token))
         .layer(cors)
 }
@@ -94,8 +133,9 @@ pub async fn bearer_auth_middleware(
             *resp.status_mut() = StatusCode::UNAUTHORIZED;
             resp.headers_mut().insert(
                 axum::http::header::WWW_AUTHENTICATE,
-                axum::http::HeaderValue::from_str(&challenge)
-                    .unwrap_or_else(|_| axum::http::HeaderValue::from_static("Bearer")),
+                axum::http::HeaderValue::from_str(&challenge).unwrap_or_else(
+                    |_| axum::http::HeaderValue::from_static("Bearer"),
+                ),
             );
             resp.headers_mut().insert(
                 axum::http::header::CONTENT_TYPE,
@@ -105,3 +145,4 @@ pub async fn bearer_auth_middleware(
         }
     }
 }
+

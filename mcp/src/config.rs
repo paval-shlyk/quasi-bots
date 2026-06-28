@@ -4,6 +4,87 @@ use std::net::SocketAddr;
 
 use serde::Deserialize;
 
+/// Google OIDC settings for owner authentication.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GoogleAuthConfig {
+    /// Google OAuth client ID (Web application).
+    #[serde(deserialize_with = "validate::deserialize_google_client_id")]
+    pub client_id: String,
+    /// Optional client secret in config. Prefer `GOOGLE_CLIENT_SECRET` env in production.
+    #[serde(default)]
+    pub client_secret: Option<String>,
+    /// Allowlisted Google `sub` values (owner accounts).
+    #[serde(
+        default,
+        deserialize_with = "validate::deserialize_allowed_google_subs"
+    )]
+    pub allowed_google_subs: Vec<String>,
+}
+
+/// Pre-approved owner entry (alternative to `allowed_google_subs`).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AllowedOwner {
+    pub sub: String,
+    #[allow(dead_code)]
+    pub label: Option<String>,
+}
+
+/// Owner authentication settings (loaded from config.toml).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AuthConfig {
+    pub google: GoogleAuthConfig,
+    #[serde(default)]
+    pub allowed_owners: Vec<AllowedOwner>,
+}
+
+impl AuthConfig {
+    /// Merged allowlist from `allowed_google_subs` and `allowed_owners`.
+    pub fn allowed_subs(&self) -> Vec<String> {
+        let mut subs = self.google.allowed_google_subs.clone();
+        for owner in &self.allowed_owners {
+            if !subs.contains(&owner.sub) {
+                subs.push(owner.sub.clone());
+            }
+        }
+        subs
+    }
+
+    /// Resolve Google client secret from config or `GOOGLE_CLIENT_SECRET`.
+    pub fn resolve_client_secret(&self) -> Option<String> {
+        if let Some(secret) = &self.google.client_secret {
+            let trimmed = secret.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+        std::env::var("GOOGLE_CLIENT_SECRET")
+            .ok()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+    }
+
+    pub fn google_redirect_uri(&self, public_url: &str) -> String {
+        format!("{public_url}/oauth/google/callback")
+    }
+
+    pub fn google_configured(&self) -> bool {
+        !self.google.client_id.starts_with("REPLACE")
+            && self.resolve_client_secret().is_some()
+    }
+
+    pub fn owner_allowed(&self, sub: &str) -> bool {
+        let allowlist = self.allowed_subs();
+        allowlist.is_empty() || allowlist.iter().any(|s| s == sub)
+    }
+
+    pub fn dev_allowlist_mode(&self) -> bool {
+        self.allowed_subs().is_empty()
+    }
+}
+
 /// HTTP server and OAuth settings.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -14,12 +95,7 @@ pub struct McpServerConfig {
     /// Public base URL used in OAuth metadata (no trailing slash), e.g. "http://127.0.0.1:9191"
     #[serde(deserialize_with = "validate::deserialize_public_url")]
     pub public_url: String,
-    /// Username shown on the OAuth consent page (single-owner server).
-    #[serde(deserialize_with = "validate::deserialize_username")]
-    pub username: String,
-    /// Password checked on the OAuth consent page.
-    #[serde(deserialize_with = "validate::deserialize_password")]
-    pub password: String,
+    pub auth: AuthConfig,
     /// Access-token lifetime in seconds (default: 3600).
     #[serde(
         default = "validate::default_token_ttl",
@@ -97,4 +173,3 @@ impl McpServerConfig {
         hosts
     }
 }
-

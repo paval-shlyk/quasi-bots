@@ -7,7 +7,8 @@ use crate::{Config, links::BrokenLink};
 #[derive(Clone)]
 pub struct NewsState {
     pub config: Arc<Config>,
-    pub gemini_api: crate::llm::GeminiApi,
+    // used for summarization
+    pub gemini_api: Option<crate::llm::GeminiApi>,
     pub pool: sqlx::SqlitePool,
 
     //the list of recently broken links

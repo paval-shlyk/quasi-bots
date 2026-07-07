@@ -34,7 +34,14 @@ pub async fn refresh_task(state: crate::NewsState) {
 
             let summarize = move |a: ArticleWithId| {
                 let gemini_api = gemini_api.clone();
-                async move { (a.id, a.article.summarize(&gemini_api).await) }
+
+                async move {
+                    if let Some(api) = gemini_api.as_ref() {
+                        (a.id, a.article.summarize(api).await)
+                    } else {
+                        (a.id, Ok(a.article.into_article_unchecked()))
+                    }
+                }
             };
 
             async move {

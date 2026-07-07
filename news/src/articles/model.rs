@@ -89,4 +89,21 @@ impl RawArticle {
             content: summarized_content.unwrap_or_default(),
         })
     }
+
+    pub fn into_article_unchecked(self) -> FeedArticle {
+        let content = if let Some(text) = self.content {
+            Some(text)
+        } else {
+            self.summary
+        }
+        .unwrap_or_default();
+
+        FeedArticle {
+            title: self.title,
+            authors: self.authors,
+            links: self.links,
+            published_at: self.published_at,
+            content,
+        }
+    }
 }

@@ -15,7 +15,8 @@ pub struct RssSource {
 pub struct Config {
     #[serde(alias = "rss_source", default)]
     pub rss_sources: Vec<RssSource>,
-    pub gemini_config: crate::llm::GeminiConfig,
+    #[serde(default)]
+    pub gemini_config: Option<crate::llm::GeminiConfig>,
 
     /// Timeout when new fetch session will be started
     #[serde(with = "humantime_serde")]

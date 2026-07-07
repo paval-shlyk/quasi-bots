@@ -24,9 +24,15 @@ pub async fn connect(
 ) -> anyhow::Result<NewsState> {
     use std::sync::Arc;
 
+    let gemini_api = if let Some(gemini_config) = config.gemini_config.as_ref()
+    {
+        llm::GeminiApi::connect(gemini_config.clone()).await?.into()
+    } else {
+        None
+    };
+
     let state = NewsState {
-        gemini_api: llm::GeminiApi::connect(config.gemini_config.clone())
-            .await?,
+        gemini_api,
         config: Arc::new(config),
         broken_links: Arc::new(tokio::sync::RwLock::new(vec![])),
         purge_notify: Arc::new(tokio::sync::Notify::new()),

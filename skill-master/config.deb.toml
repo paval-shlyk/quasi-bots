@@ -43,6 +43,7 @@ urls = [
 	"https://ubuntu.com/blog/feed",
 	"https://archlinux.org/feeds/news/",
 	"https://store.steampowered.com/feeds/news/app/1675200/?l=english",
+	"https://www.opennet.ru/opennews/opennews_all_noadv.rss"
 ]
 
 [[news.rss_source]]

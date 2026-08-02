@@ -32,4 +32,3 @@ async fn health_check() -> impl IntoResponse {
 async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {
     state.metrics_handle.render()
 }
-

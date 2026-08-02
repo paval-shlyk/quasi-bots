@@ -47,4 +47,3 @@ impl ServerHandler for SkillMasterMcpServer {
         )
     }
 }
-

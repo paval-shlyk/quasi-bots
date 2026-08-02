@@ -7,8 +7,6 @@ use serde::Deserialize;
 
 use crate::mcp::server::SkillMasterMcpServer;
 
-use super::util::json;
-
 #[derive(Debug, Deserialize, JsonSchema)]
 struct NewKnowledge {
     topic_id: u64,
@@ -47,31 +45,33 @@ impl SkillMasterMcpServer {
     #[tool(description = "Fetch the next daily knowledge question")]
     async fn knowledge_next_question(
         &self,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<knowledge::HumanEntry>, String> {
         knowledge::fetch_random_entry(&self.state.pool)
             .await
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 
     #[tool(description = "List all knowledge topics with statistics")]
     async fn knowledge_list_topics(
         &self,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<knowledge::TopicList>, String> {
         knowledge::fetch_topics(&self.state.pool)
             .await
+            .map(knowledge::TopicList::from)
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 
     #[tool(description = "List all knowledge tags")]
     async fn knowledge_list_tags(
         &self,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<knowledge::TagList>, String> {
         knowledge::fetch_tags(&self.state.pool)
             .await
+            .map(knowledge::TagList::from)
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 
     #[tool(
@@ -142,10 +142,11 @@ impl SkillMasterMcpServer {
     async fn knowledge_recent_reviews(
         &self,
         Parameters(RecentReviewsQuery { days }): Parameters<RecentReviewsQuery>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<knowledge::RecentReviews>, String> {
         knowledge::fetch_recent_reviews(&self.state.pool, days)
             .await
+            .map(knowledge::RecentReviews::from)
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 }

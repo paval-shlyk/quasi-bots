@@ -1,8 +1,10 @@
-mod routes;
-
-pub use routes::*;
-
-#[derive(Debug, sqlx::FromRow, serde::Serialize, utoipa::ToSchema)]
+#[derive(
+    Debug,
+    sqlx::FromRow,
+    serde::Serialize,
+    utoipa::ToSchema,
+    schemars::JsonSchema,
+)]
 pub struct Review {
     pub id: i64,
     pub entry_name: String,
@@ -10,10 +12,15 @@ pub struct Review {
     pub attempts: i64,
 }
 
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct RecentReviews {
+    pub reviews: Vec<Review>,
+}
+
 pub async fn fetch_recent_reviews(
     pool: &sqlx::SqlitePool,
     days: Option<u32>,
-) -> anyhow::Result<Vec<Review>> {
+) -> anyhow::Result<RecentReviews> {
     let days = days.unwrap_or(7) as i32;
 
     let reviews = sqlx::query_as!(
@@ -33,7 +40,7 @@ pub async fn fetch_recent_reviews(
     .fetch_all(pool)
     .await?;
 
-    Ok(reviews)
+    Ok(RecentReviews { reviews })
 }
 
 pub async fn update_review(

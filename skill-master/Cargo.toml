@@ -52,7 +52,7 @@ rmcp = { version = "1.7", features = [
 	"schemars",
 	"transport-streamable-http-server",
 ] }
-schemars = "1.0"
+schemars = { workspace = true }
 tokio-util = "0.7"
 
 [dev-dependencies]

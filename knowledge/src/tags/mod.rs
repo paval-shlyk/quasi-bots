@@ -1,10 +1,9 @@
-mod routes;
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct TagList {
+    pub tags: Vec<String>,
+}
 
-pub use routes::*;
-
-pub async fn fetch_tags(
-    pool: &sqlx::SqlitePool,
-) -> anyhow::Result<Vec<String>> {
+pub async fn fetch_tags(pool: &sqlx::SqlitePool) -> anyhow::Result<TagList> {
     let tags = sqlx::query!(
         r#"
                 SELECT name 
@@ -17,5 +16,5 @@ pub async fn fetch_tags(
     .map(|r| r.name)
     .collect::<Vec<_>>();
 
-    Ok(tags)
+    Ok(TagList { tags })
 }

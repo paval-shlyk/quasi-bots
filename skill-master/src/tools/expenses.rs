@@ -8,8 +8,6 @@ use serde::Deserialize;
 
 use crate::mcp::server::SkillMasterMcpServer;
 
-use super::util::json;
-
 #[derive(Debug, Deserialize, JsonSchema)]
 struct CreateCategory {
     name: String,
@@ -81,29 +79,32 @@ fn parse_created_at(value: Option<String>) -> Result<DateTime<Utc>, String> {
 #[tool_router(router = expenses_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "List expense categories")]
-    async fn list_categories(&self) -> Result<Json<serde_json::Value>, String> {
+    async fn list_categories(
+        &self,
+    ) -> Result<Json<finance::expenses::CategoryList>, String> {
         finance::expenses::list_all(self.state.finance_state.pool())
             .await
+            .map(finance::expenses::CategoryList::from)
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 
     #[tool(description = "Create an expense category")]
     async fn create_category(
         &self,
         Parameters(CreateCategory { name }): Parameters<CreateCategory>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::Category>, String> {
         finance::expenses::create_new(self.state.finance_state.pool(), &name)
             .await
+            .map(Json)
             .map_err(|e| e.to_string())
-            .and_then(json)
     }
 
     #[tool(description = "List expense entries (defaults to last 30 days)")]
     async fn list_entries(
         &self,
         Parameters(ListEntries { year, month }): Parameters<ListEntries>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::ExpenseEntryList>, String> {
         let pool = self.state.finance_state.pool();
         let entries = match (year, month) {
             (Some(year), Some(month)) => {
@@ -119,7 +120,10 @@ impl SkillMasterMcpServer {
             }
         };
 
-        entries.map_err(|e| e.to_string()).and_then(json)
+        entries
+            .map(finance::expenses::ExpenseEntryList::from)
+            .map(Json)
+            .map_err(|e| e.to_string())
     }
 
     #[tool(description = "Create an expense entry")]
@@ -131,7 +135,7 @@ impl SkillMasterMcpServer {
             category_id,
             created_at,
         }): Parameters<CreateEntry>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::ExpenseEntry>, String> {
         let created_at = parse_created_at(created_at)?;
         finance::expenses::insert(
             self.state.finance_state.pool(),
@@ -141,8 +145,8 @@ impl SkillMasterMcpServer {
             created_at,
         )
         .await
+        .map(Json)
         .map_err(|e| e.to_string())
-        .and_then(json)
     }
 
     #[tool(description = "Update an expense entry")]
@@ -155,7 +159,7 @@ impl SkillMasterMcpServer {
             category_id,
             created_at,
         }): Parameters<UpdateEntry>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::ExpenseEntry>, String> {
         let date = parse_created_at(created_at)?;
         match finance::expenses::update(
             self.state.finance_state.pool(),
@@ -167,7 +171,7 @@ impl SkillMasterMcpServer {
         )
         .await
         {
-            Ok(Some(entry)) => json(entry),
+            Ok(Some(entry)) => Ok(Json(entry)),
             Ok(None) => Err("entry not found".into()),
             Err(e) => Err(e.to_string()),
         }
@@ -194,15 +198,15 @@ impl SkillMasterMcpServer {
     async fn yearly_report(
         &self,
         Parameters(YearlyReportQuery { year }): Parameters<YearlyReportQuery>,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::YearReport>, String> {
         let year = year.unwrap_or(Utc::now().year());
         finance::expenses::fetch_year_report(
             self.state.finance_state.pool(),
             year,
         )
         .await
+        .map(Json)
         .map_err(|e| e.to_string())
-        .and_then(json)
     }
 
     #[tool(description = "Monthly expense report")]
@@ -211,7 +215,7 @@ impl SkillMasterMcpServer {
         Parameters(MonthlyReportQuery { year, month }): Parameters<
             MonthlyReportQuery,
         >,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::MonthlyReport>, String> {
         let now = Utc::now();
         let year = year.unwrap_or(now.year());
         let month = month.unwrap_or(now.month());
@@ -221,8 +225,8 @@ impl SkillMasterMcpServer {
             month,
         )
         .await
+        .map(Json)
         .map_err(|e| e.to_string())
-        .and_then(json)
     }
 
     #[tool(description = "Weekly expense report")]
@@ -231,7 +235,7 @@ impl SkillMasterMcpServer {
         Parameters(WeeklyReportQuery { year, week }): Parameters<
             WeeklyReportQuery,
         >,
-    ) -> Result<Json<serde_json::Value>, String> {
+    ) -> Result<Json<finance::expenses::WeeklyReport>, String> {
         let now = Utc::now();
         let year = year.unwrap_or(now.year());
         let week = week.unwrap_or(now.iso_week().week());
@@ -241,7 +245,7 @@ impl SkillMasterMcpServer {
             week,
         )
         .await
+        .map(Json)
         .map_err(|e| e.to_string())
-        .and_then(json)
     }
 }

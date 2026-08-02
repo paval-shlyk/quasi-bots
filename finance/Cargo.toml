@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = { workspace = true }
 axum = { workspace = true }
+schemars = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }

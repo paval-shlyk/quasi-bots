@@ -2,7 +2,7 @@ use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 
 use crate::portfolio::{Balance, RestClient, TradingPosition};
 
-#[derive(Clone, serde::Serialize)]
+#[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
     pub can_trade: bool,
     pub can_withdraw: bool,

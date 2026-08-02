@@ -1,9 +1,23 @@
 use sqlx::SqlitePool;
 
-#[derive(Debug, Clone, sqlx::FromRow, serde::Serialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, sqlx::FromRow, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct Category {
     pub id: i64,
     pub name: String,
+}
+
+/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct CategoryList {
+    pub categories: Vec<Category>,
+}
+
+impl From<Vec<Category>> for CategoryList {
+    fn from(categories: Vec<Category>) -> Self {
+        Self { categories }
+    }
 }
 
 pub const PREDEFINED_CATEGORIES: &[&str] = &[

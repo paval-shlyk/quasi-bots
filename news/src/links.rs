@@ -1,11 +1,29 @@
 use crate::RssSource;
 
-#[derive(Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
+    utoipa::ToSchema,
+    schemars::JsonSchema,
+)]
 pub struct BrokenLink {
     pub url: String,
     pub last_attempted: chrono::DateTime<chrono::Utc>,
     pub next_attempt: chrono::DateTime<chrono::Utc>,
     pub attempt_count: u32,
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct BrokenLinks {
+    pub links: Vec<BrokenLink>,
+}
+
+impl From<Vec<BrokenLink>> for BrokenLinks {
+    fn from(links: Vec<BrokenLink>) -> Self {
+        Self { links }
+    }
 }
 
 pub async fn fetch_broken_links(
@@ -73,12 +91,23 @@ pub async fn set_broken(
     Ok(())
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
 pub struct SourceStatistics {
     pub id: i64,
     pub url: String,
     pub article_count: i64,
     pub topics: Vec<String>,
+}
+
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct SourceStatisticsList {
+    pub sources: Vec<SourceStatistics>,
+}
+
+impl From<Vec<SourceStatistics>> for SourceStatisticsList {
+    fn from(sources: Vec<SourceStatistics>) -> Self {
+        Self { sources }
+    }
 }
 
 pub async fn select_source_with_statistics(

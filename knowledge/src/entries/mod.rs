@@ -1,12 +1,13 @@
-mod routes;
-
 use crate::topics;
-
-pub use routes::*;
 
 /// Human readable entry for a question
 #[derive(
-    Debug, Clone, serde::Serialize, serde::Deserialize, utoipa::ToSchema,
+    Debug,
+    Clone,
+    serde::Serialize,
+    serde::Deserialize,
+    utoipa::ToSchema,
+    schemars::JsonSchema,
 )]
 pub struct HumanEntry {
     // Unique identifier for the entry, can be a UUID or any string

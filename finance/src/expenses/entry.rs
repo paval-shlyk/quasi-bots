@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
     serde::Serialize,
     serde::Deserialize,
     utoipa::ToSchema,
+    schemars::JsonSchema,
 )]
 pub struct ExpenseEntry {
     pub id: i64,
@@ -18,7 +19,12 @@ pub struct ExpenseEntry {
 }
 
 #[derive(
-    Debug, sqlx::FromRow, serde::Serialize, serde::Deserialize, utoipa::ToSchema,
+    Debug,
+    sqlx::FromRow,
+    serde::Serialize,
+    serde::Deserialize,
+    utoipa::ToSchema,
+    schemars::JsonSchema,
 )]
 pub struct ExpenseEntryWithCategory {
     pub id: i64,
@@ -27,6 +33,18 @@ pub struct ExpenseEntryWithCategory {
     pub amount: NativeCurrency,
     pub category_id: i64,
     pub category_name: String,
+}
+
+/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct ExpenseEntryList {
+    pub entries: Vec<ExpenseEntryWithCategory>,
+}
+
+impl From<Vec<ExpenseEntryWithCategory>> for ExpenseEntryList {
+    fn from(entries: Vec<ExpenseEntryWithCategory>) -> Self {
+        Self { entries }
+    }
 }
 
 pub async fn insert(

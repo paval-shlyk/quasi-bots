@@ -2,14 +2,18 @@ use crate::expenses::{NativeCurrency, chart, entry};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct CategoryTotal {
     pub category_id: i64,
     pub category_name: String,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct MonthlyReport {
     pub year: i32,
     pub month: u32,
@@ -17,13 +21,17 @@ pub struct MonthlyReport {
     pub by_category: Vec<CategoryTotal>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct MonthData {
     pub month: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct YearReport {
     pub year: i32,
     pub total: NativeCurrency,
@@ -31,13 +39,17 @@ pub struct YearReport {
     pub by_month: Vec<MonthData>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct WeekData {
     pub week: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
+)]
 pub struct WeeklyReport {
     pub year: i32,
     pub week: u32,

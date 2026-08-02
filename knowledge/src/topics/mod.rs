@@ -15,6 +15,7 @@ pub struct Topic {
     serde::Serialize,
     serde::Deserialize,
     utoipa::ToSchema,
+    schemars::JsonSchema,
 )]
 pub struct TopicWithStatistics {
     pub id: u64,
@@ -26,6 +27,18 @@ pub struct TopicWithStatistics {
     /// Indicates whether the topic has been used in the current cycle. Once all topics have been
     /// used, this flag will be reset for all topics.
     pub is_used: bool,
+}
+
+/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
+#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+pub struct TopicList {
+    pub topics: Vec<TopicWithStatistics>,
+}
+
+impl From<Vec<TopicWithStatistics>> for TopicList {
+    fn from(topics: Vec<TopicWithStatistics>) -> Self {
+        Self { topics }
+    }
 }
 
 /// Fetches a random topic that has not been used yet. If all topics have been used, it resets the

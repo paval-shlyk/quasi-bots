@@ -11,3 +11,5 @@ mcp-auth/config.toml
 *.db-wal
 
 .opencode
+.local-docs
+todo.md

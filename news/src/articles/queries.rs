@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 
-use crate::{ArticlesWithTopic, SavedArticle};
+use crate::{ArticlesWithTopic, SavedArticle, TodayNews};
 
 pub async fn select_today_articles(
     pool: &sqlx::SqlitePool,
-) -> anyhow::Result<Vec<ArticlesWithTopic>> {
+) -> anyhow::Result<TodayNews> {
     use sqlx::types::Json;
 
     let articles = sqlx::query_as!(
@@ -33,10 +33,10 @@ pub async fn select_today_articles(
             .push(a.into_feed());
     }
 
-    let articles = map
+    let topics = map
         .into_iter()
         .map(|(topic, articles)| ArticlesWithTopic { topic, articles })
-        .collect::<Vec<_>>();
+        .collect();
 
-    Ok(articles)
+    Ok(TodayNews { topics })
 }

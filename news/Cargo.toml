@@ -5,12 +5,10 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-axum = { workspace = true }
 reqwest.workspace = true
 schemars = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
-utoipa = { workspace = true }
 tokio = { workspace = true }
 
 mediatype = "=0.19"

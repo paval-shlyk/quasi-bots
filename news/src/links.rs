@@ -1,13 +1,6 @@
 use crate::RssSource;
 
-#[derive(
-    Debug,
-    Clone,
-    serde::Serialize,
-    serde::Deserialize,
-    utoipa::ToSchema,
-    schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 pub struct BrokenLink {
     pub url: String,
     pub last_attempted: chrono::DateTime<chrono::Utc>,
@@ -15,21 +8,17 @@ pub struct BrokenLink {
     pub attempt_count: u32,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct BrokenLinks {
     pub links: Vec<BrokenLink>,
 }
 
-impl From<Vec<BrokenLink>> for BrokenLinks {
-    fn from(links: Vec<BrokenLink>) -> Self {
-        Self { links }
-    }
-}
-
 pub async fn fetch_broken_links(
     state: &crate::NewsState,
-) -> anyhow::Result<Vec<BrokenLink>> {
-    Ok(state.broken_links.read().await.clone())
+) -> anyhow::Result<BrokenLinks> {
+    Ok(BrokenLinks {
+        links: state.broken_links.read().await.clone(),
+    })
 }
 
 /// Fetch active Feed sources that are not broken in broken links list
@@ -91,7 +80,7 @@ pub async fn set_broken(
     Ok(())
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct SourceStatistics {
     pub id: i64,
     pub url: String,
@@ -99,20 +88,14 @@ pub struct SourceStatistics {
     pub topics: Vec<String>,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct SourceStatisticsList {
     pub sources: Vec<SourceStatistics>,
 }
 
-impl From<Vec<SourceStatistics>> for SourceStatisticsList {
-    fn from(sources: Vec<SourceStatistics>) -> Self {
-        Self { sources }
-    }
-}
-
 pub async fn select_source_with_statistics(
     pool: &sqlx::SqlitePool,
-) -> anyhow::Result<Vec<SourceStatistics>> {
+) -> anyhow::Result<SourceStatisticsList> {
     telemetry::execution_time!("Select url sources");
 
     let sources = sqlx::query!(
@@ -137,7 +120,8 @@ pub async fn select_source_with_statistics(
         article_count: r.article_count,
         url: r.url,
         topics: r.topics.0,
-    }).collect();
+    })
+    .collect();
 
-    Ok(sources)
+    Ok(SourceStatisticsList { sources })
 }

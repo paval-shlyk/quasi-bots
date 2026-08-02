@@ -1,6 +1,4 @@
-#[derive(
-    serde::Serialize, Clone, Debug, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(serde::Serialize, Clone, Debug, schemars::JsonSchema)]
 pub struct FeedArticle {
     pub title: String,
     pub authors: Vec<String>,
@@ -38,21 +36,15 @@ impl SavedArticle {
     }
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct ArticlesWithTopic {
     pub articles: Vec<FeedArticle>,
     pub topic: String,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct TodayNews {
     pub topics: Vec<ArticlesWithTopic>,
-}
-
-impl From<Vec<ArticlesWithTopic>> for TodayNews {
-    fn from(topics: Vec<ArticlesWithTopic>) -> Self {
-        Self { topics }
-    }
 }
 
 //not fully parsed

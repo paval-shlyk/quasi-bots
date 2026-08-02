@@ -3124,7 +3124,6 @@ name = "news"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
  "chrono",
  "feed-rs",
  "futures",
@@ -3142,7 +3141,6 @@ dependencies = [
  "telemetry",
  "tokio",
  "tracing",
- "utoipa",
 ]
 
 [[package]]

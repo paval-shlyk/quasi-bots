@@ -6,6 +6,7 @@ members = [
 	"finance",
 	"knowledge",
 	"mcp-auth",
+	"mcp-client",
 	"migration",
 	"monitor",
 	"news",

@@ -84,16 +84,17 @@ async fn handle_auth_code(
     config: &McpAuthConfig,
 ) -> Response {
     if let Some(resource) = req.resource.as_deref()
-        && !metadata::resource_matches(config, resource) {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({
-                    "error": "invalid_target",
-                    "error_description": "resource parameter mismatch"
-                })),
-            )
-                .into_response();
-        }
+        && !metadata::resource_matches(config, resource)
+    {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "invalid_target",
+                "error_description": "resource parameter mismatch"
+            })),
+        )
+            .into_response();
+    }
 
     let session = store.take_session(&req.code).await;
     let session = match session {
@@ -148,10 +149,10 @@ async fn handle_auth_code(
 
     if let Some(resource) = req.resource.as_deref()
         && let Some(session_resource) = session.resource.as_deref()
-            && (!metadata::resource_matches(config, session_resource)
-                || normalize(resource) != normalize(session_resource))
-            {
-                return (
+        && (!metadata::resource_matches(config, session_resource)
+            || normalize(resource) != normalize(session_resource))
+    {
+        return (
                     StatusCode::BAD_REQUEST,
                     Json(serde_json::json!({
                         "error": "invalid_grant",
@@ -159,7 +160,7 @@ async fn handle_auth_code(
                     })),
                 )
                     .into_response();
-            }
+    }
 
     let challenge = match session
         .code_challenge

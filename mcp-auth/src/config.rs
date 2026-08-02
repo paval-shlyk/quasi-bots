@@ -144,15 +144,16 @@ impl McpAuthConfig {
     pub fn allowed_hosts(&self) -> Vec<String> {
         let mut hosts = Vec::new();
         if let Ok(url) = url::Url::parse(&self.public_url)
-            && let Some(host) = url.host_str() {
-                let mut authority = host.to_string();
-                if let Some(port) = url.port() {
-                    authority.push(':');
-                    authority.push_str(&port.to_string());
-                }
-                hosts.push(authority);
-                hosts.push(host.to_string());
+            && let Some(host) = url.host_str()
+        {
+            let mut authority = host.to_string();
+            if let Some(port) = url.port() {
+                authority.push(':');
+                authority.push_str(&port.to_string());
             }
+            hosts.push(authority);
+            hosts.push(host.to_string());
+        }
         hosts.push("localhost".into());
         hosts.push("127.0.0.1".into());
         hosts.sort();

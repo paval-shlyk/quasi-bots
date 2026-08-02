@@ -68,7 +68,6 @@ impl SkillMasterMcpServer {
     ) -> Result<Json<knowledge::TagList>, String> {
         knowledge::fetch_tags(&self.state.pool)
             .await
-            .map(knowledge::TagList::from)
             .map(Json)
             .map_err(|e| e.to_string())
     }

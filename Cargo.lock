@@ -2731,7 +2731,6 @@ name = "knowledge"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "axum",
  "chrono",
  "rand 0.10.1",
  "schemars 1.2.1",
@@ -2741,7 +2740,6 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
- "utoipa",
  "uuid",
  "walkdir",
 ]

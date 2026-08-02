@@ -69,4 +69,3 @@ pub async fn fetch_next_unused_quote(
 pub fn notify_needs_more_quotes(state: &AppState) {
     state.needs_more_quotes.notify_one();
 }
-

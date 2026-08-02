@@ -1,7 +1,8 @@
-use rmcp::{handler::server::wrapper::Json, tool};
+use rmcp::{handler::server::wrapper::Json, tool, tool_router};
 
 use crate::{mcp::server::SkillMasterMcpServer, tools::util::json};
 
+#[tool_router(router = trading_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "Fetch trading portfolio summary")]
     async fn finance_portfolio(

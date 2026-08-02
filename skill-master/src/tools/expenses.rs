@@ -78,7 +78,7 @@ fn parse_created_at(value: Option<String>) -> Result<DateTime<Utc>, String> {
     }
 }
 
-#[tool_router(router = finance_tool_router, vis = "pub")]
+#[tool_router(router = expenses_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "List expense categories")]
     async fn list_categories(&self) -> Result<Json<serde_json::Value>, String> {

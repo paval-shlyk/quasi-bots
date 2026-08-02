@@ -25,7 +25,8 @@ pub fn mount(
         .with_json_response(config.json_response);
 
     if !config.allowed_origins.is_empty() {
-        http_cfg = http_cfg.with_allowed_origins(config.allowed_origins.clone());
+        http_cfg =
+            http_cfg.with_allowed_origins(config.allowed_origins.clone());
     }
 
     let state = app_state.clone();
@@ -35,12 +36,12 @@ pub fn mount(
         http_cfg,
     );
 
-    Router::new()
-        .nest_service("/mcp", mcp_service)
-        .layer(middleware::from_fn_with_state(
+    Router::new().nest_service("/mcp", mcp_service).layer(
+        middleware::from_fn_with_state(
             oauth_state,
             mcp_auth::oauth::bearer_auth_middleware,
-        ))
+        ),
+    )
 }
 
 pub async fn oauth_state(

@@ -82,13 +82,20 @@ pub async fn authorize(
     }
 
     if let Some(resource) = params.resource.as_deref()
-        && !metadata::resource_matches(config, resource) {
-            return (
-                StatusCode::BAD_REQUEST,
-                Html("<h1>Invalid resource parameter</h1>".to_string()),
-            )
-                .into_response();
-        }
+        && !metadata::resource_matches(config, resource)
+    {
+        tracing::warn!(
+            "Resource mismatch. Expected: {}, Given: {} ",
+            config.resource_url(),
+            resource
+        );
+
+        return (
+            StatusCode::BAD_REQUEST,
+            Html("<h1>Invalid resource parameter</h1>".to_string()),
+        )
+            .into_response();
+    }
 
     match store
         .authorize_client(&params.client_id, &params.redirect_uri)

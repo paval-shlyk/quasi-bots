@@ -1,6 +1,8 @@
 use crate::RssSource;
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 pub struct BrokenLink {
     pub url: String,
     pub last_attempted: chrono::DateTime<chrono::Utc>,

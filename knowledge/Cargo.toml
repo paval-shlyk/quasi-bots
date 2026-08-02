@@ -6,11 +6,9 @@ license = "GPL-2.0-only"
 
 [dependencies]
 anyhow = { workspace = true }
-axum = { workspace = true }
 schemars = { workspace = true }
 serde = { workspace = true }
 tracing = { workspace = true }
-utoipa = { workspace = true }
 tokio = { workspace = true, features = ["sync", "fs"] }
 
 chrono = { version = "0.4.43", features = ["serde"] }

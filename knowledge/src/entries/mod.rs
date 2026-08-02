@@ -2,12 +2,7 @@ use crate::topics;
 
 /// Human readable entry for a question
 #[derive(
-    Debug,
-    Clone,
-    serde::Serialize,
-    serde::Deserialize,
-    utoipa::ToSchema,
-    schemars::JsonSchema,
+    Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
 )]
 pub struct HumanEntry {
     // Unique identifier for the entry, can be a UUID or any string

@@ -1,10 +1,4 @@
-#[derive(
-    Debug,
-    sqlx::FromRow,
-    serde::Serialize,
-    utoipa::ToSchema,
-    schemars::JsonSchema,
-)]
+#[derive(Debug, sqlx::FromRow, serde::Serialize, schemars::JsonSchema)]
 pub struct Review {
     pub id: i64,
     pub entry_name: String,
@@ -12,7 +6,7 @@ pub struct Review {
     pub attempts: i64,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct RecentReviews {
     pub reviews: Vec<Review>,
 }

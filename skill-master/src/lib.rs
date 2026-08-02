@@ -46,7 +46,7 @@ pub async fn app_state(config: Config) -> AppState {
         .await
         .expect("Failed to fetch topics");
 
-    if topics.is_empty() {
+    if topics.topics.is_empty() {
         knowledge::refresh_from_files(
             &knowledge_state,
             &config.knowledge.database_file,

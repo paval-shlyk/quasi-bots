@@ -1,4 +1,4 @@
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct TagList {
     pub tags: Vec<String>,
 }

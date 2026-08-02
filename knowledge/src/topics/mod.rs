@@ -1,7 +1,3 @@
-mod routes;
-
-pub use routes::*;
-
 #[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Topic {
     pub id: u64,
@@ -14,7 +10,6 @@ pub struct Topic {
     sqlx::FromRow,
     serde::Serialize,
     serde::Deserialize,
-    utoipa::ToSchema,
     schemars::JsonSchema,
 )]
 pub struct TopicWithStatistics {
@@ -29,16 +24,9 @@ pub struct TopicWithStatistics {
     pub is_used: bool,
 }
 
-/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct TopicList {
     pub topics: Vec<TopicWithStatistics>,
-}
-
-impl From<Vec<TopicWithStatistics>> for TopicList {
-    fn from(topics: Vec<TopicWithStatistics>) -> Self {
-        Self { topics }
-    }
 }
 
 /// Fetches a random topic that has not been used yet. If all topics have been used, it resets the
@@ -93,7 +81,7 @@ pub async fn fetch_random_topic(
 /// disabled status.
 pub async fn fetch_topics(
     pool: &sqlx::SqlitePool,
-) -> anyhow::Result<Vec<TopicWithStatistics>> {
+) -> anyhow::Result<TopicList> {
     let topics: Vec<TopicWithStatistics> = sqlx::query_as!(
             TopicWithStatistics,
             r#"
@@ -122,7 +110,7 @@ pub async fn fetch_topics(
         .fetch_all(pool)
         .await?;
 
-    Ok(topics)
+    Ok(TopicList { topics })
 }
 
 async fn fetch_and_update_topic(

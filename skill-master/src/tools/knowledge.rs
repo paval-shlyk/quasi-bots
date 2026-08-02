@@ -58,7 +58,6 @@ impl SkillMasterMcpServer {
     ) -> Result<Json<knowledge::TopicList>, String> {
         knowledge::fetch_topics(&self.state.pool)
             .await
-            .map(knowledge::TopicList::from)
             .map(Json)
             .map_err(|e| e.to_string())
     }
@@ -132,6 +131,7 @@ impl SkillMasterMcpServer {
             attempts,
         }): Parameters<ReviewAttempts>,
     ) -> Result<String, String> {
+        //fixme: can we just use unit type here
         knowledge::update_review(&self.state.pool, entry_name, attempts as i32)
             .await
             .map(|_| "ok".to_string())
@@ -145,7 +145,6 @@ impl SkillMasterMcpServer {
     ) -> Result<Json<knowledge::RecentReviews>, String> {
         knowledge::fetch_recent_reviews(&self.state.pool, days)
             .await
-            .map(knowledge::RecentReviews::from)
             .map(Json)
             .map_err(|e| e.to_string())
     }

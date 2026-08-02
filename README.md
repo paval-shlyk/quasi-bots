@@ -79,10 +79,10 @@ Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 Release **version** is `{major.minor from skill-master/Cargo.toml}.{github.run_number}` (optional manual prefix override on `workflow_dispatch`).
 
-Two channels publish separate GitHub Releases, GHCR images, and `.deb` packages — install only one per host:
+Two channels publish separate GitHub Releases and `.deb` packages — install only one deb per host. Docker uses a single GHCR image; channels differ by tag only:
 
-- **stable** (`main`): package/image `skill-master`, release tag `{version}`
-- **dev**: package/image `skill-master-dev`, prerelease tag `dev-{version}`
+- **stable** (`main`): deb `skill-master`, image `skill-master:{version}-arm64` / `skill-master:latest-arm64`, release tag `{version}`
+- **dev**: deb `skill-master-dev`, image `skill-master:{version}-arm64` / `skill-master:dev-arm64`, prerelease tag `dev-{version}`
 
 ## Crypto trading bots (under development)
 

@@ -108,15 +108,17 @@ jobs:
             fi
           fi
 
+          # Docker always uses a single image name; channels differ only by tag.
+          # Deb packages use a distinct name so apt can tell stable vs dev apart.
+          DOCKER_IMAGE="skill-master"
+
           if [[ "$CHANNEL" == "dev" ]]; then
             PACKAGE_NAME="skill-master-dev"
-            DOCKER_IMAGE="skill-master-dev"
             CHANNEL_TAG="dev"
             RELEASE_TAG="dev-${FULL_VERSION}"
             IS_PRERELEASE="true"
           else
             PACKAGE_NAME="skill-master"
-            DOCKER_IMAGE="skill-master"
             CHANNEL_TAG="latest"
             RELEASE_TAG="${FULL_VERSION}"
             IS_PRERELEASE="false"
@@ -213,7 +215,7 @@ jobs:
           dpkg-deb -R "$OLD_DEB" /tmp/deb-repack
 
           # Channel packages are never co-installed; only the Debian package name differs.
-          # Image was already rewritten to skill-master-dev before cargo-deb.
+          # Docker image stays skill-master; channel is encoded in the image tag only.
           sed -i 's/^Package: skill-master$/Package: skill-master-dev/' /tmp/deb-repack/DEBIAN/control
           sed -i 's/^Description: .*/Description: Skill Master (dev channel) - Data collection and processing service/' /tmp/deb-repack/DEBIAN/control
 

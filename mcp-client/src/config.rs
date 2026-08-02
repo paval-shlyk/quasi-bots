@@ -37,32 +37,6 @@ impl ConnectOptions {
     }
 }
 
-/// Extract the origin (`scheme://host[:port]`) from an MCP endpoint URL.
-///
-/// OAuth discovery metadata is served at the origin, while the MCP endpoint
-/// is typically at `{origin}/mcp`.
-pub fn origin_from_mcp_url(mcp_url: &str) -> crate::Result<String> {
-    let parsed = url::Url::parse(mcp_url)
-        .map_err(|e| crate::Error::InvalidUrl(format!("{mcp_url}: {e}")))?;
-
-    let scheme = parsed.scheme();
-    if scheme != "http" && scheme != "https" {
-        return Err(crate::Error::InvalidUrl(format!(
-            "unsupported scheme '{scheme}' (expected http or https)"
-        )));
-    }
-
-    let host = parsed.host_str().ok_or_else(|| {
-        crate::Error::InvalidUrl("URL must include a host".into())
-    })?;
-
-    let origin = match parsed.port() {
-        Some(port) => format!("{scheme}://{host}:{port}"),
-        None => format!("{scheme}://{host}"),
-    };
-    Ok(origin)
-}
-
 /// Build a minimal JSON object from a JSON Schema `properties` map.
 ///
 /// Required fields get empty-string / empty-array / null defaults; optional
@@ -127,18 +101,6 @@ fn default_for_schema_prop(prop: &serde_json::Value) -> serde_json::Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn origin_strips_path() {
-        assert_eq!(
-            origin_from_mcp_url("http://127.0.0.1:8080/mcp").unwrap(),
-            "http://127.0.0.1:8080"
-        );
-        assert_eq!(
-            origin_from_mcp_url("https://example.com/mcp").unwrap(),
-            "https://example.com"
-        );
-    }
 
     #[test]
     fn empty_args_no_props() {

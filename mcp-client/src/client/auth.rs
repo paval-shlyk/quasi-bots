@@ -8,7 +8,7 @@ use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 use url::Url;
 
-use crate::config::{ConnectOptions, origin_from_mcp_url};
+use crate::config::ConnectOptions;
 use crate::{Error, Result};
 
 /// Run OAuth 2.1 + PKCE against the MCP resource server origin.
@@ -21,7 +21,6 @@ use crate::{Error, Result};
 /// 3. Browser authorization (Google owner login on skill-master)
 /// 4. Code exchange → access token
 pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
-    let origin = origin_from_mcp_url(&opts.url)?;
     let redirect = Url::parse(&opts.oauth_redirect)
         .map_err(|e| Error::InvalidUrl(format!("redirect URI: {e}")))?;
 
@@ -56,7 +55,7 @@ pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
         let _ = tx.send(result);
     });
 
-    let mut oauth = OAuthState::new(origin.as_str(), None)
+    let mut oauth = OAuthState::new(&opts.url, None)
         .await
         .map_err(Error::oauth)?;
 

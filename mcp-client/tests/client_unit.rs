@@ -1,17 +1,4 @@
-use mcp_client::{empty_args_from_schema, origin_from_mcp_url};
-
-#[test]
-fn origin_from_mcp_url_basic() {
-    assert_eq!(
-        origin_from_mcp_url("http://127.0.0.1:8080/mcp").unwrap(),
-        "http://127.0.0.1:8080"
-    );
-}
-
-#[test]
-fn origin_rejects_bad_scheme() {
-    assert!(origin_from_mcp_url("ftp://example.com/mcp").is_err());
-}
+use mcp_client::empty_args_from_schema;
 
 #[test]
 fn empty_args_from_schema_required_only() {

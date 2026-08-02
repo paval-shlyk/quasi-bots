@@ -10,6 +10,6 @@ pub mod model;
 pub mod tui;
 
 pub use client::{McpSession, login_oauth};
-pub use config::{ConnectOptions, empty_args_from_schema, origin_from_mcp_url};
+pub use config::{ConnectOptions, empty_args_from_schema};
 pub use error::{Error, Result};
 pub use model::{CallOutcome, LogEntry, LogLevel, ServerStatus, ToolView};

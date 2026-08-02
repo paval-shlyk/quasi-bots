@@ -102,4 +102,3 @@ pub fn client() -> reqwest::Client {
         .build()
         .expect("Failed to build HTTP client")
 }
-

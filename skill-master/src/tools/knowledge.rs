@@ -43,7 +43,7 @@ struct EntryAffinity {
 #[tool_router(router = knowledge_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "Fetch the next daily knowledge question")]
-    async fn knowledge_next_question(
+    async fn knowledge_bank_next_question(
         &self,
     ) -> Result<Json<knowledge::HumanEntry>, String> {
         knowledge::fetch_random_entry(&self.state.pool)
@@ -53,7 +53,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "List all knowledge topics with statistics")]
-    async fn knowledge_list_topics(
+    async fn knowledge_bank_list_topics(
         &self,
     ) -> Result<Json<knowledge::TopicList>, String> {
         knowledge::fetch_topics(&self.state.pool)
@@ -63,7 +63,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "List all knowledge tags")]
-    async fn knowledge_list_tags(
+    async fn knowledge_bank_list_tags(
         &self,
     ) -> Result<Json<knowledge::TagList>, String> {
         knowledge::fetch_tags(&self.state.pool)
@@ -75,7 +75,7 @@ impl SkillMasterMcpServer {
     #[tool(
         description = "Set review affinity for a topic (days until next review, 0 to clear)"
     )]
-    async fn knowledge_set_topic_affinity(
+    async fn knowledge_bank_set_topic_affinity(
         &self,
         Parameters(TopicAffinity { topic_id, days }): Parameters<TopicAffinity>,
     ) -> Result<String, String> {
@@ -88,7 +88,7 @@ impl SkillMasterMcpServer {
     #[tool(
         description = "Set review affinity for an entry (days until next review, 0 to clear)"
     )]
-    async fn knowledge_set_entry_affinity(
+    async fn knowledge_bank_set_entry_affinity(
         &self,
         Parameters(EntryAffinity { entry_name, days }): Parameters<
             EntryAffinity,
@@ -101,7 +101,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Add a new knowledge entry")]
-    async fn knowledge_add_entry(
+    async fn knowledge_bank_add_entry(
         &self,
         Parameters(NewKnowledge {
             topic_id,
@@ -123,7 +123,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Record a review attempt for a knowledge entry")]
-    async fn knowledge_update_review(
+    async fn knowledge_bank_update_review(
         &self,
         Parameters(ReviewAttempts {
             entry_name,
@@ -138,7 +138,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Fetch recent knowledge reviews")]
-    async fn knowledge_recent_reviews(
+    async fn knowledge_bank_recent_reviews(
         &self,
         Parameters(RecentReviewsQuery { days }): Parameters<RecentReviewsQuery>,
     ) -> Result<Json<knowledge::RecentReviews>, String> {

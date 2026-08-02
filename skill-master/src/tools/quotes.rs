@@ -5,7 +5,7 @@ use crate::mcp::server::SkillMasterMcpServer;
 #[tool_router(router = quotes_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "List known quote authors with quote counts")]
-    async fn quotes_list_authors(
+    async fn quotes_bank_list_authors(
         &self,
     ) -> Result<Json<crate::quotes::QuoteAuthorList>, String> {
         crate::quotes::fetch_known_authors(&self.state.pool)
@@ -16,7 +16,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Fetch the next unused famous quote")]
-    async fn quotes_next(
+    async fn quotes_bank_next(
         &self,
     ) -> Result<Json<crate::quotes::FamousQuote>, String> {
         match crate::quotes::fetch_next_unused_quote(&self.state.pool).await {

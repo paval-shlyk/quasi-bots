@@ -79,7 +79,7 @@ fn parse_created_at(value: Option<String>) -> Result<DateTime<Utc>, String> {
 #[tool_router(router = expenses_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "List expense categories")]
-    async fn list_categories(
+    async fn expenses_list_categories(
         &self,
     ) -> Result<Json<finance::expenses::CategoryList>, String> {
         finance::expenses::list_all(self.state.finance_state.pool())
@@ -89,7 +89,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Create an expense category")]
-    async fn create_category(
+    async fn expenses_create_category(
         &self,
         Parameters(CreateCategory { name }): Parameters<CreateCategory>,
     ) -> Result<Json<finance::expenses::Category>, String> {
@@ -100,7 +100,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "List expense entries (defaults to last 30 days)")]
-    async fn list_entries(
+    async fn expenses_list_entries(
         &self,
         Parameters(ListEntries { year, month }): Parameters<ListEntries>,
     ) -> Result<Json<finance::expenses::ExpenseEntryList>, String> {
@@ -123,7 +123,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Create an expense entry")]
-    async fn create_entry(
+    async fn expenses_create_entry(
         &self,
         Parameters(CreateEntry {
             description,
@@ -146,7 +146,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Update an expense entry")]
-    async fn update_entry(
+    async fn expenses_update_entry(
         &self,
         Parameters(UpdateEntry {
             entry_id,
@@ -174,7 +174,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Delete an expense entry")]
-    async fn delete_entry(
+    async fn expenses_delete_entry(
         &self,
         Parameters(EntryId { entry_id }): Parameters<EntryId>,
     ) -> Result<String, String> {
@@ -191,7 +191,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Yearly expense report")]
-    async fn yearly_report(
+    async fn expenses_yearly_report(
         &self,
         Parameters(YearlyReportQuery { year }): Parameters<YearlyReportQuery>,
     ) -> Result<Json<finance::expenses::YearReport>, String> {
@@ -206,7 +206,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Monthly expense report")]
-    async fn monthly_report(
+    async fn expenses_monthly_report(
         &self,
         Parameters(MonthlyReportQuery { year, month }): Parameters<
             MonthlyReportQuery,
@@ -226,7 +226,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(description = "Weekly expense report")]
-    async fn weekly_report(
+    async fn expenses_weekly_report(
         &self,
         Parameters(WeeklyReportQuery { year, week }): Parameters<
             WeeklyReportQuery,

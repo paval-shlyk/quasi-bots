@@ -5,7 +5,7 @@ use crate::mcp::server::SkillMasterMcpServer;
 #[tool_router(router = trading_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(description = "Fetch trading portfolio summary")]
-    async fn finance_portfolio(
+    async fn trading_portfolio(
         &self,
     ) -> Result<Json<finance::Portfolio>, String> {
         finance::portfolio::fetch_portfolio(self.state.finance_state.api())

@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT id, name\n                FROM topic\n                WHERE is_used = FALSE AND (disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP)\n                ORDER BY RANDOM()\n                LIMIT 1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "1805b06e735e421283add58581242c096e6bb21519a83d72acfa9d453ce41dc1"
+}

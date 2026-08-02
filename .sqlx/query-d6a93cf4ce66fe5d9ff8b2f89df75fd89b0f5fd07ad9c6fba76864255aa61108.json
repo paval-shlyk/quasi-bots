@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT name, quotes_count as \"quotes_count: u64\"\n            FROM (\n                SELECT\n                    a.name as name,\n                    COUNT(q.id) as quotes_count\n                FROM author as a\n                LEFT JOIN quote as q ON a.id = q.author_id\n                GROUP BY a.id\n            )\n            WHERE quotes_count > 0\n            ORDER BY quotes_count DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "name",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "quotes_count: u64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d6a93cf4ce66fe5d9ff8b2f89df75fd89b0f5fd07ad9c6fba76864255aa61108"
+}

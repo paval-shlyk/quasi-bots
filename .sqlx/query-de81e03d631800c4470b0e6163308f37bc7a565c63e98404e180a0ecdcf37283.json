@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    SELECT \n                        e.id,\n                        e.name,\n                        t.name as topic,\n                        e.question,\n                        e.truth,\n                        e.affinity_days as \"affinity_days: u32\"\n                    FROM entry as e\n                    JOIN topic as t ON e.topic_id = t.id\n                    WHERE t.id = ? AND e.is_reviewed = FALSE AND (e.disabled_until IS NULL OR e.disabled_until <= CURRENT_TIMESTAMP)\n                    ORDER BY RANDOM()\n                    LIMIT 1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "topic",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "question",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "truth",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "affinity_days: u32",
+        "ordinal": 5,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "de81e03d631800c4470b0e6163308f37bc7a565c63e98404e180a0ecdcf37283"
+}

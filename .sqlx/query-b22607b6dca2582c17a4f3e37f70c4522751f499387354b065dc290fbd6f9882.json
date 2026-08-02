@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                        INSERT INTO entry (topic_id, name, question, truth)\n                        VALUES (?, ?, ?, ?)\n                        RETURNING id\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "b22607b6dca2582c17a4f3e37f70c4522751f499387354b065dc290fbd6f9882"
+}

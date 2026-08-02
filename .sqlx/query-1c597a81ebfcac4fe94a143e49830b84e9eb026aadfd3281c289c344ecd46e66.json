@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                id as \"id: u64\",\n                name,\n                questions_count as \"questions_count: u64\",\n                disabled_until as \"disabled_until: chrono::DateTime<chrono::Utc>\",\n                affinity_days as \"affinity_days: u32\",\n                is_used\n            FROM (\n                SELECT\n                    t.id as id,\n                    t.name,\n                    COUNT(e.id) as questions_count,\n                    t.disabled_until,\n                    t.affinity_days,\n                    t.is_used\n                FROM topic as t\n                LEFT JOIN entry as e ON e.topic_id = t.id\n                GROUP BY t.id\n            )\n            ORDER BY questions_count DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: u64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "questions_count: u64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "disabled_until: chrono::DateTime<chrono::Utc>",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "affinity_days: u32",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_used",
+        "ordinal": 5,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "1c597a81ebfcac4fe94a143e49830b84e9eb026aadfd3281c289c344ecd46e66"
+}

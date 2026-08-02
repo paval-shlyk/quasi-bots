@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT COUNT(id) as count\n            FROM topic\n            WHERE disabled_until IS NULL OR disabled_until <= CURRENT_TIMESTAMP\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "37418d1886055de78025b4de829f97c07d687af0e3b8bca652eaeb45f1944d68"
+}

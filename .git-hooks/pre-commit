@@ -1,0 +1,7 @@
+set -exuo pipefail
+
+export SQLX_OFFLINE=true
+
+cargo check --all
+
+cargo clippy --all --all-targets --all-features -- -D warnings

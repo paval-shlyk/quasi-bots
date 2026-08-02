@@ -1,0 +1,73 @@
+build-deps:
+    sudo dnf install -y sqlite protobuf-compiler
+
+serve:
+    cargo run --bin skill-master
+
+fetch:
+    curl -s -L http://localhost:8080/news-bank/today | jq
+
+search:
+    curl -s -L "http://localhost:8080/search?q=height%20of%20Elon%20Musk"
+
+broken-links:
+    curl -s -L "http://localhost:8080/news-bank/broken-links" | jq
+
+news-sources:
+    curl -s -L "http://localhost:8080/news-bank/sources" | jq
+
+portfolio:
+    curl -s -L "http://localhost:8080/market-tracker/portfolio" | jq
+
+next-quote:
+    #!/bin/bash
+    for i in {1..5}; do \
+        curl -X POST -s -L "http://localhost:8080/quotes-bank/next" | jq
+    done
+
+fetch_market:
+    # add mozilla user agent to avoid 403 error
+    # curl -s -L -A "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36" "https://query1.finance.yahoo.com/v7/finance/quote?symbols=AAPL,BTC-USD,GC=F" | jq
+    # curl -s -L "http://localhost:8080/market-tracker/report?asset=TSLA"
+    curl -s -L "http://localhost:8080/market-tracker/recommendations"
+
+next-knowledge:
+    #!/bin/bash
+    for i in {1..5}; do \
+        curl -X POST -s -L "http://localhost:8080/knowledge-bank/next" | jq; \
+    done
+    # curl -X POST -s -L "http://localhost:8080/knowledge-bank/next"
+
+fetch_topics:
+    curl -s -L "http://localhost:8080/knowledge-bank/topics" | jq
+
+fetch_tags:
+    curl -s -L "http://localhost:8080/knowledge-bank/tags" | jq
+
+fr:
+    curl -s -L "http://localhost:8080/knowledge-bank/reviews" | jq
+
+set_attempt:
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/reviews" --json '{"attempts": 1}' 
+
+set_affinity:
+    curl -X POST -s -L "http://localhost:8080/knowledge-bank/entries/net_002/affinity" --json '{"days": 0}'
+
+expense-categories:
+    curl -s -L "http://localhost:8080/expenses-bank/categories" | jq
+
+expense-entries:
+    curl -s -L "http://localhost:8080/expenses-bank/entries" | jq
+
+expense-monthly:
+    curl -s -L "http://localhost:8080/expenses-bank/report/monthly" | jq
+
+expense-yearly:
+    curl -s -L "http://localhost:8080/expenses-bank/report/yearly" | jq
+
+add-expense:
+    curl -X POST -s -L "http://localhost:8080/expenses-bank/entries" --json '{"description": "test-2", "amount": 100, "category_id": 3}' | jq
+
+lint:
+    cargo fmt --all --check
+    cargo clippy --all-targets -- -D warnings

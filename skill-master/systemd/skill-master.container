@@ -1,0 +1,20 @@
+[Unit]
+Description=Skill Master Podman Container
+After=network.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/paval-shlyk/quasi-bots/skill-master:IMAGE_TAG
+ContainerName=skill-master
+Volume=/etc/skill-master:/config:ro
+Volume=/var/lib/skill-master:/var/lib/skill-master
+Volume=/etc/localtime:/etc/localtime:ro
+Environment=RUST_LOG=info
+PublishPort=8080:8080
+AutoUpdate=registry
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

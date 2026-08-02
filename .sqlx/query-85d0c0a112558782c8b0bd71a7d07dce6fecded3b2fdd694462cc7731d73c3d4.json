@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                UPDATE topic\n                SET is_used = TRUE\n                WHERE id = ?\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "85d0c0a112558782c8b0bd71a7d07dce6fecded3b2fdd694462cc7731d73c3d4"
+}

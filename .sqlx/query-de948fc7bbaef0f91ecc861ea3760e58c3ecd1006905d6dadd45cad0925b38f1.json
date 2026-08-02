@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE review\n            SET attempts = ?\n            WHERE \n                entry_id IN (SELECT id FROM entry WHERE name = ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "de948fc7bbaef0f91ecc861ea3760e58c3ecd1006905d6dadd45cad0925b38f1"
+}

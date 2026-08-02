@@ -1,0 +1,89 @@
+[package]
+name = "skill-master"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-2.0-only"
+description = "A HTTP server for OpenClaw bot integration"
+
+[[bin]]
+name = "skill-master"
+path = "src/bin/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true }
+tracing = { workspace = true }
+
+serde = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true, features = [
+	"fs",
+	"macros",
+	"net",
+	"rt",
+	"rt-multi-thread",
+	"sync",
+	"signal",
+] }
+
+chrono = "0.4.43"
+clap = { version = "4.5.58", features = ["derive"] }
+serde_json = "1.0.149"
+sqlx = { version = "0.8.6", features = [
+	"runtime-tokio",
+	"sqlite",
+	"tls-rustls",
+	"chrono",
+] }
+libsqlite3-sys = { version = "*", features = ["bundled"] }
+toml = "0.9.11"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+
+
+news = { version = "0.1.0", path = "../news" }
+finance = { version = "0.1.0", path = "../finance" }
+knowledge = { version = "0.1.0", path = "../knowledge" }
+telemetry = { version = "0.1.0", path = "../telemetry" }
+mcp-auth = { version = "0.1.0", path = "../mcp-auth" }
+
+rmcp = { version = "1.7", features = [
+	"server",
+	"macros",
+	"schemars",
+	"transport-streamable-http-server",
+] }
+schemars = { workspace = true }
+tokio-util = "0.7"
+
+[dev-dependencies]
+proptest = "1.10.0"
+
+[package.metadata.deb]
+maintainer = "Paval Shlyk <paval.shlyk@quasi.su>"
+copyright = "2026, quasi.su"
+depends = "$auto, podman"
+section = "utility"
+assets = [
+	[
+		"systemd/skill-master.container",
+		"/etc/containers/systemd/skill-master.container",
+		"644",
+	],
+	[
+		"config.deb.toml",
+		"/etc/skill-master/config.toml",
+		"640",
+	],
+	[
+		"knowledge-bank/*",
+		"/var/lib/skill-master/knowledge-bank/",
+		"644",
+	],
+	[
+		"man/skill-master.1",
+		"/usr/share/man/man1/skill-master.1",
+		"644",
+	],
+]
+conf-files = ["/etc/skill-master/config.toml"]
+maintainer-scripts = "debian/"

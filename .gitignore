@@ -1,1 +1,15 @@
 /target
+
+# MCP auth secrets (copy from mcp-auth/config.toml.example)
+mcp-auth/config.toml
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+
+.opencode
+.local-docs
+todo.md

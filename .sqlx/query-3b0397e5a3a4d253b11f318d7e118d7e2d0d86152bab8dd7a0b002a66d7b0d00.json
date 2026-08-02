@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT \n                e.id as \"id!\",\n                e.description,\n                e.date as \"date: chrono::DateTime<chrono::Utc>\",\n                e.amount as \"amount: u64\",\n                e.category_id,\n                c.name as category_name\n            FROM expense_entries e\n            JOIN expense_categories c ON e.category_id = c.id\n            WHERE e.date >= ? AND e.date < ?\n            ORDER BY e.date DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "description",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "date: chrono::DateTime<chrono::Utc>",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "amount: u64",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "category_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "category_name",
+        "ordinal": 5,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "3b0397e5a3a4d253b11f318d7e118d7e2d0d86152bab8dd7a0b002a66d7b0d00"
+}

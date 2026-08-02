@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                        INSERT INTO topic (name)\n                        VALUES (?)\n                        ON CONFLICT(name) DO UPDATE SET name=excluded.name\n                        RETURNING id\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "eac231af5edf22a19160f27ac97ba3e26855001a95a38305c1b2807dbd986768"
+}

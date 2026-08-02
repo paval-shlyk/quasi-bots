@@ -5,12 +5,28 @@ on:
     branches: ["main", "master", "dev"]
   pull_request:
     branches: ["main", "master"]
+  workflow_dispatch:
+    inputs:
+      release_prefix:
+        description: "Optional version prefix override (e.g. 1.0 or 2.0). If blank, major.minor is taken from skill-master/Cargo.toml"
+        required: false
+        default: ""
+        type: string
+      channel:
+        description: "Build channel (overrides branch detection)"
+        required: false
+        default: "stable"
+        type: choice
+        options:
+          - stable
+          - dev
 
 env:
   CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,48 +34,234 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler libsqlite3-dev pkg-config libfreetype6-dev libfontconfig1-dev
       - name: Lint
         run: just lint
-        working-directory: scrapper
+      - name: Test
+        run: just test-all
 
-  build-deb:
-    runs-on: ubuntu-latest
+  build:
+    needs: check
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            arch: arm64
+            dockerfile: skill-master/docker/Dockerfile
+            docker_tag_suffix: -arm64
+            docker_platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    outputs:
+      release_tag: ${{ steps.vars.outputs.release_tag }}
+      is_prerelease: ${{ steps.vars.outputs.is_prerelease }}
+      channel: ${{ steps.vars.outputs.channel }}
+      cargo_version: ${{ steps.vars.outputs.cargo_version }}
+      release_prefix: ${{ steps.vars.outputs.release_prefix }}
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install cargo-chef
-        run: cargo install cargo-chef
-
-      - name: Prepare recipe
-        run: cargo chef prepare --recipe-path recipe.json
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('recipe.json') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: Install cargo-deb
+      - name: Determine Version and Tag
+        id: vars
+        shell: bash
         run: |
-          if ! command -v cargo-deb &> /dev/null; then
-            cargo install cargo-deb
+          # Always read Cargo.toml version for logging + fallback
+          CARGO_VERSION=$(grep '^version =' skill-master/Cargo.toml | head -1 | cut -d '"' -f 2 | tr -d ' \t')
+
+          # Determine release prefix:
+          # 1. Use manual override from workflow_dispatch if provided
+          # 2. Otherwise, take major.minor from skill-master/Cargo.toml (e.g. "0.1.0" → "0.1")
+          RELEASE_PREFIX="${{ github.event.inputs.release_prefix }}"
+
+          if [[ -z "$RELEASE_PREFIX" ]]; then
+            # Extract major.minor as the prefix (supports 0.1.0, 1.0.0, 2.3.4, etc.)
+            RELEASE_PREFIX=$(echo "$CARGO_VERSION" | cut -d '.' -f 1,2)
           fi
 
-      - name: Cook ingredients
-        run: cargo chef cook --release --recipe-path recipe.json
+          # Fallback if parsing failed
+          if [[ -z "$RELEASE_PREFIX" ]]; then
+            RELEASE_PREFIX="0.1"
+          fi
+
+          RUN_NUMBER="${{ github.run_number }}"
+          FULL_VERSION="${RELEASE_PREFIX}.${RUN_NUMBER}"
+
+          # Determine channel: prefer workflow_dispatch input, else detect from branch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.channel }}" ]]; then
+            CHANNEL="${{ github.event.inputs.channel }}"
+          else
+            BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+            if [[ "$BRANCH_NAME" == "dev" ]]; then
+              CHANNEL="dev"
+            else
+              CHANNEL="stable"
+            fi
+          fi
+
+          # Docker always uses a single image name; channels differ only by tag.
+          # Deb packages use a distinct name so apt can tell stable vs dev apart.
+          DOCKER_IMAGE="skill-master"
+
+          if [[ "$CHANNEL" == "dev" ]]; then
+            PACKAGE_NAME="skill-master-dev"
+            CHANNEL_TAG="dev"
+            RELEASE_TAG="dev-${FULL_VERSION}"
+            IS_PRERELEASE="true"
+          else
+            PACKAGE_NAME="skill-master"
+            CHANNEL_TAG="latest"
+            RELEASE_TAG="${FULL_VERSION}"
+            IS_PRERELEASE="false"
+          fi
+
+          DOCKER_TAG="${FULL_VERSION}${{ matrix.docker_tag_suffix }}"
+
+          if [[ -n "${{ github.event.inputs.release_prefix }}" ]]; then
+            PREFIX_SOURCE="workflow_dispatch input (override)"
+          else
+            PREFIX_SOURCE="skill-master/Cargo.toml"
+          fi
+
+          echo "Cargo version (raw): $CARGO_VERSION"
+          echo "Using release prefix: $RELEASE_PREFIX (source: $PREFIX_SOURCE)"
+          echo "Full Version: $FULL_VERSION"
+          echo "Package Name: $PACKAGE_NAME"
+          echo "Docker Image: $DOCKER_IMAGE"
+          echo "Release Tag: $RELEASE_TAG"
+          echo "Docker Tag: $DOCKER_TAG"
+          echo "Channel: $CHANNEL"
+
+          echo "full_version=${FULL_VERSION}" >> $GITHUB_OUTPUT
+          echo "package_name=${PACKAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "docker_image=${DOCKER_IMAGE}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "is_prerelease=${IS_PRERELEASE}" >> $GITHUB_OUTPUT
+          echo "docker_tag=${DOCKER_TAG}" >> $GITHUB_OUTPUT
+          echo "channel_tag=${CHANNEL_TAG}" >> $GITHUB_OUTPUT
+          echo "channel=${CHANNEL}" >> $GITHUB_OUTPUT
+          echo "cargo_version=${CARGO_VERSION}" >> $GITHUB_OUTPUT
+          echo "release_prefix=${RELEASE_PREFIX}" >> $GITHUB_OUTPUT
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          platforms: ${{ matrix.docker_platform }}
+          push: true
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+          tags: |
+            ghcr.io/${{ github.repository }}/${{ steps.vars.outputs.docker_image }}:${{ steps.vars.outputs.docker_tag }}
+            ghcr.io/${{ github.repository }}/${{ steps.vars.outputs.docker_image }}:${{ steps.vars.outputs.channel_tag }}${{ matrix.docker_tag_suffix }}
+          cache-from: type=gha,scope=${{ matrix.docker_platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.docker_platform }}
+
+      - name: Update container image reference
+        run: |
+          IMG="${{ steps.vars.outputs.docker_image }}"
+          TAG="${{ steps.vars.outputs.docker_tag }}"
+          sed -i "s|^Image=.*|Image=ghcr.io/${{ github.repository }}/${IMG}:${TAG}|g" \
+            skill-master/systemd/skill-master.container
+
+      - name: Cache cargo-deb
+        id: cache-cargo-deb
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-deb
+          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-deb-v2
+
+      - name: Install cargo-deb
+        if: steps.cache-cargo-deb.outputs.cache-hit != 'true'
+        run: cargo install cargo-deb
 
       - name: Build and Package
-        run: cargo deb -p scrapper
+        run: cargo deb -p skill-master --no-build --target ${{ matrix.target }} --deb-version ${{ steps.vars.outputs.full_version }}
+
+      - name: Apply dev package prefix (rename package)
+        if: steps.vars.outputs.package_name == 'skill-master-dev'
+        run: |
+          set -euo pipefail
+          DEB_DIR="target/${{ matrix.target }}/debian"
+          OLD_DEB=$(ls ${DEB_DIR}/skill-master_*.deb 2>/dev/null | head -1 || true)
+
+          if [[ -z "$OLD_DEB" ]]; then
+            echo "No .deb found to repackage for dev"
+            exit 0
+          fi
+
+          echo "Repackaging $OLD_DEB as skill-master-dev package..."
+          mkdir -p /tmp/deb-repack
+          dpkg-deb -R "$OLD_DEB" /tmp/deb-repack
+
+          # Channel packages are never co-installed; only the Debian package name differs.
+          # Docker image stays skill-master; channel is encoded in the image tag only.
+          sed -i 's/^Package: skill-master$/Package: skill-master-dev/' /tmp/deb-repack/DEBIAN/control
+          sed -i 's/^Description: .*/Description: Skill Master (dev channel) - Data collection and processing service/' /tmp/deb-repack/DEBIAN/control
+
+          NEW_DEB="${DEB_DIR}/skill-master-dev_${{ steps.vars.outputs.full_version }}_${{ matrix.arch }}.deb"
+          dpkg-deb -b /tmp/deb-repack "$NEW_DEB"
+
+          rm -f "$OLD_DEB"
+          rm -rf /tmp/deb-repack
+
+          echo "Created dev package: $NEW_DEB"
+          ls -l "${DEB_DIR}/"*.deb || true
 
       - name: Upload Deb Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: scrapper-deb
-          path: target/debian/*.deb
+          name: ${{ steps.vars.outputs.package_name }}-deb-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/debian/*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/dev')) ||
+      github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-deb-*"
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate Date
+        run: echo "DATE=$(date -u)" >> $GITHUB_ENV
+
+      - name: Update Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.build.outputs.release_tag }}
+          prerelease: ${{ needs.build.outputs.is_prerelease }}
+          files: artifacts/*.deb
+          name: ${{ needs.build.outputs.release_tag }}
+          body: |
+            Release for ${{ github.ref_name }} (run #${{ github.run_number }}).
+            Channel: ${{ needs.build.outputs.channel || 'unknown' }}
+            Cargo.toml version: ${{ needs.build.outputs.cargo_version || 'n/a' }}
+            Used prefix: ${{ needs.build.outputs.release_prefix || 'n/a' }}
+            Build Date: ${{ env.DATE }}

@@ -1,0 +1,24 @@
+[package]
+name = "knowledge"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-2.0-only"
+
+[dependencies]
+anyhow = { workspace = true }
+schemars = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["sync", "fs"] }
+
+chrono = { version = "0.4.43", features = ["serde"] }
+rand = "0.10.0"
+serde_yaml = "0.9.34"
+sqlx = { version = "0.8.6", features = ["sqlite", "chrono", "runtime-tokio"] }
+walkdir = "2.5.0"
+uuid = { version = "1.20.0", features = [
+	"v4",
+	"fast-rng",
+	"macro-diagnostics",
+] }
+url = "2.5.8"

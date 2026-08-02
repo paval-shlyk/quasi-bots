@@ -1,0 +1,27 @@
+[package]
+name = "crypto-master"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "crypto-master"
+path = "src/main.rs"
+
+[[bin]]
+name = "crypto-cli"
+path = "src/bin/crypto-cli/main.rs"
+
+[dependencies]
+communication = { path = "../communication" }
+tonic = "0.13"
+prost-types = "0.13"
+tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = { workspace = true }
+rust_decimal = { version = "1", features = ["serde-with-str"] }
+clap = { version = "4", features = ["derive", "env"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = "0.4"
+axum = { workspace = true }

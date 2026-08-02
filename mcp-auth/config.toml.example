@@ -1,0 +1,14 @@
+public_url = "http://127.0.0.1:8080"
+token_ttl_secs = 3600
+scope = "mcp"
+allowed_origins = []
+stateful_mode = false
+json_response = true
+
+[auth.google]
+client_id = "REPLACE_ME.apps.googleusercontent.com"
+# client_secret = ""  # prefer GOOGLE_CLIENT_SECRET env in production
+allowed_google_subs = []
+# [[auth.allowed_owners]]
+# sub = "your-google-sub"
+# label = "Owner name"

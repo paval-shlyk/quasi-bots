@@ -1,0 +1,35 @@
+[package]
+name = "mcp-auth"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-2.0-only"
+description = "OAuth 2.1 Authorization Server for MCP resource servers"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true, features = [
+	"macros",
+	"rt",
+	"rt-multi-thread",
+	"sync",
+] }
+
+rmcp = { version = "1.7", features = ["auth"] }
+
+serde_json = "1.0"
+toml = "1.1"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+sha2 = "0.11"
+base64 = "0.22"
+serde_urlencoded = "0.7"
+tower-http = { version = "0.7", features = ["cors"] }
+url = "2"
+openidconnect = { version = "4", features = ["reqwest"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

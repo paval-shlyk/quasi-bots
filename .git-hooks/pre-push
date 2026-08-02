@@ -1,0 +1,27 @@
+#!/bin/bash
+
+just lint
+if [ $? -ne 0 ]; then
+  echo "Linting failed. Please fix the issues before pushing."
+  exit 1
+fi
+
+
+cargo sqlx prepare --workspace --check --all -- --all-targets --all-features
+if [ $? -ne 0 ]; then
+	echo "SQLx checks failed. Aborting push."
+	exit 1
+fi
+
+just test-all
+if [ $? -ne 0 ]; then
+	echo "Tests failed. Please fix the issues before pushing."
+	exit 1
+fi
+
+
+# check if any changes are not committed
+if [[ -n $(git status --porcelain) ]]; then
+  echo "You have uncommitted changes. Please commit or stash them before pushing."
+  exit 1
+fi

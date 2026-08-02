@@ -1,0 +1,100 @@
+db_file = "/var/lib/skill-master/skills.db"
+serp_api_key = ""                           # REPLACE_WITH_YOUR_KEY
+
+[knowledge]
+database_file = "/var/lib/skill-master/knowledge-bank"
+
+[finance]
+rss_source = "https://finance.yahoo.com/news/rssindex"
+provider = { base_url = "https://api-adapter.dzengi.com/api/v2", api_key = "", api_secret = "" } # REPlACE_WITH_YOUR_API_KEYS
+
+
+[news]
+refresh_timeout = "2h"
+article_max_age = "32h"
+retry_attempts = 3
+broken_link_cooldown = "10s"
+
+[news.gemini_config]
+api_key = ""                      # REPLACE_WITH_YOUR_KEY
+model = "models/gemini-2.5-flash" # YOU CAN CHOOSE A DIFFERENT MODEL IF YOU WANT
+
+summarize_instruction = '''
+Role: You are a strict news editor and extraction algorithm.
+Objective: Extract the core essence of the provided text.
+
+Constraints:
+1. Output Language: Same as the detected primary language.
+2. Format: Exactly 3 bullet points.
+3. Tone: Dry, factual, journalistic. No filler words ("The article says...").
+4. Content: Focus on metrics, names, and events. Ignore ads and navigation.
+5. Safety: If the text is empty or meaningless, return "ERROR: NO_CONTENT".
+'''
+summarize_temperature = 0.2
+
+[[news.rss_source]]
+topic = "Rust, Linux & System Programming"
+urls = [
+	"https://blog.rust-lang.org/feed.xml",
+	"https://this-week-in-rust.org/rss.xml",
+	"https://www.reddit.com/r/rust/top/.rss?t=day",
+	"https://www.phoronix.com/rss.php",
+	"https://fedoramagazine.org/feed/",
+	"https://ubuntu.com/blog/feed",
+	"https://archlinux.org/feeds/news/",
+	"https://store.steampowered.com/feeds/news/app/1675200/?l=english",
+	"https://www.opennet.ru/opennews/opennews_all_noadv.rss"
+]
+
+[[news.rss_source]]
+topic = "Big Tech & IT Infrastructure"
+urls = [
+	"https://azurecomcdn.azureedge.net/en-us/blog/feed/",
+	"https://devblogs.microsoft.com/feed/",
+	"https://netflixtechblog.com/feed",
+	"https://cloudblog.withgoogle.com/rss",
+	"https://research.google/blog/rss/",
+	"https://techcrunch.com/category/enterprise/feed/",
+	"https://github.blog/feed/",
+]
+
+[[news.rss_source]]
+topic = "Geopolitics, Markets & Belarus IT"
+urls = [
+	"https://finance.yahoo.com/news/rssindex",
+	"https://oilprice.com/rss/main",
+	"https://tradingeconomics.com/rss/news.aspx",
+	"https://www.investing.com/rss/news.rss",
+	"https://devby.io/rss",
+]
+
+[[news.rss_source]]
+topic = "Tech Trends, Algorithms, Crypto & Security"
+urls = [
+	"https://www.schneier.com/blog/atom.xml",
+	"https://habr.com/ru/rss/best/daily/",
+	"https://www.yegor256.com/rss",
+	"https://blog.cloudflare.com/rss/",
+	"https://solana.com/news/rss",
+	"https://status.crypto.com/rss",
+	"https://vitalik.eth.limo/feed.xml",
+]
+
+[[news.rss_source]]
+topic = "Art, Music & Creativity"
+urls = [
+	"https://www.artsy.net/rss/news",
+	"https://musictech.com/feed/",
+	"https://www.themarginalian.org/feed/",
+]
+
+[mcp]
+public_url = "http://127.0.0.1:8080"
+token_ttl_secs = 3600
+scope = "mcp"
+stateful_mode = false
+json_response = true
+
+[mcp.auth.google]
+client_id = "REPLACE_ME.apps.googleusercontent.com"
+allowed_google_subs = []

@@ -21,9 +21,7 @@ pub enum CryptoError {
     #[error("Settings error: {0}")]
     Settings(String),
 
-    #[error(
-        "Insufficient balance: available={available}, required={required}"
-    )]
+    #[error("Insufficient balance: available={available}, required={required}")]
     InsufficientBalance {
         available: Decimal,
         required: Decimal,

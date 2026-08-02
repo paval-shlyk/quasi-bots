@@ -6,7 +6,6 @@ use tonic::{Request, Response, Status};
 use crate::performance::compute_performance;
 use crate::worker_pool::WorkerPool;
 
-
 pub struct MasterGrpcServer {
     pool: Arc<WorkerPool>,
 }
@@ -17,7 +16,6 @@ impl MasterGrpcServer {
     }
 }
 
-
 #[tonic::async_trait]
 impl communication::MasterService for MasterGrpcServer {
     async fn list_workers(
@@ -27,9 +25,7 @@ impl communication::MasterService for MasterGrpcServer {
         let results = self
             .pool
             .for_each(|mut client| async move {
-                let resp = client
-                    .get_status(proto::Empty {})
-                    .await?;
+                let resp = client.get_status(proto::Empty {}).await?;
                 Ok(resp.into_inner())
             })
             .await;
@@ -100,14 +96,10 @@ impl communication::MasterService for MasterGrpcServer {
 
         self.pool
             .with_worker(&worker_id, |mut client| async move {
-                let status = client
-                    .get_status(proto::Empty {})
-                    .await?
-                    .into_inner();
-                let portfolio = client
-                    .get_portfolio(proto::Empty {})
-                    .await?
-                    .into_inner();
+                let status =
+                    client.get_status(proto::Empty {}).await?.into_inner();
+                let portfolio =
+                    client.get_portfolio(proto::Empty {}).await?.into_inner();
                 let trades = client
                     .get_trade_history(proto::HistoryRequest {
                         limit: 1000,
@@ -149,10 +141,8 @@ impl communication::MasterService for MasterGrpcServer {
             let result = self
                 .pool
                 .with_worker(wid, |mut client| async move {
-                    let status = client
-                        .get_status(proto::Empty {})
-                        .await?
-                        .into_inner();
+                    let status =
+                        client.get_status(proto::Empty {}).await?.into_inner();
                     let portfolio = client
                         .get_portfolio(proto::Empty {})
                         .await?
@@ -199,7 +189,11 @@ impl communication::MasterService for MasterGrpcServer {
 
         let best_worker_id = reports
             .iter()
-            .max_by_key(|r| r.total_pnl.parse::<rust_decimal::Decimal>().unwrap_or_default())
+            .max_by_key(|r| {
+                r.total_pnl
+                    .parse::<rust_decimal::Decimal>()
+                    .unwrap_or_default()
+            })
             .map(|r| r.worker_id.clone())
             .unwrap_or_default();
 

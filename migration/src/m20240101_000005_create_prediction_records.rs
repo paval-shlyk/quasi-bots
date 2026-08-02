@@ -22,7 +22,11 @@ impl MigrationTrait for Migration {
                     .col(string(PredictionRecords::Status))
                     .col(string_null(PredictionRecords::Resolution))
                     .col(text_null(PredictionRecords::LlmRationale))
-                    .col(decimal_len_null(PredictionRecords::LlmConfidence, 5, 4))
+                    .col(decimal_len_null(
+                        PredictionRecords::LlmConfidence,
+                        5,
+                        4,
+                    ))
                     .col(timestamp_with_time_zone(PredictionRecords::CreatedAt))
                     .col(timestamp_with_time_zone(PredictionRecords::UpdatedAt))
                     .to_owned(),
@@ -52,7 +56,9 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(PredictionRecords::Table).to_owned())
+            .drop_table(
+                Table::drop().table(PredictionRecords::Table).to_owned(),
+            )
             .await
     }
 }

@@ -8,10 +8,9 @@ use std::collections::HashMap;
 
 use crate::error::{CryptoError, Result};
 
-use super::models::{TradeResult, TradeSignal, TradeSide, TradeStatus};
+use super::models::{TradeResult, TradeSide, TradeSignal, TradeStatus};
 
 const BINANCE_BASE: &str = "https://api.binance.com";
-
 
 pub struct BinanceExecutor {
     client: Client,
@@ -21,10 +20,12 @@ pub struct BinanceExecutor {
 
 impl BinanceExecutor {
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("BINANCE_API_KEY")
-            .map_err(|_| CryptoError::Config("BINANCE_API_KEY not set".into()))?;
-        let secret_key = std::env::var("BINANCE_SECRET_KEY")
-            .map_err(|_| CryptoError::Config("BINANCE_SECRET_KEY not set".into()))?;
+        let api_key = std::env::var("BINANCE_API_KEY").map_err(|_| {
+            CryptoError::Config("BINANCE_API_KEY not set".into())
+        })?;
+        let secret_key = std::env::var("BINANCE_SECRET_KEY").map_err(|_| {
+            CryptoError::Config("BINANCE_SECRET_KEY not set".into())
+        })?;
 
         Ok(Self {
             client: Client::new(),
@@ -40,12 +41,17 @@ impl BinanceExecutor {
 
     fn sign(&self, query: &str) -> String {
         let mut mac =
-            Hmac::<Sha256>::new_from_slice(self.secret_key.as_bytes()).expect("HMAC key length");
+            Hmac::<Sha256>::new_from_slice(self.secret_key.as_bytes())
+                .expect("HMAC key length");
         mac.update(query.as_bytes());
         hex::encode(mac.finalize().into_bytes())
     }
 
-    async fn signed_get(&self, path: &str, params: &mut HashMap<&str, String>) -> Result<String> {
+    async fn signed_get(
+        &self,
+        path: &str,
+        params: &mut HashMap<&str, String>,
+    ) -> Result<String> {
         params.insert("timestamp", Utc::now().timestamp_millis().to_string());
         params.insert("recvWindow", "5000".into());
 
@@ -64,13 +70,14 @@ impl BinanceExecutor {
             .header("X-MBX-APIKEY", &self.api_key)
             .send()
             .await
-            .map_err(|e| CryptoError::Trading(format!("Binance GET failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Trading(format!("Binance GET failed: {e}"))
+            })?;
 
         let status = resp.status();
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| CryptoError::Trading(format!("Binance response read failed: {e}")))?;
+        let body = resp.text().await.map_err(|e| {
+            CryptoError::Trading(format!("Binance response read failed: {e}"))
+        })?;
 
         if !status.is_success() {
             return Err(CryptoError::Trading(format!(
@@ -106,13 +113,14 @@ impl BinanceExecutor {
             .body(body_str)
             .send()
             .await
-            .map_err(|e| CryptoError::Trading(format!("Binance POST failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Trading(format!("Binance POST failed: {e}"))
+            })?;
 
         let status = resp.status();
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| CryptoError::Trading(format!("Binance response read failed: {e}")))?;
+        let body = resp.text().await.map_err(|e| {
+            CryptoError::Trading(format!("Binance response read failed: {e}"))
+        })?;
 
         if !status.is_success() {
             return Err(CryptoError::Trading(format!(
@@ -145,13 +153,14 @@ impl BinanceExecutor {
             .header("X-MBX-APIKEY", &self.api_key)
             .send()
             .await
-            .map_err(|e| CryptoError::Trading(format!("Binance DELETE failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Trading(format!("Binance DELETE failed: {e}"))
+            })?;
 
         let status = resp.status();
-        let body = resp
-            .text()
-            .await
-            .map_err(|e| CryptoError::Trading(format!("Binance response read failed: {e}")))?;
+        let body = resp.text().await.map_err(|e| {
+            CryptoError::Trading(format!("Binance response read failed: {e}"))
+        })?;
 
         if !status.is_success() {
             return Err(CryptoError::Trading(format!(
@@ -161,7 +170,6 @@ impl BinanceExecutor {
         Ok(body)
     }
 }
-
 
 #[async_trait]
 impl super::executor::TradeExecutor for BinanceExecutor {
@@ -183,16 +191,19 @@ impl super::executor::TradeExecutor for BinanceExecutor {
         params.insert("quantity", signal.quantity.to_string());
         params.insert("newOrderRespType", "FULL".into());
 
-        if order_type == "LIMIT" {
-            if let Some(price) = signal.price {
+        if order_type == "LIMIT"
+            && let Some(price) = signal.price {
                 params.insert("price", price.to_string());
                 params.insert("timeInForce", "GTC".into());
             }
-        }
 
         let body = self.signed_post("/api/v3/order", &mut params).await?;
-        let resp: serde_json::Value = serde_json::from_str(&body)
-            .map_err(|e| CryptoError::Trading(format!("Failed to parse order response: {e}")))?;
+        let resp: serde_json::Value =
+            serde_json::from_str(&body).map_err(|e| {
+                CryptoError::Trading(format!(
+                    "Failed to parse order response: {e}"
+                ))
+            })?;
 
         let order_id = resp["orderId"].as_i64().unwrap_or(0).to_string();
 
@@ -278,21 +289,21 @@ impl super::executor::TradeExecutor for BinanceExecutor {
         let symbol = Self::normalize_pair(pair);
         let url = format!("{BINANCE_BASE}/api/v3/ticker/price?symbol={symbol}");
 
-        let resp = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| CryptoError::Trading(format!("Price fetch failed: {e}")))?;
+        let resp = self.client.get(&url).send().await.map_err(|e| {
+            CryptoError::Trading(format!("Price fetch failed: {e}"))
+        })?;
 
-        let body: serde_json::Value = resp
-            .json()
-            .await
-            .map_err(|e| CryptoError::Trading(format!("Price parse failed: {e}")))?;
+        let body: serde_json::Value = resp.json().await.map_err(|e| {
+            CryptoError::Trading(format!("Price parse failed: {e}"))
+        })?;
 
         body["price"]
             .as_str()
             .and_then(|s| s.parse().ok())
-            .ok_or_else(|| CryptoError::Trading(format!("Invalid price response for {pair}")))
+            .ok_or_else(|| {
+                CryptoError::Trading(format!(
+                    "Invalid price response for {pair}"
+                ))
+            })
     }
 }

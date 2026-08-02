@@ -8,7 +8,6 @@ use crate::error::{CryptoError, Result};
 
 use super::models::{Candle, MarketData};
 
-
 const BINANCE_WS_BASE: &str = "wss://stream.binance.com:9443/ws";
 
 /// Converts a pair like "BTC/USDC" to the Binance stream name like "btcusdc".
@@ -31,11 +30,14 @@ pub fn spawn_market_feed(
     watch::Receiver<std::collections::HashMap<String, Vec<Candle>>>,
 ) {
     let (ticker_tx, ticker_rx) = watch::channel(Vec::new());
-    let (candle_tx, candle_rx) = watch::channel(std::collections::HashMap::new());
+    let (candle_tx, candle_rx) =
+        watch::channel(std::collections::HashMap::new());
 
     let interval = candle_interval.to_string();
     tokio::spawn(async move {
-        if let Err(e) = run_feed(pairs, &interval, ticker_tx, candle_tx, shutdown).await {
+        if let Err(e) =
+            run_feed(pairs, &interval, ticker_tx, candle_tx, shutdown).await
+        {
             tracing::error!(error = %e, "Market feed terminated with error");
         }
     });
@@ -65,9 +67,9 @@ async fn run_feed(
     let url = format!("{BINANCE_WS_BASE}/{stream_param}");
     tracing::info!(url = %url, "Connecting to Binance WebSocket");
 
-    let (ws_stream, _) = connect_async(&url)
-        .await
-        .map_err(|e| CryptoError::Trading(format!("WebSocket connect failed: {e}")))?;
+    let (ws_stream, _) = connect_async(&url).await.map_err(|e| {
+        CryptoError::Trading(format!("WebSocket connect failed: {e}"))
+    })?;
 
     let (_, mut read) = ws_stream.split();
 
@@ -181,7 +183,6 @@ fn parse_kline(v: &serde_json::Value) -> Option<Candle> {
 fn parse_dec(s: &str) -> Option<Decimal> {
     s.parse().ok()
 }
-
 
 #[cfg(test)]
 mod tests {

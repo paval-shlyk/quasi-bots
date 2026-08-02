@@ -56,7 +56,9 @@ struct ApiError {
 
 type ApiResult<T> = Result<Json<T>, (axum::http::StatusCode, Json<ApiError>)>;
 
-fn grpc_to_http(status: tonic::Status) -> (axum::http::StatusCode, Json<ApiError>) {
+fn grpc_to_http(
+    status: tonic::Status,
+) -> (axum::http::StatusCode, Json<ApiError>) {
     let http_code = match status.code() {
         tonic::Code::NotFound => axum::http::StatusCode::NOT_FOUND,
         tonic::Code::InvalidArgument => axum::http::StatusCode::BAD_REQUEST,
@@ -73,7 +75,9 @@ fn grpc_to_http(status: tonic::Status) -> (axum::http::StatusCode, Json<ApiError
 
 // -- Handlers ----------------------------------------------------------------
 
-async fn list_workers(State(pool): State<AppState>) -> ApiResult<proto::WorkerList> {
+async fn list_workers(
+    State(pool): State<AppState>,
+) -> ApiResult<proto::WorkerList> {
     let results = pool
         .for_each(|mut client| async move {
             let resp = client.get_status(proto::Empty {}).await?;
@@ -138,7 +142,8 @@ async fn get_performance_report(
 ) -> ApiResult<proto::PerformanceReport> {
     pool.with_worker(&worker_id, |mut client| async move {
         let status = client.get_status(proto::Empty {}).await?.into_inner();
-        let portfolio = client.get_portfolio(proto::Empty {}).await?.into_inner();
+        let portfolio =
+            client.get_portfolio(proto::Empty {}).await?.into_inner();
         let trades = client
             .get_trade_history(proto::HistoryRequest {
                 limit: 1000,
@@ -178,8 +183,10 @@ async fn get_aggregate_performance(
     for wid in &worker_ids {
         let result = pool
             .with_worker(wid, |mut client| async move {
-                let status = client.get_status(proto::Empty {}).await?.into_inner();
-                let portfolio = client.get_portfolio(proto::Empty {}).await?.into_inner();
+                let status =
+                    client.get_status(proto::Empty {}).await?.into_inner();
+                let portfolio =
+                    client.get_portfolio(proto::Empty {}).await?.into_inner();
                 let trades = client
                     .get_trade_history(proto::HistoryRequest {
                         limit: 1000,

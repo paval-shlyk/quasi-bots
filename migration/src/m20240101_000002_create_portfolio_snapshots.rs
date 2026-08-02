@@ -13,14 +13,30 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(uuid(PortfolioSnapshots::Id).primary_key())
                     .col(decimal_len(PortfolioSnapshots::TotalBalance, 20, 8))
-                    .col(decimal_len(PortfolioSnapshots::AvailableBalance, 20, 8))
-                    .col(decimal_len(PortfolioSnapshots::TradingAllocated, 20, 8))
-                    .col(decimal_len(PortfolioSnapshots::PolymarketAllocated, 20, 8))
+                    .col(decimal_len(
+                        PortfolioSnapshots::AvailableBalance,
+                        20,
+                        8,
+                    ))
+                    .col(decimal_len(
+                        PortfolioSnapshots::TradingAllocated,
+                        20,
+                        8,
+                    ))
+                    .col(decimal_len(
+                        PortfolioSnapshots::PolymarketAllocated,
+                        20,
+                        8,
+                    ))
                     .col(decimal_len(PortfolioSnapshots::UnrealizedPnl, 20, 8))
                     .col(decimal_len(PortfolioSnapshots::RealizedPnl, 20, 8))
                     .col(string(PortfolioSnapshots::BaseCurrency))
-                    .col(timestamp_with_time_zone(PortfolioSnapshots::SnapshotAt))
-                    .col(timestamp_with_time_zone(PortfolioSnapshots::CreatedAt))
+                    .col(timestamp_with_time_zone(
+                        PortfolioSnapshots::SnapshotAt,
+                    ))
+                    .col(timestamp_with_time_zone(
+                        PortfolioSnapshots::CreatedAt,
+                    ))
                     .to_owned(),
             )
             .await?;
@@ -38,7 +54,9 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(PortfolioSnapshots::Table).to_owned())
+            .drop_table(
+                Table::drop().table(PortfolioSnapshots::Table).to_owned(),
+            )
             .await
     }
 }

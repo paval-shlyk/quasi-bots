@@ -11,7 +11,6 @@ use crate::portfolio::PortfolioService;
 use crate::settings::SettingsService;
 use crate::trading::service::TradingService;
 
-
 pub struct WorkerGrpcServer {
     worker_id: String,
     started_at: chrono::DateTime<Utc>,
@@ -40,7 +39,6 @@ impl WorkerGrpcServer {
     }
 }
 
-
 fn datetime_to_timestamp(dt: chrono::DateTime<Utc>) -> Option<Timestamp> {
     Some(Timestamp {
         seconds: dt.timestamp(),
@@ -51,7 +49,6 @@ fn datetime_to_timestamp(dt: chrono::DateTime<Utc>) -> Option<Timestamp> {
 fn map_err(e: impl std::fmt::Display) -> Status {
     Status::internal(e.to_string())
 }
-
 
 #[tonic::async_trait]
 impl communication::WorkerService for WorkerGrpcServer {
@@ -114,11 +111,8 @@ impl communication::WorkerService for WorkerGrpcServer {
         let proto_settings = req.into_inner();
         let new_settings = parse_bot_settings(&proto_settings)?;
 
-        let applied = self
-            .settings
-            .replace(new_settings)
-            .await
-            .map_err(map_err)?;
+        let applied =
+            self.settings.replace(new_settings).await.map_err(map_err)?;
 
         // Re-evaluate open positions/predictions against new constraints
         if let Err(e) = self.trading.reevaluate_positions(&applied).await {
@@ -139,13 +133,11 @@ impl communication::WorkerService for WorkerGrpcServer {
         &self,
         _req: Request<proto::Empty>,
     ) -> Result<Response<proto::OpenTradesResponse>, Status> {
-        let positions = self
-            .trading
-            .get_open_positions()
-            .await
-            .map_err(map_err)?;
+        let positions =
+            self.trading.get_open_positions().await.map_err(map_err)?;
 
-        let proto_positions = positions.into_iter().map(position_to_proto).collect();
+        let proto_positions =
+            positions.into_iter().map(position_to_proto).collect();
         Ok(Response::new(proto::OpenTradesResponse {
             positions: proto_positions,
         }))
@@ -161,7 +153,8 @@ impl communication::WorkerService for WorkerGrpcServer {
             .await
             .map_err(map_err)?;
 
-        let proto_preds = predictions.into_iter().map(prediction_to_proto).collect();
+        let proto_preds =
+            predictions.into_iter().map(prediction_to_proto).collect();
         Ok(Response::new(proto::OpenPredictionsResponse {
             predictions: proto_preds,
         }))
@@ -184,7 +177,8 @@ impl communication::WorkerService for WorkerGrpcServer {
             .await
             .map_err(map_err)?;
 
-        let proto_records = records.into_iter().map(trade_record_to_proto).collect();
+        let proto_records =
+            records.into_iter().map(trade_record_to_proto).collect();
         Ok(Response::new(proto::TradeHistoryResponse {
             records: proto_records,
         }))
@@ -217,28 +211,43 @@ impl communication::WorkerService for WorkerGrpcServer {
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // Proto <-> Domain conversions
 // ---------------------------------------------------------------------------
 
-fn parse_decimal(s: &str, field: &str) -> Result<rust_decimal::Decimal, Status> {
-    s.parse()
-        .map_err(|_| Status::invalid_argument(format!("Invalid decimal in {field}: {s}")))
+fn parse_decimal(
+    s: &str,
+    field: &str,
+) -> Result<rust_decimal::Decimal, Status> {
+    s.parse().map_err(|_| {
+        Status::invalid_argument(format!("Invalid decimal in {field}: {s}"))
+    })
 }
 
-fn parse_bot_settings(p: &proto::BotSettings) -> Result<crate::settings::BotSettings, Status> {
+fn parse_bot_settings(
+    p: &proto::BotSettings,
+) -> Result<crate::settings::BotSettings, Status> {
     let provider = match p.llm_provider.to_lowercase().as_str() {
         "grok" => LlmProvider::Grok,
         "gemini" => LlmProvider::Gemini,
-        other => return Err(Status::invalid_argument(format!("Unknown llm_provider: {other}"))),
+        other => {
+            return Err(Status::invalid_argument(format!(
+                "Unknown llm_provider: {other}"
+            )));
+        }
     };
 
     Ok(crate::settings::BotSettings {
-        max_position_size_pct: parse_decimal(&p.max_position_size_pct, "max_position_size_pct")?,
+        max_position_size_pct: parse_decimal(
+            &p.max_position_size_pct,
+            "max_position_size_pct",
+        )?,
         stop_loss_pct: parse_decimal(&p.stop_loss_pct, "stop_loss_pct")?,
         max_open_positions: p.max_open_positions,
-        confidence_threshold: parse_decimal(&p.confidence_threshold, "confidence_threshold")?,
+        confidence_threshold: parse_decimal(
+            &p.confidence_threshold,
+            "confidence_threshold",
+        )?,
         trading_allocation_pct: parse_decimal(
             &p.trading_allocation_pct,
             "trading_allocation_pct",
@@ -297,8 +306,14 @@ fn position_to_proto(
         quantity: p.quantity.to_string(),
         current_price: p.current_price.to_string(),
         unrealized_pnl: p.unrealized_pnl.to_string(),
-        stop_loss_price: p.stop_loss_price.map(|d| d.to_string()).unwrap_or_default(),
-        take_profit_price: p.take_profit_price.map(|d| d.to_string()).unwrap_or_default(),
+        stop_loss_price: p
+            .stop_loss_price
+            .map(|d| d.to_string())
+            .unwrap_or_default(),
+        take_profit_price: p
+            .take_profit_price
+            .map(|d| d.to_string())
+            .unwrap_or_default(),
         allocated_capital: p.allocated_capital.to_string(),
         opened_at: datetime_to_timestamp(p.opened_at),
         updated_at: datetime_to_timestamp(p.updated_at),
@@ -320,7 +335,10 @@ fn trade_record_to_proto(
         fee: r.fee.to_string(),
         status: r.status,
         llm_rationale: r.llm_rationale.unwrap_or_default(),
-        llm_confidence: r.llm_confidence.map(|d| d.to_string()).unwrap_or_default(),
+        llm_confidence: r
+            .llm_confidence
+            .map(|d| d.to_string())
+            .unwrap_or_default(),
         created_at: datetime_to_timestamp(r.created_at),
         updated_at: datetime_to_timestamp(r.updated_at),
     }
@@ -359,7 +377,10 @@ fn prediction_record_to_proto(
         status: r.status,
         resolution: r.resolution.unwrap_or_default(),
         llm_rationale: r.llm_rationale.unwrap_or_default(),
-        llm_confidence: r.llm_confidence.map(|d| d.to_string()).unwrap_or_default(),
+        llm_confidence: r
+            .llm_confidence
+            .map(|d| d.to_string())
+            .unwrap_or_default(),
         created_at: datetime_to_timestamp(r.created_at),
         updated_at: datetime_to_timestamp(r.updated_at),
     }

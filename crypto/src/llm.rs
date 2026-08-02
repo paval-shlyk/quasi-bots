@@ -8,14 +8,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::error::{CryptoError, Result};
 
-
 /// Which LLM backend this bot instance uses (selected at startup via config).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LlmProvider {
     Grok,
     Gemini,
 }
-
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TradeAction {
@@ -35,7 +33,6 @@ pub struct TradeRecommendation {
     pub timestamp: DateTime<Utc>,
 }
 
-
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PredictionAction {
     BuyYes,
@@ -54,7 +51,6 @@ pub struct PredictionRecommendation {
     pub rationale: String,
     pub timestamp: DateTime<Utc>,
 }
-
 
 /// Market + portfolio context assembled before calling the LLM for a trade.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -84,7 +80,6 @@ pub struct PredictionContext {
     pub open_predictions: Vec<serde_json::Value>,
 }
 
-
 /// Abstraction over LLM providers.
 /// In production each instance wires either xAI/Grok or Gemini behind this
 /// trait via `rig-core`.  A [`HeuristicFallback`] implementation is provided
@@ -103,7 +98,6 @@ pub trait DecisionEngine: Send + Sync {
 
     fn provider(&self) -> LlmProvider;
 }
-
 
 // ---------------------------------------------------------------------------
 // Rig-based LLM decision engine
@@ -134,7 +128,6 @@ Rules:\n\
 - size_usdc is in USDC, be conservative with sizing\n\
 - Prefer Hold when the edge is small or data is ambiguous";
 
-
 /// LLM-backed decision engine using rig-core. Supports xAI (Grok) and
 /// Google Gemini. The agent is initialized once at startup with a system
 /// prompt; each call sends the serialized context as a user message.
@@ -147,9 +140,14 @@ pub struct RigDecisionEngine {
 impl RigDecisionEngine {
     /// Both xAI and Gemini expose OpenAI-compatible chat completions
     /// endpoints, so we use the CompletionsClient with a custom base URL.
-    pub fn from_env(llm_provider: LlmProvider, temperature: f64) -> Result<Self> {
+    pub fn from_env(
+        llm_provider: LlmProvider,
+        temperature: f64,
+    ) -> Result<Self> {
         let (api_key_var, base_url, model) = match llm_provider {
-            LlmProvider::Grok => ("XAI_API_KEY", "https://api.x.ai/v1", "grok-3-mini"),
+            LlmProvider::Grok => {
+                ("XAI_API_KEY", "https://api.x.ai/v1", "grok-3-mini")
+            }
             LlmProvider::Gemini => (
                 "GEMINI_API_KEY",
                 "https://generativelanguage.googleapis.com/v1beta/openai",
@@ -157,14 +155,17 @@ impl RigDecisionEngine {
             ),
         };
 
-        let api_key = std::env::var(api_key_var)
-            .map_err(|_| CryptoError::Config(format!("{api_key_var} not set")))?;
+        let api_key = std::env::var(api_key_var).map_err(|_| {
+            CryptoError::Config(format!("{api_key_var} not set"))
+        })?;
 
         let client = openai::CompletionsClient::builder()
             .api_key(&api_key)
             .base_url(base_url)
             .build()
-            .map_err(|e| CryptoError::Config(format!("Failed to build LLM client: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Config(format!("Failed to build LLM client: {e}"))
+            })?;
 
         let trading_agent = client
             .agent(model)
@@ -192,14 +193,18 @@ impl DecisionEngine for RigDecisionEngine {
         &self,
         context: &TradingContext,
     ) -> Result<TradeRecommendation> {
-        let context_json = serde_json::to_string_pretty(context)
-            .map_err(|e| CryptoError::Llm(format!("Failed to serialize context: {e}")))?;
+        let context_json =
+            serde_json::to_string_pretty(context).map_err(|e| {
+                CryptoError::Llm(format!("Failed to serialize context: {e}"))
+            })?;
 
         let raw_response = self
             .trading_agent
             .prompt(&context_json)
             .await
-            .map_err(|e| CryptoError::Llm(format!("LLM trading prompt failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Llm(format!("LLM trading prompt failed: {e}"))
+            })?;
 
         parse_trade_response(&raw_response, &context.pair)
     }
@@ -208,14 +213,18 @@ impl DecisionEngine for RigDecisionEngine {
         &self,
         context: &PredictionContext,
     ) -> Result<PredictionRecommendation> {
-        let context_json = serde_json::to_string_pretty(context)
-            .map_err(|e| CryptoError::Llm(format!("Failed to serialize context: {e}")))?;
+        let context_json =
+            serde_json::to_string_pretty(context).map_err(|e| {
+                CryptoError::Llm(format!("Failed to serialize context: {e}"))
+            })?;
 
         let raw_response = self
             .prediction_agent
             .prompt(&context_json)
             .await
-            .map_err(|e| CryptoError::Llm(format!("LLM prediction prompt failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Llm(format!("LLM prediction prompt failed: {e}"))
+            })?;
 
         parse_prediction_response(&raw_response, &context.market_id)
     }
@@ -237,8 +246,9 @@ fn strip_json_fences(s: &str) -> &str {
 
 fn parse_trade_response(raw: &str, pair: &str) -> Result<TradeRecommendation> {
     let cleaned = strip_json_fences(raw);
-    let v: serde_json::Value = serde_json::from_str(cleaned)
-        .map_err(|e| CryptoError::Llm(format!("LLM returned invalid JSON: {e}\nRaw: {raw}")))?;
+    let v: serde_json::Value = serde_json::from_str(cleaned).map_err(|e| {
+        CryptoError::Llm(format!("LLM returned invalid JSON: {e}\nRaw: {raw}"))
+    })?;
 
     let action = match v["action"].as_str().unwrap_or("Hold") {
         "Buy" | "buy" | "BUY" => TradeAction::Buy,
@@ -271,10 +281,14 @@ fn parse_trade_response(raw: &str, pair: &str) -> Result<TradeRecommendation> {
     })
 }
 
-fn parse_prediction_response(raw: &str, market_id: &str) -> Result<PredictionRecommendation> {
+fn parse_prediction_response(
+    raw: &str,
+    market_id: &str,
+) -> Result<PredictionRecommendation> {
     let cleaned = strip_json_fences(raw);
-    let v: serde_json::Value = serde_json::from_str(cleaned)
-        .map_err(|e| CryptoError::Llm(format!("LLM returned invalid JSON: {e}\nRaw: {raw}")))?;
+    let v: serde_json::Value = serde_json::from_str(cleaned).map_err(|e| {
+        CryptoError::Llm(format!("LLM returned invalid JSON: {e}\nRaw: {raw}"))
+    })?;
 
     let action = match v["action"].as_str().unwrap_or("Hold") {
         "BuyYes" | "buyYes" | "buy_yes" => PredictionAction::BuyYes,
@@ -307,7 +321,6 @@ fn parse_prediction_response(raw: &str, market_id: &str) -> Result<PredictionRec
         timestamp: Utc::now(),
     })
 }
-
 
 // ---------------------------------------------------------------------------
 // Fallback wrapper: try real LLM, fall back to heuristics on error
@@ -363,7 +376,6 @@ impl DecisionEngine for FallbackDecisionEngine {
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // HeuristicFallback: deterministic, no LLM
 // ---------------------------------------------------------------------------
@@ -381,7 +393,8 @@ impl DecisionEngine for HeuristicFallback {
             pair: context.pair.clone(),
             size_percent: Decimal::ZERO,
             confidence: Decimal::new(5, 1),
-            rationale: "Heuristic fallback: no LLM available, holding position".into(),
+            rationale: "Heuristic fallback: no LLM available, holding position"
+                .into(),
             timestamp: Utc::now(),
         })
     }
@@ -404,7 +417,6 @@ impl DecisionEngine for HeuristicFallback {
         LlmProvider::Grok
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -456,6 +468,9 @@ mod tests {
         assert_eq!(strip_json_fences("```json\n{}\n```"), "{}");
         assert_eq!(strip_json_fences("```\n{}\n```"), "{}");
         assert_eq!(strip_json_fences("{}"), "{}");
-        assert_eq!(strip_json_fences("  ```json\n{\"a\":1}\n```  "), "{\"a\":1}");
+        assert_eq!(
+            strip_json_fences("  ```json\n{\"a\":1}\n```  "),
+            "{\"a\":1}"
+        );
     }
 }

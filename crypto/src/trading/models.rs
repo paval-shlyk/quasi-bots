@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketData {
     pub pair: String,
@@ -24,7 +23,6 @@ pub struct Candle {
     pub volume: Decimal,
     pub timestamp: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TechnicalIndicators {
@@ -49,7 +47,6 @@ pub struct BollingerBands {
     pub middle: Decimal,
     pub lower: Decimal,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TradeSide {

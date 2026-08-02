@@ -1,16 +1,23 @@
 use clap::{Parser, Subcommand};
-use communication::proto;
 use communication::MasterServiceClient;
+use communication::proto;
 
 mod display;
 use display::*;
 
-
 #[derive(Parser)]
-#[command(name = "crypto-cli", about = "CLI for the crypto-master fleet manager")]
+#[command(
+    name = "crypto-cli",
+    about = "CLI for the crypto-master fleet manager"
+)]
 struct Cli {
     /// Master gRPC endpoint (e.g. http://localhost:50050)
-    #[arg(short, long, env = "MASTER_GRPC_URL", default_value = "http://localhost:50050")]
+    #[arg(
+        short,
+        long,
+        env = "MASTER_GRPC_URL",
+        default_value = "http://localhost:50050"
+    )]
     endpoint: String,
 
     #[command(subcommand)]
@@ -82,7 +89,6 @@ enum Command {
         json: String,
     },
 }
-
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -176,7 +182,6 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-
 /// Intermediate struct for JSON deserialization of settings from CLI input.
 /// All fields are optional so the user can specify only what they want to change;
 /// missing fields get sensible defaults that the worker will validate.
@@ -210,18 +215,42 @@ struct SettingsInput {
     polymarket_interval_secs: u64,
 }
 
-fn default_position_size() -> String { "10".into() }
-fn default_stop_loss() -> String { "5".into() }
-fn default_max_open() -> i32 { 5 }
-fn default_confidence() -> String { "0.7".into() }
-fn default_trading_alloc() -> String { "50".into() }
-fn default_poly_alloc() -> String { "50".into() }
-fn default_llm_provider() -> String { "grok".into() }
-fn default_llm_temp() -> String { "0.3".into() }
-fn default_trading_interval() -> u64 { 60 }
-fn default_pred_exposure() -> String { "100".into() }
-fn default_min_liquidity() -> String { "50".into() }
-fn default_poly_interval() -> u64 { 120 }
+fn default_position_size() -> String {
+    "10".into()
+}
+fn default_stop_loss() -> String {
+    "5".into()
+}
+fn default_max_open() -> i32 {
+    5
+}
+fn default_confidence() -> String {
+    "0.7".into()
+}
+fn default_trading_alloc() -> String {
+    "50".into()
+}
+fn default_poly_alloc() -> String {
+    "50".into()
+}
+fn default_llm_provider() -> String {
+    "grok".into()
+}
+fn default_llm_temp() -> String {
+    "0.3".into()
+}
+fn default_trading_interval() -> u64 {
+    60
+}
+fn default_pred_exposure() -> String {
+    "100".into()
+}
+fn default_min_liquidity() -> String {
+    "50".into()
+}
+fn default_poly_interval() -> u64 {
+    120
+}
 
 impl SettingsInput {
     fn into_proto(self) -> proto::BotSettings {

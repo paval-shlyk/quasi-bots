@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MarketInfo {
     pub market_id: String,
@@ -27,7 +26,6 @@ pub struct MarketOrderBook {
     pub liquidity: Decimal,
     pub timestamp: DateTime<Utc>,
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PredictionSide {
@@ -77,7 +75,6 @@ impl std::fmt::Display for PredictionStatus {
         }
     }
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PredictionSignal {

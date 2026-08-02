@@ -5,7 +5,6 @@ use crate::error::Result;
 
 use super::models::{TradeResult, TradeSignal, TradeStatus};
 
-
 #[async_trait]
 pub trait TradeExecutor: Send + Sync {
     /// Place an order on the exchange.
@@ -17,7 +16,6 @@ pub trait TradeExecutor: Send + Sync {
     /// Fetch the latest price for a trading pair.
     async fn get_price(&self, pair: &str) -> Result<Decimal>;
 }
-
 
 pub struct PaperTradeExecutor;
 

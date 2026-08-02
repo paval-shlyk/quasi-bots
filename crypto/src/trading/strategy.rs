@@ -7,7 +7,6 @@ use crate::settings::BotSettings;
 
 use super::models::*;
 
-
 #[async_trait]
 pub trait TradingStrategy: Send + Sync {
     async fn analyze(
@@ -17,7 +16,6 @@ pub trait TradingStrategy: Send + Sync {
         settings: &BotSettings,
     ) -> Result<Option<TradeSignal>>;
 }
-
 
 pub struct LlmTradingStrategy {
     decision_engine: Box<dyn DecisionEngine>,
@@ -57,12 +55,11 @@ impl LlmTradingStrategy {
             }
         }
 
-        if let Some(bb) = &indicators.bollinger {
-            if bb.upper - bb.lower == Decimal::ZERO {
+        if let Some(bb) = &indicators.bollinger
+            && bb.upper - bb.lower == Decimal::ZERO {
                 tracing::info!("Zero-width Bollinger bands – filtering");
                 return false;
             }
-        }
 
         true
     }
@@ -80,7 +77,8 @@ impl TradingStrategy for LlmTradingStrategy {
             pair: market_data.pair.clone(),
             current_price: market_data.price,
             price_change_24h: if market_data.low_24h != Decimal::ZERO {
-                ((market_data.price - market_data.low_24h) / market_data.low_24h)
+                ((market_data.price - market_data.low_24h)
+                    / market_data.low_24h)
                     * Decimal::new(100, 0)
             } else {
                 Decimal::ZERO
@@ -125,7 +123,6 @@ impl TradingStrategy for LlmTradingStrategy {
         }))
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -180,7 +177,11 @@ mod tests {
         let rec = buy_recommendation(Decimal::new(85, 2)); // 0.85
         let indicators = default_indicators();
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -188,7 +189,11 @@ mod tests {
         let rec = buy_recommendation(Decimal::new(3, 1)); // 0.3, below 0.7 threshold
         let indicators = default_indicators();
         let settings = default_settings();
-        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(!LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -197,7 +202,11 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(80, 0)); // overbought (> 75)
         let settings = default_settings();
-        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(!LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -206,7 +215,11 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(80, 0));
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -215,7 +228,11 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(20, 0)); // oversold (< 25)
         let settings = default_settings();
-        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(!LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -224,7 +241,11 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(20, 0));
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -237,7 +258,11 @@ mod tests {
             lower: Decimal::new(100, 0),
         });
         let settings = default_settings();
-        assert!(!LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(!LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -252,7 +277,11 @@ mod tests {
             ema_26: None,
         };
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -262,7 +291,11 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(75, 0));
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 
     #[test]
@@ -272,6 +305,10 @@ mod tests {
         let mut indicators = default_indicators();
         indicators.rsi = Some(Decimal::new(25, 0));
         let settings = default_settings();
-        assert!(LlmTradingStrategy::passes_heuristics(&rec, &indicators, &settings));
+        assert!(LlmTradingStrategy::passes_heuristics(
+            &rec,
+            &indicators,
+            &settings
+        ));
     }
 }

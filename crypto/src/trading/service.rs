@@ -3,8 +3,8 @@ use std::sync::Arc;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait,
+    PaginatorTrait, QueryFilter, QueryOrder, Set,
 };
 use uuid::Uuid;
 
@@ -17,7 +17,6 @@ use super::entities::{open_position, trade_record};
 use super::executor::TradeExecutor;
 use super::models::*;
 use super::strategy::TradingStrategy;
-
 
 pub struct TradingService {
     db: DatabaseConnection,
@@ -47,7 +46,6 @@ impl TradingService {
         }
     }
 
-
     pub async fn tick(
         &self,
         market_data: &MarketData,
@@ -59,21 +57,28 @@ impl TradingService {
             return Ok(());
         }
 
-        let Some(mut signal) = self.strategy.analyze(market_data, indicators, &settings).await?
+        let Some(mut signal) = self
+            .strategy
+            .analyze(market_data, indicators, &settings)
+            .await?
         else {
             return Ok(());
         };
 
         let balance = self.portfolio.get_balance().await;
-        let trading_budget = balance * settings.trading_allocation_pct / Decimal::new(100, 0);
-        let position_cap = trading_budget * settings.max_position_size_pct / Decimal::new(100, 0);
+        let trading_budget =
+            balance * settings.trading_allocation_pct / Decimal::new(100, 0);
+        let position_cap = trading_budget * settings.max_position_size_pct
+            / Decimal::new(100, 0);
 
         if market_data.price > Decimal::ZERO {
             signal.quantity = position_cap / market_data.price;
         }
 
         signal.stop_loss = Some(
-            market_data.price * (Decimal::ONE - settings.stop_loss_pct / Decimal::new(100, 0)),
+            market_data.price
+                * (Decimal::ONE
+                    - settings.stop_loss_pct / Decimal::new(100, 0)),
         );
 
         self.check_risk(&signal, &settings).await?;
@@ -93,7 +98,9 @@ impl TradingService {
 
         self.record_trade(&signal, &result).await?;
 
-        if result.status == TradeStatus::Filled || result.status == TradeStatus::PartiallyFilled {
+        if result.status == TradeStatus::Filled
+            || result.status == TradeStatus::PartiallyFilled
+        {
             self.update_positions(&signal, &result).await?;
         }
 
@@ -173,8 +180,9 @@ impl TradingService {
 
             match self.executor.execute(&signal).await {
                 Ok(result) => {
-                    let pnl =
-                        (result.avg_fill_price - pos.entry_price) * pos.quantity - result.fee;
+                    let pnl = (result.avg_fill_price - pos.entry_price)
+                        * pos.quantity
+                        - result.fee;
                     self.portfolio
                         .release_funds(pos.allocated_capital, pnl, "trading")
                         .await?;
@@ -196,21 +204,25 @@ impl TradingService {
         Ok(())
     }
 
-    pub async fn get_open_positions(&self) -> Result<Vec<open_position::Model>> {
+    pub async fn get_open_positions(
+        &self,
+    ) -> Result<Vec<open_position::Model>> {
         Ok(open_position::Entity::find()
             .order_by_asc(open_position::Column::OpenedAt)
             .all(&self.db)
             .await?)
     }
 
-    pub async fn get_trade_history(&self, page_size: u64) -> Result<Vec<trade_record::Model>> {
+    pub async fn get_trade_history(
+        &self,
+        page_size: u64,
+    ) -> Result<Vec<trade_record::Model>> {
         Ok(trade_record::Entity::find()
             .order_by_desc(trade_record::Column::CreatedAt)
             .paginate(&self.db, page_size)
             .fetch_page(0)
             .await?)
     }
-
 
     /// Re-check all open positions against updated settings. Called after a
     /// settings push from the master.
@@ -219,7 +231,10 @@ impl TradingService {
     /// 2. Recalculate stop-loss prices using the new `stop_loss_pct`.
     /// 3. If position count exceeds the new `max_open_positions`, close the
     ///    newest positions first (LIFO) until compliant.
-    pub async fn reevaluate_positions(&self, settings: &crate::settings::BotSettings) -> Result<()> {
+    pub async fn reevaluate_positions(
+        &self,
+        settings: &crate::settings::BotSettings,
+    ) -> Result<()> {
         let mut positions = open_position::Entity::find()
             .order_by_asc(open_position::Column::OpenedAt)
             .all(&self.db)
@@ -237,7 +252,8 @@ impl TradingService {
         }
 
         // 2. Recalculate stop-losses on remaining positions
-        let stop_factor = Decimal::ONE - settings.stop_loss_pct / Decimal::new(100, 0);
+        let stop_factor =
+            Decimal::ONE - settings.stop_loss_pct / Decimal::new(100, 0);
         for pos in &kept {
             let new_stop = pos.entry_price * stop_factor;
             let mut active: open_position::ActiveModel = pos.clone().into();
@@ -264,7 +280,10 @@ impl TradingService {
     }
 
     /// Market-sell a position and release its capital.
-    async fn force_close_position(&self, pos: &open_position::Model) -> Result<()> {
+    async fn force_close_position(
+        &self,
+        pos: &open_position::Model,
+    ) -> Result<()> {
         let signal = TradeSignal {
             pair: pos.pair.clone(),
             side: TradeSide::Sell,
@@ -281,8 +300,14 @@ impl TradingService {
         match self.executor.execute(&signal).await {
             Ok(result) => {
                 let pnl = match pos.side.as_str() {
-                    "long" => (result.avg_fill_price - pos.entry_price) * pos.quantity - result.fee,
-                    "short" => (pos.entry_price - result.avg_fill_price) * pos.quantity - result.fee,
+                    "long" => {
+                        (result.avg_fill_price - pos.entry_price) * pos.quantity
+                            - result.fee
+                    }
+                    "short" => {
+                        (pos.entry_price - result.avg_fill_price) * pos.quantity
+                            - result.fee
+                    }
                     _ => Decimal::ZERO,
                 };
                 self.portfolio
@@ -305,8 +330,11 @@ impl TradingService {
         Ok(())
     }
 
-
-    async fn check_risk(&self, signal: &TradeSignal, settings: &crate::settings::BotSettings) -> Result<()> {
+    async fn check_risk(
+        &self,
+        signal: &TradeSignal,
+        settings: &crate::settings::BotSettings,
+    ) -> Result<()> {
         let open_count = open_position::Entity::find().count(&self.db).await?;
 
         if open_count >= settings.max_open_positions as u64 {
@@ -333,7 +361,11 @@ impl TradingService {
         Ok(())
     }
 
-    async fn record_trade(&self, signal: &TradeSignal, result: &TradeResult) -> Result<()> {
+    async fn record_trade(
+        &self,
+        signal: &TradeSignal,
+        result: &TradeResult,
+    ) -> Result<()> {
         let now = Utc::now();
         trade_record::ActiveModel {
             id: Set(Uuid::new_v4()),
@@ -356,7 +388,11 @@ impl TradingService {
         Ok(())
     }
 
-    async fn update_positions(&self, signal: &TradeSignal, result: &TradeResult) -> Result<()> {
+    async fn update_positions(
+        &self,
+        signal: &TradeSignal,
+        result: &TradeResult,
+    ) -> Result<()> {
         let now = Utc::now();
 
         match signal.side {
@@ -371,7 +407,9 @@ impl TradingService {
                     unrealized_pnl: Set(Decimal::ZERO),
                     stop_loss_price: Set(signal.stop_loss),
                     take_profit_price: Set(signal.take_profit),
-                    allocated_capital: Set(result.filled_quantity * result.avg_fill_price),
+                    allocated_capital: Set(
+                        result.filled_quantity * result.avg_fill_price
+                    ),
                     opened_at: Set(now),
                     updated_at: Set(now),
                 }
@@ -384,7 +422,9 @@ impl TradingService {
                     .one(&self.db)
                     .await?
                 {
-                    let pnl = (result.avg_fill_price - pos.entry_price) * pos.quantity - result.fee;
+                    let pnl = (result.avg_fill_price - pos.entry_price)
+                        * pos.quantity
+                        - result.fee;
                     self.portfolio
                         .release_funds(pos.allocated_capital, pnl, "trading")
                         .await?;

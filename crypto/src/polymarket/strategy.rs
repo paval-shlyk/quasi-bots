@@ -7,7 +7,6 @@ use crate::settings::BotSettings;
 
 use super::models::*;
 
-
 #[async_trait]
 pub trait PolymarketStrategy: Send + Sync {
     async fn analyze(
@@ -17,7 +16,6 @@ pub trait PolymarketStrategy: Send + Sync {
         settings: &BotSettings,
     ) -> Result<Option<PredictionSignal>>;
 }
-
 
 pub struct LlmPolymarketStrategy {
     decision_engine: Box<dyn DecisionEngine>,
@@ -34,8 +32,12 @@ impl LlmPolymarketStrategy {
         order_book: &MarketOrderBook,
     ) -> MarketEdge {
         let (market_prob, side) = match action {
-            PredictionAction::BuyYes => (order_book.yes_price, PredictionSide::Yes),
-            PredictionAction::BuyNo => (order_book.no_price, PredictionSide::No),
+            PredictionAction::BuyYes => {
+                (order_book.yes_price, PredictionSide::Yes)
+            }
+            PredictionAction::BuyNo => {
+                (order_book.no_price, PredictionSide::No)
+            }
             _ => (order_book.yes_price, PredictionSide::Yes),
         };
         MarketEdge {
@@ -124,21 +126,28 @@ impl PolymarketStrategy for LlmPolymarketStrategy {
             return Ok(None);
         }
 
-        let edge = Self::calculate_edge(rec.confidence, &rec.action, order_book);
+        let edge =
+            Self::calculate_edge(rec.confidence, &rec.action, order_book);
         if !Self::passes_heuristics(&edge, order_book, settings) {
             return Ok(None);
         }
 
         let (side, action, limit_price) = match rec.action {
-            PredictionAction::BuyYes => {
-                (PredictionSide::Yes, PredictionOrderAction::Buy, order_book.yes_ask)
-            }
-            PredictionAction::BuyNo => {
-                (PredictionSide::No, PredictionOrderAction::Buy, order_book.no_ask)
-            }
-            PredictionAction::Sell => {
-                (PredictionSide::Yes, PredictionOrderAction::Sell, order_book.yes_bid)
-            }
+            PredictionAction::BuyYes => (
+                PredictionSide::Yes,
+                PredictionOrderAction::Buy,
+                order_book.yes_ask,
+            ),
+            PredictionAction::BuyNo => (
+                PredictionSide::No,
+                PredictionOrderAction::Buy,
+                order_book.no_ask,
+            ),
+            PredictionAction::Sell => (
+                PredictionSide::Yes,
+                PredictionOrderAction::Sell,
+                order_book.yes_bid,
+            ),
             PredictionAction::Hold => return Ok(None),
         };
 
@@ -162,7 +171,6 @@ impl PolymarketStrategy for LlmPolymarketStrategy {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,8 +183,8 @@ mod tests {
     fn default_order_book() -> MarketOrderBook {
         MarketOrderBook {
             market_id: "mkt-1".into(),
-            yes_price: Decimal::new(60, 2),  // 0.60
-            no_price: Decimal::new(40, 2),   // 0.40
+            yes_price: Decimal::new(60, 2), // 0.60
+            no_price: Decimal::new(40, 2),  // 0.40
             yes_bid: Decimal::new(59, 2),
             yes_ask: Decimal::new(61, 2),
             no_bid: Decimal::new(39, 2),
@@ -225,7 +233,9 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 
     #[test]
@@ -239,7 +249,9 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(!LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 
     #[test]
@@ -254,7 +266,9 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(!LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 
     #[test]
@@ -269,7 +283,9 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(!LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 
     #[test]
@@ -284,7 +300,9 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(!LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 
     #[test]
@@ -299,6 +317,8 @@ mod tests {
             side: PredictionSide::Yes,
         };
         let settings = default_settings();
-        assert!(!LlmPolymarketStrategy::passes_heuristics(&edge, &ob, &settings));
+        assert!(!LlmPolymarketStrategy::passes_heuristics(
+            &edge, &ob, &settings
+        ));
     }
 }

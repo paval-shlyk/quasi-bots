@@ -19,7 +19,11 @@ impl MigrationTrait for Migration {
                     .col(decimal_len(OpenPositions::CurrentPrice, 20, 8))
                     .col(decimal_len(OpenPositions::UnrealizedPnl, 20, 8))
                     .col(decimal_len_null(OpenPositions::StopLossPrice, 20, 8))
-                    .col(decimal_len_null(OpenPositions::TakeProfitPrice, 20, 8))
+                    .col(decimal_len_null(
+                        OpenPositions::TakeProfitPrice,
+                        20,
+                        8,
+                    ))
                     .col(decimal_len(OpenPositions::AllocatedCapital, 20, 8))
                     .col(timestamp_with_time_zone(OpenPositions::OpenedAt))
                     .col(timestamp_with_time_zone(OpenPositions::UpdatedAt))

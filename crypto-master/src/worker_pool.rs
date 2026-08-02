@@ -4,7 +4,6 @@ use communication::WorkerServiceClient;
 use tokio::sync::RwLock;
 use tonic::transport::Channel;
 
-
 /// A single discovered worker with its gRPC client and cached status.
 pub struct WorkerConnection {
     pub id: String,
@@ -23,7 +22,6 @@ impl WorkerConnection {
     }
 }
 
-
 /// Pool of worker connections discovered from env at startup.
 /// Thread-safe for concurrent gRPC calls from the MasterService.
 pub struct WorkerPool {
@@ -41,14 +39,19 @@ impl WorkerPool {
     pub async fn discover_from_env(&self) -> anyhow::Result<()> {
         let raw = std::env::var("WORKER_ADDRESSES").unwrap_or_default();
         if raw.is_empty() {
-            tracing::warn!("WORKER_ADDRESSES not set, no workers will be registered");
+            tracing::warn!(
+                "WORKER_ADDRESSES not set, no workers will be registered"
+            );
             return Ok(());
         }
 
         for entry in raw.split(',') {
             let entry = entry.trim();
             let Some((id, addr)) = entry.split_once('=') else {
-                tracing::warn!(entry, "Skipping malformed worker entry (expected id=host:port)");
+                tracing::warn!(
+                    entry,
+                    "Skipping malformed worker entry (expected id=host:port)"
+                );
                 continue;
             };
 
@@ -78,15 +81,19 @@ impl WorkerPool {
 
     /// Run a closure against a specific worker's gRPC client.
     /// Returns NotFound if the worker_id is unknown.
-    pub async fn with_worker<F, Fut, T>(&self, worker_id: &str, f: F) -> Result<T, tonic::Status>
+    pub async fn with_worker<F, Fut, T>(
+        &self,
+        worker_id: &str,
+        f: F,
+    ) -> Result<T, tonic::Status>
     where
         F: FnOnce(WorkerServiceClient<Channel>) -> Fut,
         Fut: std::future::Future<Output = Result<T, tonic::Status>>,
     {
         let guard = self.workers.read().await;
-        let conn = guard
-            .get(worker_id)
-            .ok_or_else(|| tonic::Status::not_found(format!("Unknown worker: {worker_id}")))?;
+        let conn = guard.get(worker_id).ok_or_else(|| {
+            tonic::Status::not_found(format!("Unknown worker: {worker_id}"))
+        })?;
 
         // Clone the client (tonic clients are cheap clones backed by a shared channel)
         let client = conn.client.clone();
@@ -96,10 +103,15 @@ impl WorkerPool {
     }
 
     /// Run a closure against ALL workers, collecting results keyed by worker_id.
-    pub async fn for_each<F, Fut, T>(&self, f: F) -> Vec<(String, Result<T, tonic::Status>)>
+    pub async fn for_each<F, Fut, T>(
+        &self,
+        f: F,
+    ) -> Vec<(String, Result<T, tonic::Status>)>
     where
         F: Fn(WorkerServiceClient<Channel>) -> Fut + Send + Sync,
-        Fut: std::future::Future<Output = Result<T, tonic::Status>> + Send + 'static,
+        Fut: std::future::Future<Output = Result<T, tonic::Status>>
+            + Send
+            + 'static,
         T: Send + 'static,
     {
         let guard = self.workers.read().await;

@@ -1,12 +1,11 @@
-use communication::proto;
-use communication::{WorkerService, WorkerServiceServer};
-use communication::{MasterService, MasterServiceServer};
-use communication::WorkerServiceClient;
 use communication::MasterServiceClient;
+use communication::WorkerServiceClient;
+use communication::proto;
+use communication::{MasterService, MasterServiceServer};
+use communication::{WorkerService, WorkerServiceServer};
 use prost_types::Timestamp;
 use tonic::transport::{Channel, Server};
 use tonic::{Request, Response, Status};
-
 
 // ---------------------------------------------------------------------------
 // Mock WorkerService
@@ -25,8 +24,14 @@ impl WorkerService for MockWorker {
             llm_provider: "grok".into(),
             trading_active: true,
             polymarket_active: true,
-            started_at: Some(Timestamp { seconds: 1000, nanos: 0 }),
-            last_heartbeat: Some(Timestamp { seconds: 2000, nanos: 0 }),
+            started_at: Some(Timestamp {
+                seconds: 1000,
+                nanos: 0,
+            }),
+            last_heartbeat: Some(Timestamp {
+                seconds: 2000,
+                nanos: 0,
+            }),
             open_trade_count: 3,
             open_prediction_count: 2,
         }))
@@ -75,8 +80,14 @@ impl WorkerService for MockWorker {
                 stop_loss_price: "49000".into(),
                 take_profit_price: "55000".into(),
                 allocated_capital: "5000".into(),
-                opened_at: Some(Timestamp { seconds: 1000, nanos: 0 }),
-                updated_at: Some(Timestamp { seconds: 2000, nanos: 0 }),
+                opened_at: Some(Timestamp {
+                    seconds: 1000,
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: 2000,
+                    nanos: 0,
+                }),
             }],
         }))
     }
@@ -96,8 +107,14 @@ impl WorkerService for MockWorker {
                 current_price: "0.65".into(),
                 unrealized_pnl: "2.5".into(),
                 allocated_capital: "30".into(),
-                opened_at: Some(Timestamp { seconds: 1500, nanos: 0 }),
-                updated_at: Some(Timestamp { seconds: 2500, nanos: 0 }),
+                opened_at: Some(Timestamp {
+                    seconds: 1500,
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: 2500,
+                    nanos: 0,
+                }),
             }],
         }))
     }
@@ -107,7 +124,11 @@ impl WorkerService for MockWorker {
         req: Request<proto::HistoryRequest>,
     ) -> Result<Response<proto::TradeHistoryResponse>, Status> {
         let params = req.into_inner();
-        let count = if params.limit > 0 { params.limit.min(2) } else { 1 };
+        let count = if params.limit > 0 {
+            params.limit.min(2)
+        } else {
+            1
+        };
         let records = (0..count)
             .map(|i| proto::TradeRecord {
                 id: format!("trade-{i}"),
@@ -122,8 +143,14 @@ impl WorkerService for MockWorker {
                 status: "filled".into(),
                 llm_rationale: "momentum".into(),
                 llm_confidence: "0.85".into(),
-                created_at: Some(Timestamp { seconds: 1000 + i as i64, nanos: 0 }),
-                updated_at: Some(Timestamp { seconds: 1001 + i as i64, nanos: 0 }),
+                created_at: Some(Timestamp {
+                    seconds: 1000 + i as i64,
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: 1001 + i as i64,
+                    nanos: 0,
+                }),
             })
             .collect();
         Ok(Response::new(proto::TradeHistoryResponse { records }))
@@ -134,7 +161,11 @@ impl WorkerService for MockWorker {
         req: Request<proto::HistoryRequest>,
     ) -> Result<Response<proto::PredictionHistoryResponse>, Status> {
         let params = req.into_inner();
-        let count = if params.limit > 0 { params.limit.min(2) } else { 1 };
+        let count = if params.limit > 0 {
+            params.limit.min(2)
+        } else {
+            1
+        };
         let records = (0..count)
             .map(|i| proto::PredictionRecord {
                 id: format!("predrec-{i}"),
@@ -149,14 +180,19 @@ impl WorkerService for MockWorker {
                 resolution: "pending".into(),
                 llm_rationale: "polling data".into(),
                 llm_confidence: "0.7".into(),
-                created_at: Some(Timestamp { seconds: 2000 + i as i64, nanos: 0 }),
-                updated_at: Some(Timestamp { seconds: 2001 + i as i64, nanos: 0 }),
+                created_at: Some(Timestamp {
+                    seconds: 2000 + i as i64,
+                    nanos: 0,
+                }),
+                updated_at: Some(Timestamp {
+                    seconds: 2001 + i as i64,
+                    nanos: 0,
+                }),
             })
             .collect();
         Ok(Response::new(proto::PredictionHistoryResponse { records }))
     }
 }
-
 
 // ---------------------------------------------------------------------------
 // Mock MasterService (delegates to a single mock worker for simplicity)
@@ -167,10 +203,14 @@ struct MockMaster {
 }
 
 impl MockMaster {
-    async fn worker_client(&self) -> Result<WorkerServiceClient<Channel>, Status> {
+    async fn worker_client(
+        &self,
+    ) -> Result<WorkerServiceClient<Channel>, Status> {
         WorkerServiceClient::connect(self.worker_addr.clone())
             .await
-            .map_err(|e| Status::unavailable(format!("Cannot reach worker: {e}")))
+            .map_err(|e| {
+                Status::unavailable(format!("Cannot reach worker: {e}"))
+            })
     }
 }
 
@@ -207,7 +247,9 @@ impl MasterService for MockMaster {
         &self,
         req: Request<proto::UpdateWorkerSettingsRequest>,
     ) -> Result<Response<proto::UpdateSettingsResponse>, Status> {
-        let settings = req.into_inner().settings
+        let settings = req
+            .into_inner()
+            .settings
             .ok_or_else(|| Status::invalid_argument("missing settings"))?;
         let mut client = self.worker_client().await?;
         client.update_settings(settings).await
@@ -232,8 +274,14 @@ impl MasterService for MockMaster {
             total_predictions: 10,
             correct_predictions: 7,
             prediction_accuracy: "0.7".into(),
-            period_start: Some(Timestamp { seconds: 0, nanos: 0 }),
-            period_end: Some(Timestamp { seconds: 3000, nanos: 0 }),
+            period_start: Some(Timestamp {
+                seconds: 0,
+                nanos: 0,
+            }),
+            period_end: Some(Timestamp {
+                seconds: 3000,
+                nanos: 0,
+            }),
         }))
     }
 
@@ -300,7 +348,6 @@ impl MasterService for MockMaster {
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -364,7 +411,6 @@ fn test_settings() -> proto::BotSettings {
     }
 }
 
-
 // ---------------------------------------------------------------------------
 // Worker RPC tests
 // ---------------------------------------------------------------------------
@@ -374,7 +420,11 @@ async fn worker_get_status() {
     let url = spawn_worker_server().await;
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
-    let resp = client.get_status(proto::Empty {}).await.unwrap().into_inner();
+    let resp = client
+        .get_status(proto::Empty {})
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(resp.worker_id, "test-worker");
     assert_eq!(resp.llm_provider, "grok");
     assert!(resp.trading_active);
@@ -388,7 +438,11 @@ async fn worker_get_portfolio() {
     let url = spawn_worker_server().await;
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
-    let resp = client.get_portfolio(proto::Empty {}).await.unwrap().into_inner();
+    let resp = client
+        .get_portfolio(proto::Empty {})
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(resp.total_balance, "10000");
     assert_eq!(resp.available_balance, "8000");
     assert_eq!(resp.base_currency, "USDT");
@@ -400,7 +454,11 @@ async fn worker_update_settings() {
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
     let settings = test_settings();
-    let resp = client.update_settings(settings.clone()).await.unwrap().into_inner();
+    let resp = client
+        .update_settings(settings.clone())
+        .await
+        .unwrap()
+        .into_inner();
     assert!(resp.success);
     assert_eq!(resp.message, "applied");
 
@@ -414,7 +472,11 @@ async fn worker_open_trades() {
     let url = spawn_worker_server().await;
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
-    let resp = client.get_open_trades(proto::Empty {}).await.unwrap().into_inner();
+    let resp = client
+        .get_open_trades(proto::Empty {})
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(resp.positions.len(), 1);
 
     let pos = &resp.positions[0];
@@ -428,7 +490,11 @@ async fn worker_open_predictions() {
     let url = spawn_worker_server().await;
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
-    let resp = client.get_open_predictions(proto::Empty {}).await.unwrap().into_inner();
+    let resp = client
+        .get_open_predictions(proto::Empty {})
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(resp.predictions.len(), 1);
 
     let pred = &resp.predictions[0];
@@ -442,7 +508,10 @@ async fn worker_trade_history() {
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
     let resp = client
-        .get_trade_history(proto::HistoryRequest { limit: 2, offset: 0 })
+        .get_trade_history(proto::HistoryRequest {
+            limit: 2,
+            offset: 0,
+        })
         .await
         .unwrap()
         .into_inner();
@@ -457,7 +526,10 @@ async fn worker_prediction_history() {
     let mut client = WorkerServiceClient::connect(url).await.unwrap();
 
     let resp = client
-        .get_prediction_history(proto::HistoryRequest { limit: 1, offset: 0 })
+        .get_prediction_history(proto::HistoryRequest {
+            limit: 1,
+            offset: 0,
+        })
         .await
         .unwrap()
         .into_inner();
@@ -465,7 +537,6 @@ async fn worker_prediction_history() {
     assert_eq!(resp.records[0].market_id, "mkt-xyz");
     assert_eq!(resp.records[0].action, "buy");
 }
-
 
 // ---------------------------------------------------------------------------
 // Master RPC tests (proxied through mock worker)
@@ -477,7 +548,11 @@ async fn master_list_workers() {
     let master_url = spawn_master_server(worker_url).await;
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
-    let resp = client.list_workers(proto::Empty {}).await.unwrap().into_inner();
+    let resp = client
+        .list_workers(proto::Empty {})
+        .await
+        .unwrap()
+        .into_inner();
     assert_eq!(resp.workers.len(), 1);
     assert_eq!(resp.workers[0].worker_id, "test-worker");
 }
@@ -489,7 +564,9 @@ async fn master_get_worker_status() {
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
     let resp = client
-        .get_worker_status(proto::WorkerId { id: "test-worker".into() })
+        .get_worker_status(proto::WorkerId {
+            id: "test-worker".into(),
+        })
         .await
         .unwrap()
         .into_inner();
@@ -504,7 +581,9 @@ async fn master_get_worker_portfolio() {
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
     let resp = client
-        .get_worker_portfolio(proto::WorkerId { id: "test-worker".into() })
+        .get_worker_portfolio(proto::WorkerId {
+            id: "test-worker".into(),
+        })
         .await
         .unwrap()
         .into_inner();
@@ -536,7 +615,9 @@ async fn master_performance_report() {
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
     let resp = client
-        .get_performance_report(proto::WorkerId { id: "test-worker".into() })
+        .get_performance_report(proto::WorkerId {
+            id: "test-worker".into(),
+        })
         .await
         .unwrap()
         .into_inner();
@@ -569,7 +650,9 @@ async fn master_worker_open_trades() {
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
     let resp = client
-        .get_worker_open_trades(proto::WorkerId { id: "test-worker".into() })
+        .get_worker_open_trades(proto::WorkerId {
+            id: "test-worker".into(),
+        })
         .await
         .unwrap()
         .into_inner();
@@ -584,7 +667,9 @@ async fn master_worker_open_predictions() {
     let mut client = MasterServiceClient::connect(master_url).await.unwrap();
 
     let resp = client
-        .get_worker_open_predictions(proto::WorkerId { id: "test-worker".into() })
+        .get_worker_open_predictions(proto::WorkerId {
+            id: "test-worker".into(),
+        })
         .await
         .unwrap()
         .into_inner();

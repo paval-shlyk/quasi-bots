@@ -1,10 +1,10 @@
 use rust_decimal::Decimal;
+use ta::Next;
 use ta::indicators::{
     BollingerBands as TaBollinger, ExponentialMovingAverage,
     MovingAverageConvergenceDivergence, RelativeStrengthIndex,
     SimpleMovingAverage,
 };
-use ta::Next;
 
 use super::models::{BollingerBands, Candle, MACDValues, TechnicalIndicators};
 

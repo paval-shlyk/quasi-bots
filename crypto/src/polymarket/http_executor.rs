@@ -10,7 +10,6 @@ use super::models::*;
 const CLOB_BASE: &str = "https://clob.polymarket.com";
 const GAMMA_BASE: &str = "https://gamma-api.polymarket.com";
 
-
 pub struct HttpPolymarketExecutor {
     client: Client,
     api_key: String,
@@ -18,8 +17,9 @@ pub struct HttpPolymarketExecutor {
 
 impl HttpPolymarketExecutor {
     pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("POLYMARKET_API_KEY")
-            .map_err(|_| CryptoError::Config("POLYMARKET_API_KEY not set".into()))?;
+        let api_key = std::env::var("POLYMARKET_API_KEY").map_err(|_| {
+            CryptoError::Config("POLYMARKET_API_KEY not set".into())
+        })?;
 
         Ok(Self {
             client: Client::new(),
@@ -39,10 +39,12 @@ impl HttpPolymarketExecutor {
     }
 }
 
-
 #[async_trait]
 impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
-    async fn execute(&self, signal: &PredictionSignal) -> Result<PredictionResult> {
+    async fn execute(
+        &self,
+        signal: &PredictionSignal,
+    ) -> Result<PredictionResult> {
         let side_str = match signal.side {
             PredictionSide::Yes => "YES",
             PredictionSide::No => "NO",
@@ -67,13 +69,14 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
             .json(&body)
             .send()
             .await
-            .map_err(|e| CryptoError::Polymarket(format!("Order request failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Polymarket(format!("Order request failed: {e}"))
+            })?;
 
         let status_code = resp.status();
-        let resp_body: serde_json::Value = resp
-            .json()
-            .await
-            .map_err(|e| CryptoError::Polymarket(format!("Order response parse failed: {e}")))?;
+        let resp_body: serde_json::Value = resp.json().await.map_err(|e| {
+            CryptoError::Polymarket(format!("Order response parse failed: {e}"))
+        })?;
 
         if !status_code.is_success() {
             return Err(CryptoError::Polymarket(format!(
@@ -95,12 +98,13 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
             .unwrap_or(signal.limit_price.unwrap_or(Decimal::new(5, 1)));
         let total_cost = filled_shares * avg_price;
 
-        let order_status = match resp_body["status"].as_str().unwrap_or("filled") {
-            "filled" | "FILLED" => PredictionStatus::Filled,
-            "placed" | "PLACED" | "open" => PredictionStatus::Placed,
-            "cancelled" | "CANCELLED" => PredictionStatus::Cancelled,
-            _ => PredictionStatus::Failed,
-        };
+        let order_status =
+            match resp_body["status"].as_str().unwrap_or("filled") {
+                "filled" | "FILLED" => PredictionStatus::Filled,
+                "placed" | "PLACED" | "open" => PredictionStatus::Placed,
+                "cancelled" | "CANCELLED" => PredictionStatus::Cancelled,
+                _ => PredictionStatus::Failed,
+            };
 
         tracing::info!(
             market = %signal.market_id,
@@ -131,7 +135,9 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
             .headers(self.auth_headers())
             .send()
             .await
-            .map_err(|e| CryptoError::Polymarket(format!("Cancel failed: {e}")))?;
+            .map_err(|e| {
+                CryptoError::Polymarket(format!("Cancel failed: {e}"))
+            })?;
 
         if !resp.status().is_success() {
             let body = resp.text().await.unwrap_or_default();
@@ -144,20 +150,19 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
         Ok(())
     }
 
-    async fn get_market_prices(&self, market_id: &str) -> Result<MarketOrderBook> {
+    async fn get_market_prices(
+        &self,
+        market_id: &str,
+    ) -> Result<MarketOrderBook> {
         let url = format!("{CLOB_BASE}/book?token_id={market_id}");
 
-        let resp = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| CryptoError::Polymarket(format!("Book fetch failed: {e}")))?;
+        let resp = self.client.get(&url).send().await.map_err(|e| {
+            CryptoError::Polymarket(format!("Book fetch failed: {e}"))
+        })?;
 
-        let body: serde_json::Value = resp
-            .json()
-            .await
-            .map_err(|e| CryptoError::Polymarket(format!("Book parse failed: {e}")))?;
+        let body: serde_json::Value = resp.json().await.map_err(|e| {
+            CryptoError::Polymarket(format!("Book parse failed: {e}"))
+        })?;
 
         // The CLOB returns bids/asks arrays; derive mid prices
         let best_bid = extract_best_price(&body["bids"]);
@@ -185,17 +190,13 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
     async fn fetch_active_markets(&self) -> Result<Vec<MarketInfo>> {
         let url = format!("{GAMMA_BASE}/markets?closed=false&limit=50");
 
-        let resp = self
-            .client
-            .get(&url)
-            .send()
-            .await
-            .map_err(|e| CryptoError::Polymarket(format!("Markets fetch failed: {e}")))?;
+        let resp = self.client.get(&url).send().await.map_err(|e| {
+            CryptoError::Polymarket(format!("Markets fetch failed: {e}"))
+        })?;
 
-        let body: Vec<serde_json::Value> = resp
-            .json()
-            .await
-            .map_err(|e| CryptoError::Polymarket(format!("Markets parse failed: {e}")))?;
+        let body: Vec<serde_json::Value> = resp.json().await.map_err(|e| {
+            CryptoError::Polymarket(format!("Markets parse failed: {e}"))
+        })?;
 
         let markets = body
             .into_iter()
@@ -203,7 +204,8 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
                 let market_id = m["condition_id"].as_str()?.to_string();
                 let condition_id = market_id.clone();
                 let title = m["question"].as_str().unwrap_or("").to_string();
-                let description = m["description"].as_str().unwrap_or("").to_string();
+                let description =
+                    m["description"].as_str().unwrap_or("").to_string();
                 let end_date = m["end_date_iso"]
                     .as_str()
                     .and_then(|s| s.parse::<chrono::DateTime<Utc>>().ok());
@@ -226,14 +228,11 @@ impl super::executor::PolymarketExecutor for HttpPolymarketExecutor {
     }
 }
 
-
 fn extract_best_price(side: &serde_json::Value) -> Decimal {
     side.as_array()
         .and_then(|arr| {
             arr.first().and_then(|entry| {
-                entry["price"]
-                    .as_str()
-                    .and_then(|s| s.parse().ok())
+                entry["price"].as_str().and_then(|s| s.parse().ok())
             })
         })
         .unwrap_or(Decimal::ZERO)

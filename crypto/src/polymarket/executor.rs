@@ -5,28 +5,35 @@ use crate::error::Result;
 
 use super::models::*;
 
-
 #[async_trait]
 pub trait PolymarketExecutor: Send + Sync {
     /// Place an order on the Polymarket CLOB.
-    async fn execute(&self, signal: &PredictionSignal) -> Result<PredictionResult>;
+    async fn execute(
+        &self,
+        signal: &PredictionSignal,
+    ) -> Result<PredictionResult>;
 
     /// Cancel an open order.
     async fn cancel_order(&self, order_id: &str) -> Result<()>;
 
     /// Current order-book for a given market.
-    async fn get_market_prices(&self, market_id: &str) -> Result<MarketOrderBook>;
+    async fn get_market_prices(
+        &self,
+        market_id: &str,
+    ) -> Result<MarketOrderBook>;
 
     /// Fetch the list of active prediction markets.
     async fn fetch_active_markets(&self) -> Result<Vec<MarketInfo>>;
 }
 
-
 pub struct PaperPolymarketExecutor;
 
 #[async_trait]
 impl PolymarketExecutor for PaperPolymarketExecutor {
-    async fn execute(&self, signal: &PredictionSignal) -> Result<PredictionResult> {
+    async fn execute(
+        &self,
+        signal: &PredictionSignal,
+    ) -> Result<PredictionResult> {
         let price = signal.limit_price.unwrap_or(Decimal::new(5, 1));
         let cost = signal.shares * price;
 
@@ -57,7 +64,10 @@ impl PolymarketExecutor for PaperPolymarketExecutor {
         Ok(())
     }
 
-    async fn get_market_prices(&self, market_id: &str) -> Result<MarketOrderBook> {
+    async fn get_market_prices(
+        &self,
+        market_id: &str,
+    ) -> Result<MarketOrderBook> {
         Ok(MarketOrderBook {
             market_id: market_id.to_string(),
             yes_price: Decimal::new(5, 1),

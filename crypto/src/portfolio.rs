@@ -1,11 +1,12 @@
 use chrono::Utc;
 use rust_decimal::Decimal;
-use sea_orm::{ActiveModelTrait, DatabaseConnection, EntityTrait, QueryOrder, Set};
+use sea_orm::{
+    ActiveModelTrait, DatabaseConnection, EntityTrait, QueryOrder, Set,
+};
 use uuid::Uuid;
 
 use crate::entities::portfolio_snapshot;
 use crate::error::{CryptoError, Result};
-
 
 #[derive(Debug, Clone)]
 pub struct PortfolioState {
@@ -31,7 +32,6 @@ impl Default for PortfolioState {
         }
     }
 }
-
 
 /// Manages the portfolio state with RwLock-protected concurrent access.
 /// Both modules call [`reserve_funds`] before execution and
@@ -83,7 +83,11 @@ impl PortfolioService {
     }
 
     /// Reserve `amount` for `module` ("trading" | "polymarket").
-    pub async fn reserve_funds(&self, amount: Decimal, module: &str) -> Result<()> {
+    pub async fn reserve_funds(
+        &self,
+        amount: Decimal,
+        module: &str,
+    ) -> Result<()> {
         let mut state = self.state.write().await;
         if state.available_balance < amount {
             return Err(CryptoError::InsufficientBalance {
@@ -98,7 +102,7 @@ impl PortfolioService {
             _ => {
                 return Err(CryptoError::Portfolio(format!(
                     "Unknown module: {module}"
-                )))
+                )));
             }
         }
         Ok(())
@@ -120,12 +124,13 @@ impl PortfolioService {
             _ => {
                 return Err(CryptoError::Portfolio(format!(
                     "Unknown module: {module}"
-                )))
+                )));
             }
         }
         state.realized_pnl += pnl;
-        state.total_balance =
-            state.available_balance + state.trading_allocated + state.polymarket_allocated;
+        state.total_balance = state.available_balance
+            + state.trading_allocated
+            + state.polymarket_allocated;
         Ok(())
     }
 

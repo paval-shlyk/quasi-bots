@@ -3,8 +3,8 @@ use std::sync::Arc;
 use chrono::Utc;
 use rust_decimal::Decimal;
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, PaginatorTrait, QueryFilter,
-    QueryOrder, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait,
+    PaginatorTrait, QueryFilter, QueryOrder, Set,
 };
 use uuid::Uuid;
 
@@ -17,7 +17,6 @@ use super::entities::{open_prediction, prediction_record};
 use super::executor::PolymarketExecutor;
 use super::models::*;
 use super::strategy::PolymarketStrategy;
-
 
 pub struct PolymarketService {
     db: DatabaseConnection,
@@ -46,7 +45,6 @@ impl PolymarketService {
             event_bus,
         }
     }
-
 
     pub async fn tick(&self) -> Result<()> {
         let settings = self.settings.get();
@@ -91,7 +89,9 @@ impl PolymarketService {
         Ok(())
     }
 
-    pub async fn get_open_predictions(&self) -> Result<Vec<open_prediction::Model>> {
+    pub async fn get_open_predictions(
+        &self,
+    ) -> Result<Vec<open_prediction::Model>> {
         Ok(open_prediction::Entity::find()
             .order_by_asc(open_prediction::Column::OpenedAt)
             .all(&self.db)
@@ -109,7 +109,6 @@ impl PolymarketService {
             .await?)
     }
 
-
     /// Re-check all open predictions against updated settings. Called after a
     /// settings push from the master.
     ///
@@ -124,7 +123,8 @@ impl PolymarketService {
             .all(&self.db)
             .await?;
 
-        let mut total_exposure: Decimal = predictions.iter().map(|p| p.allocated_capital).sum();
+        let mut total_exposure: Decimal =
+            predictions.iter().map(|p| p.allocated_capital).sum();
 
         // Sell smallest positions first until within limits
         predictions.reverse();
@@ -150,7 +150,10 @@ impl PolymarketService {
     }
 
     /// Market-sell a prediction and release its capital.
-    async fn force_close_prediction(&self, pred: &open_prediction::Model) -> Result<()> {
+    async fn force_close_prediction(
+        &self,
+        pred: &open_prediction::Model,
+    ) -> Result<()> {
         let side = match pred.side.as_str() {
             "yes" => PredictionSide::Yes,
             _ => PredictionSide::No,
@@ -170,7 +173,8 @@ impl PolymarketService {
 
         match self.executor.execute(&signal).await {
             Ok(result) => {
-                let pnl = (result.avg_price - pred.avg_price) * result.filled_shares;
+                let pnl =
+                    (result.avg_price - pred.avg_price) * result.filled_shares;
                 self.portfolio
                     .release_funds(pred.allocated_capital, pnl, "polymarket")
                     .await?;
@@ -187,7 +191,10 @@ impl PolymarketService {
                 );
                 self.event_bus.publish(BotEvent::ModuleError {
                     module: "polymarket".into(),
-                    error: format!("Force-close failed for {}: {e}", pred.market_id),
+                    error: format!(
+                        "Force-close failed for {}: {e}",
+                        pred.market_id
+                    ),
                 });
             }
         }
@@ -195,20 +202,21 @@ impl PolymarketService {
         Ok(())
     }
 
-
     async fn process_market(
         &self,
         market: &MarketInfo,
         settings: &crate::settings::BotSettings,
     ) -> Result<()> {
         let ob = self.executor.get_market_prices(&market.market_id).await?;
-        let Some(signal) = self.strategy.analyze(market, &ob, settings).await? else {
+        let Some(signal) = self.strategy.analyze(market, &ob, settings).await?
+        else {
             return Ok(());
         };
 
         self.check_exposure(&signal, settings).await?;
 
-        let cost = signal.shares * signal.limit_price.unwrap_or(Decimal::new(5, 1));
+        let cost =
+            signal.shares * signal.limit_price.unwrap_or(Decimal::new(5, 1));
         if signal.action == PredictionOrderAction::Buy {
             self.portfolio.reserve_funds(cost, "polymarket").await?;
         }
@@ -248,8 +256,10 @@ impl PolymarketService {
     ) -> Result<()> {
         let open = open_prediction::Entity::find().all(&self.db).await?;
 
-        let total_exposure: Decimal = open.iter().map(|p| p.allocated_capital).sum();
-        let signal_cost = signal.shares * signal.limit_price.unwrap_or(Decimal::ZERO);
+        let total_exposure: Decimal =
+            open.iter().map(|p| p.allocated_capital).sum();
+        let signal_cost =
+            signal.shares * signal.limit_price.unwrap_or(Decimal::ZERO);
 
         if total_exposure + signal_cost > settings.max_prediction_exposure {
             return Err(CryptoError::RiskLimitExceeded(format!(
@@ -264,7 +274,8 @@ impl PolymarketService {
             .filter(|p| p.market_id == signal.market_id)
             .map(|p| p.allocated_capital)
             .sum();
-        let per_market_limit = settings.max_prediction_exposure / Decimal::new(3, 0);
+        let per_market_limit =
+            settings.max_prediction_exposure / Decimal::new(3, 0);
 
         if market_exposure + signal_cost > per_market_limit {
             return Err(CryptoError::RiskLimitExceeded(format!(
@@ -313,15 +324,20 @@ impl PolymarketService {
         match signal.action {
             PredictionOrderAction::Buy => {
                 let existing = open_prediction::Entity::find()
-                    .filter(open_prediction::Column::MarketId.eq(&signal.market_id))
-                    .filter(open_prediction::Column::Side.eq(signal.side.to_string()))
+                    .filter(
+                        open_prediction::Column::MarketId.eq(&signal.market_id),
+                    )
+                    .filter(
+                        open_prediction::Column::Side
+                            .eq(signal.side.to_string()),
+                    )
                     .one(&self.db)
                     .await?;
 
                 if let Some(pos) = existing {
                     let total_shares = pos.shares + result.filled_shares;
-                    let total_cost =
-                        (pos.avg_price * pos.shares) + (result.avg_price * result.filled_shares);
+                    let total_cost = (pos.avg_price * pos.shares)
+                        + (result.avg_price * result.filled_shares);
                     let new_avg = if total_shares > Decimal::ZERO {
                         total_cost / total_shares
                     } else {
@@ -354,12 +370,18 @@ impl PolymarketService {
             }
             PredictionOrderAction::Sell => {
                 if let Some(pos) = open_prediction::Entity::find()
-                    .filter(open_prediction::Column::MarketId.eq(&signal.market_id))
-                    .filter(open_prediction::Column::Side.eq(signal.side.to_string()))
+                    .filter(
+                        open_prediction::Column::MarketId.eq(&signal.market_id),
+                    )
+                    .filter(
+                        open_prediction::Column::Side
+                            .eq(signal.side.to_string()),
+                    )
                     .one(&self.db)
                     .await?
                 {
-                    let pnl = (result.avg_price - pos.avg_price) * result.filled_shares;
+                    let pnl = (result.avg_price - pos.avg_price)
+                        * result.filled_shares;
                     self.portfolio
                         .release_funds(pos.allocated_capital, pnl, "polymarket")
                         .await?;

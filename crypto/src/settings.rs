@@ -8,7 +8,6 @@ use crate::entities::bot_settings;
 use crate::error::{CryptoError, Result};
 use crate::llm::LlmProvider;
 
-
 /// Stored as a single JSONB blob in the `bot_settings` table so new fields
 /// can be added without schema migrations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -53,7 +52,6 @@ impl Default for BotSettings {
     }
 }
 
-
 /// Settings hub backed by a `watch` channel so that any task holding a
 /// `Receiver` can `.changed().await` to react to pushes from the master.
 ///
@@ -64,7 +62,10 @@ pub struct SettingsService {
 }
 
 impl SettingsService {
-    pub fn new(db: DatabaseConnection, initial: BotSettings) -> (Self, watch::Receiver<BotSettings>) {
+    pub fn new(
+        db: DatabaseConnection,
+        initial: BotSettings,
+    ) -> (Self, watch::Receiver<BotSettings>) {
         let (tx, rx) = watch::channel(initial);
         (Self { db, tx }, rx)
     }
@@ -75,10 +76,14 @@ impl SettingsService {
 
         match existing {
             Some(model) => {
-                let settings: BotSettings =
-                    serde_json::from_value(model.settings_json).map_err(|e| {
-                        CryptoError::Settings(format!("Failed to parse settings: {e}"))
-                    })?;
+                let settings: BotSettings = serde_json::from_value(
+                    model.settings_json,
+                )
+                .map_err(|e| {
+                    CryptoError::Settings(format!(
+                        "Failed to parse settings: {e}"
+                    ))
+                })?;
                 self.tx.send_replace(settings.clone());
                 Ok(settings)
             }
@@ -115,16 +120,20 @@ impl SettingsService {
     }
 
     /// Full replacement used by the gRPC UpdateSettings handler.
-    pub async fn replace(&self, new_settings: BotSettings) -> Result<BotSettings> {
+    pub async fn replace(
+        &self,
+        new_settings: BotSettings,
+    ) -> Result<BotSettings> {
         Self::validate(&new_settings)?;
         self.persist(&new_settings).await?;
         self.tx.send_replace(new_settings.clone());
         Ok(new_settings)
     }
 
-
     fn validate(s: &BotSettings) -> Result<()> {
-        if s.trading_allocation_pct + s.polymarket_allocation_pct > Decimal::new(100, 0) {
+        if s.trading_allocation_pct + s.polymarket_allocation_pct
+            > Decimal::new(100, 0)
+        {
             return Err(CryptoError::Settings(
                 "Trading + Polymarket allocation exceeds 100%".into(),
             ));
@@ -136,7 +145,9 @@ impl SettingsService {
                 "max_position_size_pct must be in (0, 100]".into(),
             ));
         }
-        if s.confidence_threshold < Decimal::ZERO || s.confidence_threshold > Decimal::ONE {
+        if s.confidence_threshold < Decimal::ZERO
+            || s.confidence_threshold > Decimal::ONE
+        {
             return Err(CryptoError::Settings(
                 "confidence_threshold must be in [0, 1]".into(),
             ));
@@ -145,13 +156,12 @@ impl SettingsService {
     }
 
     async fn persist(&self, settings: &BotSettings) -> Result<()> {
-        let json = serde_json::to_value(settings)
-            .map_err(|e| CryptoError::Settings(format!("Serialization failed: {e}")))?;
+        let json = serde_json::to_value(settings).map_err(|e| {
+            CryptoError::Settings(format!("Serialization failed: {e}"))
+        })?;
 
         // Delete-then-insert for the single-row table.
-        let _ = bot_settings::Entity::delete_many()
-            .exec(&self.db)
-            .await?;
+        let _ = bot_settings::Entity::delete_many().exec(&self.db).await?;
 
         let model = bot_settings::ActiveModel {
             id: Set(1),

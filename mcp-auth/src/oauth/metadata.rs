@@ -22,9 +22,7 @@ impl ProtectedResourceMetadata {
     }
 }
 
-pub fn authorization_metadata(
-    config: &McpAuthConfig,
-) -> AuthorizationMetadata {
+pub fn authorization_metadata(config: &McpAuthConfig) -> AuthorizationMetadata {
     let base = config.issuer_url();
     let mut meta = AuthorizationMetadata::default();
 
@@ -70,4 +68,3 @@ pub fn resource_matches(config: &McpAuthConfig, candidate: &str) -> bool {
 fn normalize_resource_uri(uri: &str) -> String {
     uri.trim_end_matches('/').to_lowercase()
 }
-

@@ -115,4 +115,3 @@ mod tests {
         assert_eq!(obj["expires_in"], 120);
     }
 }
-

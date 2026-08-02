@@ -225,4 +225,3 @@ impl OAuthStore {
         Some((record.pending_id, record.pkce_verifier, record.nonce))
     }
 }
-

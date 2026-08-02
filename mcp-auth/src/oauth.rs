@@ -38,9 +38,7 @@ pub struct OAuthState {
 
 pub type SharedOAuthState = Arc<OAuthState>;
 
-pub async fn state(
-    config: McpAuthConfig,
-) -> anyhow::Result<SharedOAuthState> {
+pub async fn state(config: McpAuthConfig) -> anyhow::Result<SharedOAuthState> {
     let store = store::OAuthStore::new();
 
     let google = if config.auth.google_configured() {
@@ -145,4 +143,3 @@ pub async fn bearer_auth_middleware(
         }
     }
 }
-

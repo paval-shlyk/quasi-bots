@@ -83,8 +83,8 @@ async fn handle_auth_code(
     req: Token,
     config: &McpAuthConfig,
 ) -> Response {
-    if let Some(resource) = req.resource.as_deref() {
-        if !metadata::resource_matches(config, resource) {
+    if let Some(resource) = req.resource.as_deref()
+        && !metadata::resource_matches(config, resource) {
             return (
                 StatusCode::BAD_REQUEST,
                 Json(serde_json::json!({
@@ -94,7 +94,6 @@ async fn handle_auth_code(
             )
                 .into_response();
         }
-    }
 
     let session = store.take_session(&req.code).await;
     let session = match session {
@@ -147,10 +146,10 @@ async fn handle_auth_code(
             .into_response();
     }
 
-    if let Some(resource) = req.resource.as_deref() {
-        if let Some(session_resource) = session.resource.as_deref() {
-            if !metadata::resource_matches(config, session_resource)
-                || normalize(resource) != normalize(session_resource)
+    if let Some(resource) = req.resource.as_deref()
+        && let Some(session_resource) = session.resource.as_deref()
+            && (!metadata::resource_matches(config, session_resource)
+                || normalize(resource) != normalize(session_resource))
             {
                 return (
                     StatusCode::BAD_REQUEST,
@@ -161,8 +160,6 @@ async fn handle_auth_code(
                 )
                     .into_response();
             }
-        }
-    }
 
     let challenge = match session
         .code_challenge

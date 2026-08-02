@@ -19,4 +19,3 @@ pub struct AuthorizeQuery {
     /// RFC 8707 resource indicator — canonical MCP server URI.
     pub resource: Option<String>,
 }
-

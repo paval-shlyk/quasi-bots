@@ -81,15 +81,14 @@ pub async fn authorize(
             .into_response();
     }
 
-    if let Some(resource) = params.resource.as_deref() {
-        if !metadata::resource_matches(config, resource) {
+    if let Some(resource) = params.resource.as_deref()
+        && !metadata::resource_matches(config, resource) {
             return (
                 StatusCode::BAD_REQUEST,
                 Html("<h1>Invalid resource parameter</h1>".to_string()),
             )
                 .into_response();
         }
-    }
 
     match store
         .authorize_client(&params.client_id, &params.redirect_uri)
@@ -154,4 +153,3 @@ fn validate_pkce(
         Some(_) => Ok(()),
     }
 }
-

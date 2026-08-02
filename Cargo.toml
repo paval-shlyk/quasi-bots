@@ -1,8 +1,8 @@
 [workspace]
 members = [
 	"communication",
-	"crypto",
-	"crypto-master",
+	# "crypto",
+	# "crypto-master",
 	"finance",
 	"knowledge",
 	"mcp-auth",

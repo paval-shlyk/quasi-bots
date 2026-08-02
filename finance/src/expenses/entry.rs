@@ -7,7 +7,6 @@ use chrono::{DateTime, Utc};
     sqlx::FromRow,
     serde::Serialize,
     serde::Deserialize,
-    utoipa::ToSchema,
     schemars::JsonSchema,
 )]
 pub struct ExpenseEntry {
@@ -23,7 +22,6 @@ pub struct ExpenseEntry {
     sqlx::FromRow,
     serde::Serialize,
     serde::Deserialize,
-    utoipa::ToSchema,
     schemars::JsonSchema,
 )]
 pub struct ExpenseEntryWithCategory {
@@ -35,16 +33,9 @@ pub struct ExpenseEntryWithCategory {
     pub category_name: String,
 }
 
-/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct ExpenseEntryList {
     pub entries: Vec<ExpenseEntryWithCategory>,
-}
-
-impl From<Vec<ExpenseEntryWithCategory>> for ExpenseEntryList {
-    fn from(entries: Vec<ExpenseEntryWithCategory>) -> Self {
-        Self { entries }
-    }
 }
 
 pub async fn insert(
@@ -133,8 +124,8 @@ pub async fn list_by_date_range(
     pool: &sqlx::SqlitePool,
     start: DateTime<Utc>,
     end: DateTime<Utc>,
-) -> sqlx::Result<Vec<ExpenseEntryWithCategory>> {
-    sqlx::query_as!(
+) -> sqlx::Result<ExpenseEntryList> {
+    let entries = sqlx::query_as!(
         ExpenseEntryWithCategory,
         r#"
             SELECT 
@@ -153,14 +144,16 @@ pub async fn list_by_date_range(
         end
     )
     .fetch_all(pool)
-    .await
+    .await?;
+
+    Ok(ExpenseEntryList { entries })
 }
 
 pub async fn list_by_month(
     pool: &sqlx::SqlitePool,
     year: i32,
     month: u32,
-) -> sqlx::Result<Vec<ExpenseEntryWithCategory>> {
+) -> sqlx::Result<ExpenseEntryList> {
     let start = chrono::NaiveDate::from_ymd_opt(year, month, 1)
         .unwrap()
         .and_hms_opt(0, 0, 0)
@@ -183,7 +176,7 @@ pub async fn list_by_month(
 pub async fn list_by_year(
     pool: &sqlx::SqlitePool,
     year: i32,
-) -> sqlx::Result<Vec<ExpenseEntryWithCategory>> {
+) -> sqlx::Result<ExpenseEntryList> {
     let start = chrono::NaiveDate::from_ymd_opt(year, 1, 1)
         .unwrap()
         .and_hms_opt(0, 0, 0)
@@ -203,7 +196,7 @@ pub async fn list_by_week(
     pool: &sqlx::SqlitePool,
     year: i32,
     week: u32,
-) -> sqlx::Result<Vec<ExpenseEntryWithCategory>> {
+) -> sqlx::Result<ExpenseEntryList> {
     let days_offset = (week.saturating_sub(1)) * 7;
     let start = chrono::NaiveDate::from_ymd_opt(year, 1, 1)
         .unwrap()

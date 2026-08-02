@@ -4,6 +4,7 @@ use crate::{Config, portfolio};
 
 #[derive(Clone)]
 pub struct FinanceState {
+    #[allow(unused)]
     pub(crate) config: Arc<Config>,
 
     pub(crate) pool: sqlx::SqlitePool,

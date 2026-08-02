@@ -3,10 +3,8 @@ pub mod metrics;
 pub mod model;
 pub mod portfolio;
 mod recommendations;
-mod routes;
 mod state;
 
-pub use routes::*;
 pub use state::FinanceState;
 
 pub use portfolio::*;

@@ -1,23 +1,16 @@
 use sqlx::SqlitePool;
 
 #[derive(
-    Debug, Clone, sqlx::FromRow, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema,
+    Debug, Clone, sqlx::FromRow, serde::Serialize, schemars::JsonSchema,
 )]
 pub struct Category {
     pub id: i64,
     pub name: String,
 }
 
-/// Object-rooted list for MCP structured output (HTTP may still return bare `Vec`).
-#[derive(Debug, serde::Serialize, utoipa::ToSchema, schemars::JsonSchema)]
+#[derive(Debug, serde::Serialize, schemars::JsonSchema)]
 pub struct CategoryList {
     pub categories: Vec<Category>,
-}
-
-impl From<Vec<Category>> for CategoryList {
-    fn from(categories: Vec<Category>) -> Self {
-        Self { categories }
-    }
 }
 
 pub const PREDEFINED_CATEGORIES: &[&str] = &[
@@ -31,8 +24,8 @@ pub const PREDEFINED_CATEGORIES: &[&str] = &[
     "Other",
 ];
 
-pub async fn list_all(pool: &SqlitePool) -> sqlx::Result<Vec<Category>> {
-    sqlx::query_as!(
+pub async fn list_all(pool: &SqlitePool) -> sqlx::Result<CategoryList> {
+    let categories = sqlx::query_as!(
         Category,
         r#"
         SELECT
@@ -43,7 +36,9 @@ pub async fn list_all(pool: &SqlitePool) -> sqlx::Result<Vec<Category>> {
             name"#
     )
     .fetch_all(pool)
-    .await
+    .await?;
+
+    Ok(CategoryList { categories })
 }
 
 pub async fn find_by_id(

@@ -1,5 +1,3 @@
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
-
 use crate::portfolio::{Balance, RestClient, TradingPosition};
 
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
@@ -19,23 +17,6 @@ pub enum Asset {
     Owned(Balance),
     Leverage(TradingPosition),
 }
-
-pub async fn get_portfolio(
-    State(state): State<crate::FinanceState>,
-) -> impl IntoResponse {
-    fetch_portfolio(&state.api).await.map(Json).map_err(|e| {
-        tracing::error!("failed to fetch portfolio: {:?}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            serde_json::json!({
-                "error": e.to_string()
-            })
-            .to_string(),
-        )
-    })
-}
-
-pub async fn get_historical_volume() -> impl IntoResponse {}
 
 pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
     let server_ts = api.time().await?;

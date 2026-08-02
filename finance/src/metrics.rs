@@ -4,20 +4,20 @@ use ta::Next;
 use ta::indicators::{BollingerBands, RelativeStrengthIndex};
 use yahoo_finance_api as yahoo;
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize)]
 pub enum RsiSignal {
     Buy,
     Sell,
     Hold,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize)]
 pub enum Volatility {
     Low,
     High,
 }
 
-#[derive(Debug, serde::Serialize, utoipa::ToSchema)]
+#[derive(Debug, serde::Serialize)]
 pub struct TechnicalReport {
     symbol: String,
     price: f64,

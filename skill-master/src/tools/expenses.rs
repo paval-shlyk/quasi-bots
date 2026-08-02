@@ -84,7 +84,6 @@ impl SkillMasterMcpServer {
     ) -> Result<Json<finance::expenses::CategoryList>, String> {
         finance::expenses::list_all(self.state.finance_state.pool())
             .await
-            .map(finance::expenses::CategoryList::from)
             .map(Json)
             .map_err(|e| e.to_string())
     }
@@ -120,10 +119,7 @@ impl SkillMasterMcpServer {
             }
         };
 
-        entries
-            .map(finance::expenses::ExpenseEntryList::from)
-            .map(Json)
-            .map_err(|e| e.to_string())
+        entries.map(Json).map_err(|e| e.to_string())
     }
 
     #[tool(description = "Create an expense entry")]

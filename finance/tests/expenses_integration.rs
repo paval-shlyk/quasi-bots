@@ -16,8 +16,12 @@ async fn test_expense_crud() {
     finance::expenses::init_predefined(&pool).await.unwrap();
 
     let categories = finance::expenses::list_all(&pool).await.unwrap();
-    assert!(!categories.is_empty());
-    let food_category = categories.iter().find(|c| c.name == "Food").unwrap();
+    assert!(!categories.categories.is_empty());
+    let food_category = categories
+        .categories
+        .iter()
+        .find(|c| c.name == "Food")
+        .unwrap();
 
     let entry = finance::expenses::insert(
         &pool,
@@ -40,8 +44,8 @@ async fn test_expense_crud() {
     )
     .await
     .unwrap();
-    assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].category_name, "Food");
+    assert_eq!(entries.entries.len(), 1);
+    assert_eq!(entries.entries[0].category_name, "Food");
 
     let custom_cat = finance::expenses::create_new(&pool, "Custom Category")
         .await

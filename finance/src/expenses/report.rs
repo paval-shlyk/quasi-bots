@@ -2,18 +2,14 @@ use crate::expenses::{NativeCurrency, chart, entry};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CategoryTotal {
     pub category_id: i64,
     pub category_name: String,
     pub total: NativeCurrency,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MonthlyReport {
     pub year: i32,
     pub month: u32,
@@ -21,17 +17,13 @@ pub struct MonthlyReport {
     pub by_category: Vec<CategoryTotal>,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct MonthData {
     pub month: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct YearReport {
     pub year: i32,
     pub total: NativeCurrency,
@@ -39,17 +31,13 @@ pub struct YearReport {
     pub by_month: Vec<MonthData>,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct WeekData {
     pub week: u32,
     pub total: NativeCurrency,
 }
 
-#[derive(
-    Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, schemars::JsonSchema,
-)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct WeeklyReport {
     pub year: i32,
     pub week: u32,
@@ -62,16 +50,16 @@ pub async fn fetch_monthly_report(
     year: i32,
     month: u32,
 ) -> sqlx::Result<MonthlyReport> {
-    let entries = entry::list_by_month(pool, year, month).await?;
+    let list = entry::list_by_month(pool, year, month).await?;
 
-    let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
+    let total: NativeCurrency = list.entries.iter().map(|e| e.amount).sum();
 
     let mut category_totals: std::collections::HashMap<
         i64,
         (String, NativeCurrency),
     > = std::collections::HashMap::new();
 
-    for e in entries {
+    for e in list.entries {
         let entry = category_totals
             .entry(e.category_id)
             .or_insert((e.category_name.clone(), 0));
@@ -99,9 +87,9 @@ pub async fn fetch_year_report(
     pool: &SqlitePool,
     year: i32,
 ) -> sqlx::Result<YearReport> {
-    let entries = entry::list_by_year(pool, year).await?;
+    let list = entry::list_by_year(pool, year).await?;
 
-    let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
+    let total: NativeCurrency = list.entries.iter().map(|e| e.amount).sum();
 
     let mut category_totals: std::collections::HashMap<
         i64,
@@ -110,7 +98,7 @@ pub async fn fetch_year_report(
     let mut month_totals: std::collections::HashMap<u32, NativeCurrency> =
         std::collections::HashMap::new();
 
-    for e in entries {
+    for e in list.entries {
         let cat_entry = category_totals
             .entry(e.category_id)
             .or_insert((e.category_name.clone(), 0));
@@ -147,16 +135,16 @@ pub async fn fetch_weekly_report(
     year: i32,
     week: u32,
 ) -> sqlx::Result<WeeklyReport> {
-    let entries = entry::list_by_week(pool, year, week).await?;
+    let list = entry::list_by_week(pool, year, week).await?;
 
-    let total: NativeCurrency = entries.iter().map(|e| e.amount).sum();
+    let total: NativeCurrency = list.entries.iter().map(|e| e.amount).sum();
 
     let mut category_totals: std::collections::HashMap<
         i64,
         (String, NativeCurrency),
     > = std::collections::HashMap::new();
 
-    for e in entries {
+    for e in list.entries {
         let entry = category_totals
             .entry(e.category_id)
             .or_insert((e.category_name.clone(), 0));

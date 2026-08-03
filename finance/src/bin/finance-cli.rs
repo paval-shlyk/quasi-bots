@@ -80,6 +80,10 @@ enum Commands {
         url: String,
         symbol: String,
     },
+
+    OwningAssets {
+        url: String,
+    },
 }
 
 #[tokio::main]
@@ -245,6 +249,17 @@ async fn main() -> anyhow::Result<()> {
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
             let v = rc.ticker(&symbol).await?;
+
+            println!("{:#?}", v);
+        }
+        Commands::OwningAssets { url } => {
+            let api_key = env::var("API_KEY").expect("API_KEY required");
+            let api_secret =
+                env::var("API_SECRET").expect("API_SECRET required");
+            let rc =
+                finance::investment::RestClient::new(url, api_key, api_secret);
+
+            let v = finance::investment::fetch_owning_assets(&rc).await?;
 
             println!("{:#?}", v);
         }

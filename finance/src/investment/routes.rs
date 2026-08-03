@@ -1,4 +1,6 @@
-use crate::investment::{Balance, RestClient, TradingPosition};
+use std::collections::HashMap;
+
+use crate::investment::RestClient;
 
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
@@ -13,9 +15,31 @@ pub struct Portfolio {
     pub total_withdrawal: f64,
 }
 
-pub enum Asset {
-    Owned(Balance),
-    Leverage(TradingPosition),
+//fixme: only long operations are supported
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
+pub struct AssetTrade {
+    pub entry_price: f64,
+    pub amount: f64,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
+pub struct Asset {
+    pub name: String,
+
+    //summary about position
+    pub amount: f64,
+    pub cost: f64,
+    pub profit_loss: f64,
+
+    pub average_entry_price: f64,
+
+    pub trades: Vec<AssetTrade>,
+    //todo: metrics?
+}
+
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
+pub struct OwningAssets {
+    pub assets: Vec<Asset>,
 }
 
 pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
@@ -142,6 +166,67 @@ pub async fn find_quote_symbol(
 
     //fetch pair from exchange-info
     todo!()
+}
+
+//  Leverage + Assets
+pub async fn fetch_owning_assets(
+    api_client: &RestClient,
+) -> anyhow::Result<OwningAssets> {
+    let server_ts = api_client.time().await?;
+    let (_account, positions) = tokio::try_join!(
+        api_client.account(server_ts),
+        api_client.trading_positions(server_ts)
+    )?;
+
+    // assets.extend(account.balances.into_iter().map(|b| AssetExt::Owned(b)));
+
+    let mut assets_by_name = HashMap::<String, Asset>::new();
+
+    for position in positions {
+        assert_eq!(position.close_price, 0.0);
+
+        assets_by_name
+            .entry(position.symbol.clone())
+            .and_modify(|a| {
+                a.profit_loss += position.profit_loss;
+                a.cost += position.cost;
+                a.amount += position.open_qty;
+                a.average_entry_price += position.open_price;
+
+                a.trades.push(AssetTrade {
+                    entry_price: position.open_price,
+                    amount: position.open_qty,
+                });
+            })
+            .or_insert(Asset {
+                name: position.symbol,
+
+                amount: position.open_qty,
+                cost: position.cost,
+                profit_loss: position.profit_loss,
+                average_entry_price: position.open_price,
+
+                trades: vec![AssetTrade {
+                    amount: position.open_qty,
+                    entry_price: position.open_price,
+                }],
+            });
+    }
+
+    let leverage_assets = assets_by_name
+        .into_values()
+        .map(|mut a| {
+            assert!(!a.trades.is_empty());
+
+            a.average_entry_price /= a.trades.len() as f64;
+
+            a
+        })
+        .collect::<Vec<_>>();
+
+    Ok(OwningAssets {
+        assets: leverage_assets,
+    })
 }
 
 pub fn new_pair(base: &str, quote: &str) -> String {

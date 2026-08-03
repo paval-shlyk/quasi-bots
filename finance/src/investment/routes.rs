@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::investment::RestClient;
+use crate::investment::{Balance, ExchangeInfo, RestClient, Trade};
 
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
@@ -119,6 +119,8 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
     })
 }
 
+const QTY_EPS: f64 = 1e-12;
+
 pub async fn estimate_price_in_usd(
     api: &RestClient,
     symbol: &str,
@@ -127,65 +129,253 @@ pub async fn estimate_price_in_usd(
     if symbol == "USD" {
         return Ok(amount);
     }
-    let (base_to_quote, trade_symbol) = if symbol == "BYN" {
-        (false, "USD/BYN".to_string())
-    } else {
-        let ts = api.time().await?;
 
-        let exchanges = api.exchange_info(ts).await?;
-
-        let trade_info = exchanges
-            .symbols
-            .into_iter()
-            .filter(|s| s.symbol.contains(symbol))
-            .min_by_key(|s| s.symbol.len())
-            .ok_or_else(|| {
-                tracing::warn!("Failed to find trade of {symbol}");
-
-                anyhow::anyhow!("no trading pair found for symbol {}", symbol)
-            })?;
-
-        (trade_info.quote_asset == "USD", trade_info.symbol)
-    };
+    let ts = api.time().await?;
+    let exchanges = api.exchange_info(ts).await?;
+    let (trade_symbol, asset_is_base) = resolve_trade_pair(&exchanges, symbol)
+        .ok_or_else(|| {
+            tracing::warn!("Failed to find trade of {symbol}");
+            anyhow::anyhow!("no trading pair found for symbol {}", symbol)
+        })?;
 
     tracing::info!("found trading pair {} for symbol {}", trade_symbol, symbol);
 
     let ticker = api.ticker(&trade_symbol).await?;
 
-    if base_to_quote {
+    if asset_is_base {
         Ok(amount * ticker.bid_price)
     } else {
         Ok(amount / ticker.bid_price)
     }
 }
 
-pub async fn find_quote_symbol(
-    api: &RestClient,
-    _base_symbol: &str,
-) -> anyhow::Result<Option<String>> {
-    let _ts = api.time().await?;
+/// Returns `(pair_symbol, asset_is_base)`. When `asset_is_base`, trade `qty` is
+/// in the held currency and `is_buyer` means an acquisition.
+pub fn resolve_trade_pair(
+    info: &ExchangeInfo,
+    asset: &str,
+) -> Option<(String, bool)> {
+    if asset == "BYN" {
+        return Some(("USD/BYN".to_string(), false));
+    }
 
-    //fetch pair from exchange-info
-    todo!()
+    if let Some(s) = info
+        .symbols
+        .iter()
+        .filter(|s| s.base_asset == asset && s.quote_asset == "USD")
+        .min_by_key(|s| s.symbol.len())
+    {
+        return Some((s.symbol.clone(), true));
+    }
+
+    if let Some(s) = info
+        .symbols
+        .iter()
+        .filter(|s| s.base_asset == asset)
+        .min_by_key(|s| s.symbol.len())
+    {
+        return Some((s.symbol.clone(), true));
+    }
+
+    if let Some(s) = info
+        .symbols
+        .iter()
+        .filter(|s| s.quote_asset == asset)
+        .min_by_key(|s| s.symbol.len())
+    {
+        return Some((s.symbol.clone(), false));
+    }
+
+    info.symbols
+        .iter()
+        .filter(|s| s.symbol.contains(asset))
+        .min_by_key(|s| s.symbol.len())
+        .map(|s| (s.symbol.clone(), s.base_asset == asset))
 }
 
-//  Leverage + Assets
+pub async fn find_quote_symbol(
+    api: &RestClient,
+    base_symbol: &str,
+) -> anyhow::Result<Option<String>> {
+    let ts = api.time().await?;
+    let info = api.exchange_info(ts).await?;
+    Ok(resolve_trade_pair(&info, base_symbol).map(|(pair, _)| pair))
+}
+
+/// Open lots from `/myTrades`, newest first, until `balance_qty` is covered.
+fn lots_from_trades(
+    balance_qty: f64,
+    mut trades: Vec<Trade>,
+    asset_is_base: bool,
+) -> Vec<AssetTrade> {
+    trades.sort_by_key(|t| std::cmp::Reverse(t.time));
+
+    let mut remaining = balance_qty;
+    let mut lots = Vec::new();
+
+    for t in trades {
+        if remaining <= QTY_EPS {
+            break;
+        }
+
+        // Base: buy acquires qty. Quote: sell of base acquires quote amount.
+        let is_acquisition = if asset_is_base {
+            t.is_buyer
+        } else {
+            !t.is_buyer
+        };
+        if !is_acquisition {
+            continue;
+        }
+
+        let price: f64 = t.price.parse().unwrap_or(0.0);
+        let qty: f64 = if asset_is_base {
+            t.qty.parse().unwrap_or(0.0)
+        } else if let Some(ref qq) = t.quote_qty {
+            qq.parse().unwrap_or(0.0)
+        } else {
+            t.qty.parse().unwrap_or(0.0) * price
+        };
+
+        // Quote holdings: invert pair price so cost is in base (USD for USD/*).
+        let entry_price = if asset_is_base {
+            price
+        } else if price > 0.0 {
+            1.0 / price
+        } else {
+            0.0
+        };
+
+        let take = qty.min(remaining);
+        if take > QTY_EPS {
+            lots.push(AssetTrade {
+                entry_price,
+                amount: take,
+            });
+            remaining -= take;
+        }
+    }
+
+    lots
+}
+
+fn normalize_symbol(symbol: &str) -> String {
+    symbol.strip_suffix('.').unwrap_or(symbol).to_string()
+}
+
+fn resolve_asset_name(
+    name_by_symbol: &HashMap<String, String>,
+    symbol: &str,
+) -> Option<String> {
+    if let Some(name) = name_by_symbol.get(symbol) {
+        return Some(name.clone());
+    }
+    // e.g. "TSM/USD_LEVERAGE" → look up "TSM"
+    symbol
+        .strip_suffix("/USD_LEVERAGE")
+        .and_then(|base| name_by_symbol.get(base).cloned())
+}
+
+async fn spot_asset_from_balance(
+    api: &RestClient,
+    balance: &Balance,
+    exchange_info: &ExchangeInfo,
+    name_by_symbol: &HashMap<String, String>,
+    server_ts: u64,
+) -> Option<Asset> {
+    let amount = balance.free + balance.locked;
+    if amount <= QTY_EPS || balance.asset == "USD" {
+        return None;
+    }
+
+    let symbol = normalize_symbol(&balance.asset);
+    let Some((trade_symbol, asset_is_base)) =
+        resolve_trade_pair(exchange_info, &symbol)
+    else {
+        tracing::warn!(
+            "no trading pair for balance asset {}; skipping",
+            symbol
+        );
+        return None;
+    };
+
+    let raw_trades = match api.my_trades(&trade_symbol, server_ts).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!(
+                "my_trades failed for {} ({}): {e}",
+                symbol,
+                trade_symbol
+            );
+            Vec::new()
+        }
+    };
+
+    let trades = lots_from_trades(amount, raw_trades, asset_is_base);
+    let explained: f64 = trades.iter().map(|t| t.amount).sum();
+    if explained + QTY_EPS < amount {
+        tracing::warn!(
+            "myTrades only explain {explained} of {amount} for {symbol} \
+             (pair {trade_symbol}); history may be truncated"
+        );
+    }
+
+    let cost: f64 = trades.iter().map(|t| t.entry_price * t.amount).sum();
+    let average_entry_price = if explained > QTY_EPS {
+        cost / explained
+    } else {
+        0.0
+    };
+
+    let mark = match api.ticker(&trade_symbol).await {
+        Ok(ticker) if asset_is_base => amount * ticker.bid_price,
+        Ok(ticker) => amount / ticker.bid_price,
+        Err(e) => {
+            tracing::warn!("ticker failed for {trade_symbol}: {e}");
+            0.0
+        }
+    };
+
+    Some(Asset {
+        name: resolve_asset_name(name_by_symbol, &symbol),
+        symbol,
+        amount,
+        cost,
+        profit_loss: mark - cost,
+        average_entry_price,
+        trades,
+    })
+}
+
 pub async fn fetch_owning_assets(
     api_client: &RestClient,
 ) -> anyhow::Result<OwningAssets> {
     let server_ts = api_client.time().await?;
 
-    let (_account, positions, currencies) = tokio::try_join!(
+    let (account, positions, currencies, exchange_info) = tokio::try_join!(
         api_client.account(server_ts),
         api_client.trading_positions(server_ts),
         api_client.currencies(server_ts),
+        api_client.exchange_info(server_ts),
     )?;
 
-    // displaySymbol → full name. Leverage-only instruments may be absent.
     let name_by_symbol: HashMap<String, String> =
         currencies.into_iter().map(|c| (c.symbol, c.name)).collect();
 
-    // assets.extend(account.balances.into_iter().map(|b| AssetExt::Owned(b)));
+    let mut spot_assets = Vec::new();
+    for balance in &account.balances {
+        if let Some(asset) = spot_asset_from_balance(
+            api_client,
+            balance,
+            &exchange_info,
+            &name_by_symbol,
+            server_ts,
+        )
+        .await
+        {
+            spot_assets.push(asset);
+        }
+    }
 
     let mut assets_by_symbol = HashMap::<String, Asset>::new();
 
@@ -195,24 +385,8 @@ pub async fn fetch_owning_assets(
             "Only long operations are supported"
         );
 
-        let symbol = position
-            .symbol
-            .strip_suffix(".")
-            .unwrap_or(&position.symbol)
-            .to_string();
-
-        // Some position symbols exist only in leverage mode and are not listed
-        // under /currencies — leave name unset in that case.
-        let name = {
-            match name_by_symbol.get(&symbol).cloned() {
-                Some(name) => Some(name),
-                None => symbol
-                    .contains("/USD_LEVERAGE")
-                    .then(|| symbol.strip_suffix("/USD_LEVERAGE"))
-                    .flatten()
-                    .and_then(|s| s.to_string().into()),
-            }
-        };
+        let symbol = normalize_symbol(&position.symbol);
+        let name = resolve_asset_name(&name_by_symbol, &symbol);
 
         assets_by_symbol
             .entry(symbol.clone())
@@ -230,12 +404,10 @@ pub async fn fetch_owning_assets(
             .or_insert(Asset {
                 symbol,
                 name,
-
                 amount: position.open_qty,
                 cost: position.cost,
                 profit_loss: position.profit_loss,
                 average_entry_price: position.open_price,
-
                 trades: vec![AssetTrade {
                     amount: position.open_qty,
                     entry_price: position.open_price,
@@ -247,18 +419,244 @@ pub async fn fetch_owning_assets(
         .into_values()
         .map(|mut a| {
             assert!(!a.trades.is_empty());
-
             a.average_entry_price /= a.trades.len() as f64;
-
             a
         })
         .collect::<Vec<_>>();
 
-    Ok(OwningAssets {
-        assets: leverage_assets,
-    })
+    let mut assets = spot_assets;
+    assets.extend(leverage_assets);
+
+    Ok(OwningAssets { assets })
 }
 
 pub fn new_pair(base: &str, quote: &str) -> String {
     format!("{}/{}", base, quote)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::investment::{SymbolInfo, Trade};
+
+    fn trade(time: u64, price: &str, qty: &str, is_buyer: bool) -> Trade {
+        Trade {
+            symbol: "BTC/USD".into(),
+            id: time.to_string(),
+            order_id: time.to_string(),
+            price: price.into(),
+            qty: qty.into(),
+            quote_qty: None,
+            commission: None,
+            commission_asset: None,
+            time,
+            is_buyer,
+            is_maker: false,
+            is_best_match: None,
+        }
+    }
+
+    fn trade_with_quote(
+        time: u64,
+        price: &str,
+        qty: &str,
+        quote_qty: &str,
+        is_buyer: bool,
+    ) -> Trade {
+        let mut t = trade(time, price, qty, is_buyer);
+        t.quote_qty = Some(quote_qty.into());
+        t
+    }
+
+    fn symbol_info(symbol: &str, base: &str, quote: &str) -> SymbolInfo {
+        SymbolInfo {
+            symbol: symbol.into(),
+            status: "TRADING".into(),
+            base_asset: base.into(),
+            quote_asset: quote.into(),
+        }
+    }
+
+    fn exchange_info(symbols: Vec<SymbolInfo>) -> ExchangeInfo {
+        ExchangeInfo {
+            timezone: None,
+            server_time: None,
+            symbols,
+        }
+    }
+
+    #[test]
+    fn given_mixed_buy_sell_history_when_lots_from_trades_then_attributes_lifo_buys_until_balance_zero(
+    ) {
+        // Arrange: buy 10 @ 100, sell 5, buy 3 @ 120 → balance 8
+        let balance_qty = 8.0;
+        let history = vec![
+            trade(1, "100", "10", true),
+            trade(2, "110", "5", false),
+            trade(3, "120", "3", true),
+        ];
+
+        // Act
+        let lots = lots_from_trades(balance_qty, history, true);
+
+        // Assert: newest buy 3 fully, then 5 from the older buy of 10
+        assert_eq!(lots.len(), 2);
+        assert!((lots[0].amount - 3.0).abs() < QTY_EPS);
+        assert!((lots[0].entry_price - 120.0).abs() < QTY_EPS);
+        assert!((lots[1].amount - 5.0).abs() < QTY_EPS);
+        assert!((lots[1].entry_price - 100.0).abs() < QTY_EPS);
+        let explained: f64 = lots.iter().map(|l| l.amount).sum();
+        assert!((explained - balance_qty).abs() < QTY_EPS);
+    }
+
+    #[test]
+    fn given_partial_last_lot_when_lots_from_trades_then_takes_only_remaining_qty() {
+        // Arrange: single buy of 10, balance only 4
+        let history = vec![trade(1, "50", "10", true)];
+
+        // Act
+        let lots = lots_from_trades(4.0, history, true);
+
+        // Assert
+        assert_eq!(lots.len(), 1);
+        assert!((lots[0].amount - 4.0).abs() < QTY_EPS);
+        assert!((lots[0].entry_price - 50.0).abs() < QTY_EPS);
+    }
+
+    #[test]
+    fn given_only_sells_when_lots_from_trades_then_returns_no_lots() {
+        // Arrange
+        let history = vec![
+            trade(1, "100", "1", false),
+            trade(2, "101", "2", false),
+        ];
+
+        // Act
+        let lots = lots_from_trades(5.0, history, true);
+
+        // Assert
+        assert!(lots.is_empty());
+    }
+
+    #[test]
+    fn given_quote_asset_holdings_when_lots_from_trades_then_uses_sells_and_inverted_price() {
+        // Arrange: holding quote (e.g. BYN on USD/BYN). Selling base acquires quote.
+        let history = vec![trade_with_quote(1, "2.0", "10", "20", false)];
+
+        // Act
+        let lots = lots_from_trades(20.0, history, false);
+
+        // Assert: quote qty 20, entry_price = 1/2
+        assert_eq!(lots.len(), 1);
+        assert!((lots[0].amount - 20.0).abs() < QTY_EPS);
+        assert!((lots[0].entry_price - 0.5).abs() < QTY_EPS);
+    }
+
+    #[test]
+    fn given_truncated_history_when_lots_from_trades_then_explains_only_available_qty() {
+        // Arrange: balance 100 but history only has one buy of 10
+        let history = vec![trade(1, "10", "10", true)];
+
+        // Act
+        let lots = lots_from_trades(100.0, history, true);
+
+        // Assert
+        assert_eq!(lots.len(), 1);
+        assert!((lots[0].amount - 10.0).abs() < QTY_EPS);
+        let explained: f64 = lots.iter().map(|l| l.amount).sum();
+        assert!(explained < 100.0);
+    }
+
+    #[test]
+    fn given_usd_quoted_and_other_pairs_when_resolve_trade_pair_then_prefers_base_usd() {
+        // Arrange
+        let info = exchange_info(vec![
+            symbol_info("BTC/EUR", "BTC", "EUR"),
+            symbol_info("BTC/USD", "BTC", "USD"),
+            symbol_info("ETH/BTC", "ETH", "BTC"),
+        ]);
+
+        // Act
+        let resolved = resolve_trade_pair(&info, "BTC");
+
+        // Assert
+        assert_eq!(
+            resolved,
+            Some(("BTC/USD".to_string(), true))
+        );
+    }
+
+    #[test]
+    fn given_asset_only_as_quote_when_resolve_trade_pair_then_asset_is_not_base() {
+        // Arrange
+        let info = exchange_info(vec![symbol_info("USD/BYN", "USD", "BYN")]);
+
+        // Act
+        let resolved = resolve_trade_pair(&info, "BYN");
+
+        // Assert
+        assert_eq!(resolved, Some(("USD/BYN".to_string(), false)));
+    }
+
+    #[test]
+    fn given_unknown_asset_when_resolve_trade_pair_then_returns_none() {
+        // Arrange
+        let info = exchange_info(vec![symbol_info("BTC/USD", "BTC", "USD")]);
+
+        // Act
+        let resolved = resolve_trade_pair(&info, "NOPE");
+
+        // Assert
+        assert!(resolved.is_none());
+    }
+
+    #[test]
+    fn given_currency_map_when_resolve_asset_name_then_returns_display_name() {
+        // Arrange
+        let mut names = HashMap::new();
+        names.insert("TSM".into(), "Taiwan Semiconductor".into());
+
+        // Act
+        let name = resolve_asset_name(&names, "TSM");
+
+        // Assert
+        assert_eq!(name.as_deref(), Some("Taiwan Semiconductor"));
+    }
+
+    #[test]
+    fn given_leverage_symbol_when_resolve_asset_name_then_looks_up_base_ticker() {
+        // Arrange
+        let mut names = HashMap::new();
+        names.insert("TSM".into(), "Taiwan Semiconductor".into());
+
+        // Act
+        let name = resolve_asset_name(&names, "TSM/USD_LEVERAGE");
+
+        // Assert
+        assert_eq!(name.as_deref(), Some("Taiwan Semiconductor"));
+    }
+
+    #[test]
+    fn given_leverage_only_symbol_when_resolve_asset_name_then_returns_none() {
+        // Arrange
+        let names = HashMap::new();
+
+        // Act
+        let name = resolve_asset_name(&names, "FOO/USD_LEVERAGE");
+
+        // Assert
+        assert!(name.is_none());
+    }
+
+    #[test]
+    fn given_symbol_with_trailing_dot_when_normalize_symbol_then_strips_dot() {
+        // Arrange
+        let raw = "TSM.";
+
+        // Act
+        let symbol = normalize_symbol(raw);
+
+        // Assert
+        assert_eq!(symbol, "TSM");
+    }
 }

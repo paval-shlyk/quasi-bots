@@ -355,7 +355,7 @@ impl RestClient {
         symbol: Option<&str>,
         server_ts: u64,
     ) -> anyhow::Result<Vec<TradingPositionHistory>> {
-        let url = format!("{}/tradingPositionHistory", self.base_url);
+        let url = format!("{}/tradingPositionsHistory", self.base_url);
         let mut params = format!("timestamp={}", server_ts);
         if let Some(s) = symbol {
             params = format!("symbol={}&{}", urlencoding::encode(s), params);

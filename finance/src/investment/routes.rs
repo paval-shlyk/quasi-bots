@@ -24,7 +24,8 @@ pub struct AssetTrade {
 
 #[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
 pub struct Asset {
-    pub name: String,
+    pub name: Option<String>,
+    pub symbol: String,
 
     //summary about position
     pub amount: f64,
@@ -173,20 +174,48 @@ pub async fn fetch_owning_assets(
     api_client: &RestClient,
 ) -> anyhow::Result<OwningAssets> {
     let server_ts = api_client.time().await?;
-    let (_account, positions) = tokio::try_join!(
+
+    let (_account, positions, currencies) = tokio::try_join!(
         api_client.account(server_ts),
-        api_client.trading_positions(server_ts)
+        api_client.trading_positions(server_ts),
+        api_client.currencies(server_ts),
     )?;
+
+    // displaySymbol → full name. Leverage-only instruments may be absent.
+    let name_by_symbol: HashMap<String, String> =
+        currencies.into_iter().map(|c| (c.symbol, c.name)).collect();
 
     // assets.extend(account.balances.into_iter().map(|b| AssetExt::Owned(b)));
 
-    let mut assets_by_name = HashMap::<String, Asset>::new();
+    let mut assets_by_symbol = HashMap::<String, Asset>::new();
 
     for position in positions {
-        assert_eq!(position.close_price, 0.0);
+        assert_eq!(
+            position.close_price, 0.0,
+            "Only long operations are supported"
+        );
 
-        assets_by_name
-            .entry(position.symbol.clone())
+        let symbol = position
+            .symbol
+            .strip_suffix(".")
+            .unwrap_or(&position.symbol)
+            .to_string();
+
+        // Some position symbols exist only in leverage mode and are not listed
+        // under /currencies — leave name unset in that case.
+        let name = {
+            match name_by_symbol.get(&symbol).cloned() {
+                Some(name) => Some(name),
+                None => symbol
+                    .contains("/USD_LEVERAGE")
+                    .then(|| symbol.strip_suffix("/USD_LEVERAGE"))
+                    .flatten()
+                    .and_then(|s| s.to_string().into()),
+            }
+        };
+
+        assets_by_symbol
+            .entry(symbol.clone())
             .and_modify(|a| {
                 a.profit_loss += position.profit_loss;
                 a.cost += position.cost;
@@ -199,7 +228,8 @@ pub async fn fetch_owning_assets(
                 });
             })
             .or_insert(Asset {
-                name: position.symbol,
+                symbol,
+                name,
 
                 amount: position.open_qty,
                 cost: position.cost,
@@ -213,7 +243,7 @@ pub async fn fetch_owning_assets(
             });
     }
 
-    let leverage_assets = assets_by_name
+    let leverage_assets = assets_by_symbol
         .into_values()
         .map(|mut a| {
             assert!(!a.trades.is_empty());

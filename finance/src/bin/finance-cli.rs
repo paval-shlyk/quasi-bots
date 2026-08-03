@@ -93,7 +93,7 @@ async fn main() -> anyhow::Result<()> {
             let api_key = env::var("API_KEY").unwrap_or_default();
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let st = rc.time().await?;
             println!("serverTime: {}", st);
         }
@@ -101,7 +101,7 @@ async fn main() -> anyhow::Result<()> {
             let api_key = env::var("API_KEY").unwrap_or_default();
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let v = rc.depth(&symbol).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
@@ -109,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
             let api_key = env::var("API_KEY").unwrap_or_default();
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
 
             let ts = rc.time().await?;
             let v = rc.exchange_info(ts).await?;
@@ -122,7 +122,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret = env::var("API_SECRET")
                 .expect("API_SECRET required for account");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.account(ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
@@ -131,7 +131,7 @@ async fn main() -> anyhow::Result<()> {
             let api_key = env::var("API_KEY").unwrap_or_default();
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
 
             let ts = rc.time().await?;
             let v = rc.currencies(ts).await?;
@@ -146,7 +146,7 @@ async fn main() -> anyhow::Result<()> {
             let api_key = env::var("API_KEY").unwrap_or_default();
             let api_secret = env::var("API_SECRET").unwrap_or_default();
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let v = rc.klines(&symbol, &interval).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
@@ -155,7 +155,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.deposits(ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
@@ -165,7 +165,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.my_trades(&symbol, ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
@@ -175,7 +175,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.fetch_order(&order_id, ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
@@ -185,7 +185,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.open_orders(symbol.as_deref(), ts).await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
@@ -195,7 +195,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let mut v = rc.fetch_full_ledger(currency.as_deref(), ts).await?;
             // .into_iter()
@@ -211,7 +211,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.fetch_all_transactions(ts).await?;
             println!("{:#?}", v);
@@ -222,7 +222,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.trading_positions(ts).await?;
             println!("{:#?}", v);
@@ -232,7 +232,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
             let ts = rc.time().await?;
             let v = rc.trading_position_history(symbol.as_deref(), ts).await?;
             println!("{:#?}", v);
@@ -242,7 +242,7 @@ async fn main() -> anyhow::Result<()> {
             let api_secret =
                 env::var("API_SECRET").expect("API_SECRET required");
             let rc =
-                finance::portfolio::RestClient::new(url, api_key, api_secret);
+                finance::investment::RestClient::new(url, api_key, api_secret);
 
             let v = rc.ticker(&symbol).await?;
 

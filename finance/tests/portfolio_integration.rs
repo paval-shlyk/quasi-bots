@@ -1,4 +1,4 @@
-use finance::portfolio::{
+use finance::investment::{
     AuthRequest, PortfolioEvent, PortfolioSnapshot, Position, now_ms, sign,
 };
 use std::env;
@@ -77,7 +77,7 @@ async fn sign_and_serialization() {
 
     // Attempt to exercise REST endpoints if API_URL provided
     if let Ok(base) = env::var("API_URL") {
-        let rc = finance::portfolio::RestClient::new(
+        let rc = finance::investment::RestClient::new(
             base,
             api_key.clone(),
             api_secret.clone(),

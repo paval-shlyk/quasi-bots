@@ -24,7 +24,7 @@ impl SkillMasterMcpServer {
                 + Self::search_tool_router()
                 + Self::news_tool_router()
                 + Self::expenses_tool_router()
-                + Self::trading_tool_router(),
+                + Self::investment_tool_router(),
         }
     }
 }

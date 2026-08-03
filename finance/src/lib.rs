@@ -1,27 +1,27 @@
 pub mod expenses;
+pub mod investment;
 pub mod metrics;
 pub mod model;
-pub mod portfolio;
 mod recommendations;
 mod state;
 
 pub use state::FinanceState;
 
-pub use portfolio::*;
+pub use investment::*;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Config {
     //dummy rss source
     pub rss_source: reqwest::Url,
 
-    pub provider: portfolio::ProviderConfig,
+    pub provider: investment::ProviderConfig,
 }
 
 pub async fn connect(
     config: Config,
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<FinanceState> {
-    let api = portfolio::RestClient::new(
+    let api = investment::RestClient::new(
         config.provider.base_url.clone(),
         config.provider.api_key.clone(),
         config.provider.api_secret.clone(),

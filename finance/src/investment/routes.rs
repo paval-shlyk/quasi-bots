@@ -1,4 +1,4 @@
-use crate::portfolio::{Balance, RestClient, TradingPosition};
+use crate::investment::{Balance, RestClient, TradingPosition};
 
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {

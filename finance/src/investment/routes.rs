@@ -16,31 +16,31 @@ pub struct Portfolio {
 }
 
 //fixme: only long operations are supported
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
+#[derive(
+    Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug,
+)]
 pub struct AssetTrade {
     pub entry_price: f64,
     pub amount: f64,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
+#[derive(
+    Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug,
+)]
 pub struct Asset {
     pub name: Option<String>,
     pub symbol: String,
 
-    //summary about position
+    // summary about position
     pub amount: f64,
+    /// Live market value of the holding (`unit_market_price * amount`).
     pub cost: f64,
     pub profit_loss: f64,
 
     pub average_entry_price: f64,
+    pub unit_market_price: f64,
 
     pub trades: Vec<AssetTrade>,
-    //todo: metrics?
-}
-
-#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug)]
-pub struct OwningAssets {
-    pub assets: Vec<Asset>,
 }
 
 pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
@@ -149,8 +149,11 @@ pub async fn estimate_price_in_usd(
     }
 }
 
-/// Returns `(pair_symbol, asset_is_base)`. When `asset_is_base`, trade `qty` is
-/// in the held currency and `is_buyer` means an acquisition.
+/// Resolve a trade pair for a held asset; second value is whether that asset is base.
+///
+/// Tickers are quote-per-base, so when the asset is quote the caller must invert:
+/// mark as `amount / bid`, entry as `1/price`, and treat sells as acquisitions.
+/// Prefer base/USD when several pairs exist so valuation stays in USD without a chain.
 pub fn resolve_trade_pair(
     info: &ExchangeInfo,
     asset: &str,
@@ -263,6 +266,13 @@ fn normalize_symbol(symbol: &str) -> String {
     symbol.strip_suffix('.').unwrap_or(symbol).to_string()
 }
 
+/// Map exchange / leverage symbols to a lookup key (Yahoo, Finnhub, news).
+/// e.g. `TSM.` → `TSM`, `TSM/USD_LEVERAGE` → `TSM`.
+pub fn lookup_symbol(symbol: &str) -> String {
+    let s = normalize_symbol(symbol);
+    s.strip_suffix("/USD_LEVERAGE").unwrap_or(&s).to_string()
+}
+
 fn resolve_asset_name(
     name_by_symbol: &HashMap<String, String>,
     symbol: &str,
@@ -282,74 +292,75 @@ async fn spot_asset_from_balance(
     exchange_info: &ExchangeInfo,
     name_by_symbol: &HashMap<String, String>,
     server_ts: u64,
-) -> Option<Asset> {
+) -> anyhow::Result<Option<Asset>> {
     let amount = balance.free + balance.locked;
     if amount <= QTY_EPS || balance.asset == "USD" {
-        return None;
+        return Ok(None);
     }
 
     let symbol = normalize_symbol(&balance.asset);
     let Some((trade_symbol, asset_is_base)) =
         resolve_trade_pair(exchange_info, &symbol)
     else {
-        tracing::warn!(
-            "no trading pair for balance asset {}; skipping",
-            symbol
-        );
-        return None;
+        return Err(anyhow::anyhow!(
+            "no trading pair for balance asset {symbol}",
+        ));
     };
 
-    let raw_trades = match api.my_trades(&trade_symbol, server_ts).await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::warn!(
+    let raw_trades =
+        api.my_trades(&trade_symbol, server_ts).await.map_err(|e| {
+            anyhow::anyhow!(
                 "my_trades failed for {} ({}): {e}",
                 symbol,
                 trade_symbol
-            );
-            Vec::new()
-        }
-    };
+            )
+        })?;
 
     let trades = lots_from_trades(amount, raw_trades, asset_is_base);
     let explained: f64 = trades.iter().map(|t| t.amount).sum();
     if explained + QTY_EPS < amount {
-        tracing::warn!(
+        return Err(anyhow::anyhow!(
             "myTrades only explain {explained} of {amount} for {symbol} \
              (pair {trade_symbol}); history may be truncated"
-        );
+        ));
     }
 
-    let cost: f64 = trades.iter().map(|t| t.entry_price * t.amount).sum();
-    let average_entry_price = if explained > QTY_EPS {
-        cost / explained
+    assert!(explained >= QTY_EPS);
+
+    // Entry basis from reconstructed lots (not live mark).
+    let entry_cost: f64 = trades.iter().map(|t| t.entry_price * t.amount).sum();
+    let average_entry_price = entry_cost / explained;
+
+    let ticker = api.ticker(&trade_symbol).await.map_err(|e| {
+        anyhow::anyhow!("ticker failed for {trade_symbol}: {e}")
+    })?;
+    let unit_market_price = if asset_is_base {
+        ticker.bid_price
     } else {
-        0.0
+        assert!(ticker.bid_price > 0.0);
+
+        1.0 / ticker.bid_price
     };
 
-    let mark = match api.ticker(&trade_symbol).await {
-        Ok(ticker) if asset_is_base => amount * ticker.bid_price,
-        Ok(ticker) => amount / ticker.bid_price,
-        Err(e) => {
-            tracing::warn!("ticker failed for {trade_symbol}: {e}");
-            0.0
-        }
-    };
+    let cost = amount * unit_market_price; // a live market value
+    let profit_loss = cost - entry_cost;
 
-    Some(Asset {
+    Ok(Some(Asset {
         name: resolve_asset_name(name_by_symbol, &symbol),
         symbol,
         amount,
         cost,
-        profit_loss: mark - cost,
+        profit_loss,
         average_entry_price,
+        unit_market_price,
         trades,
-    })
+    }))
 }
 
-pub async fn fetch_owning_assets(
+/// Spot balances + leverage positions as raw holdings (no external analysis).
+pub async fn fetch_holding_assets(
     api_client: &RestClient,
-) -> anyhow::Result<OwningAssets> {
+) -> anyhow::Result<Vec<Asset>> {
     let server_ts = api_client.time().await?;
 
     let (account, positions, currencies, exchange_info) = tokio::try_join!(
@@ -363,18 +374,25 @@ pub async fn fetch_owning_assets(
         currencies.into_iter().map(|c| (c.symbol, c.name)).collect();
 
     let mut spot_assets = Vec::new();
+
     for balance in &account.balances {
-        if let Some(asset) = spot_asset_from_balance(
+        let Some(asset) = spot_asset_from_balance(
             api_client,
             balance,
             &exchange_info,
             &name_by_symbol,
             server_ts,
         )
-        .await
-        {
-            spot_assets.push(asset);
-        }
+        .await?
+        else {
+            tracing::debug!(
+                "Failed to resolve spot asset: {symbol}",
+                symbol = balance.asset
+            );
+            continue;
+        };
+
+        spot_assets.push(asset);
     }
 
     let mut assets_by_symbol = HashMap::<String, Asset>::new();
@@ -387,6 +405,17 @@ pub async fn fetch_owning_assets(
 
         let symbol = normalize_symbol(&position.symbol);
         let name = resolve_asset_name(&name_by_symbol, &symbol);
+
+        if position.open_qty.abs() <= QTY_EPS {
+            tracing::warn!(
+                "Too small owning assets: {} count={}",
+                position.symbol,
+                position.open_qty
+            );
+            continue;
+        }
+
+        let unit_market_price = position.cost / position.open_qty;
 
         assets_by_symbol
             .entry(symbol.clone())
@@ -408,6 +437,7 @@ pub async fn fetch_owning_assets(
                 cost: position.cost,
                 profit_loss: position.profit_loss,
                 average_entry_price: position.open_price,
+                unit_market_price,
                 trades: vec![AssetTrade {
                     amount: position.open_qty,
                     entry_price: position.open_price,
@@ -420,6 +450,12 @@ pub async fn fetch_owning_assets(
         .map(|mut a| {
             assert!(!a.trades.is_empty());
             a.average_entry_price /= a.trades.len() as f64;
+            // Recompute after merge: cost is live market value, so unit = cost / qty.
+            a.unit_market_price = if a.amount.abs() > QTY_EPS {
+                a.cost / a.amount
+            } else {
+                0.0
+            };
             a
         })
         .collect::<Vec<_>>();
@@ -427,7 +463,7 @@ pub async fn fetch_owning_assets(
     let mut assets = spot_assets;
     assets.extend(leverage_assets);
 
-    Ok(OwningAssets { assets })
+    Ok(assets)
 }
 
 pub fn new_pair(base: &str, quote: &str) -> String {
@@ -486,8 +522,8 @@ mod tests {
     }
 
     #[test]
-    fn given_mixed_buy_sell_history_when_lots_from_trades_then_attributes_lifo_buys_until_balance_zero(
-    ) {
+    fn given_mixed_buy_sell_history_when_lots_from_trades_then_attributes_lifo_buys_until_balance_zero()
+     {
         // Arrange: buy 10 @ 100, sell 5, buy 3 @ 120 → balance 8
         let balance_qty = 8.0;
         let history = vec![
@@ -510,7 +546,8 @@ mod tests {
     }
 
     #[test]
-    fn given_partial_last_lot_when_lots_from_trades_then_takes_only_remaining_qty() {
+    fn given_partial_last_lot_when_lots_from_trades_then_takes_only_remaining_qty()
+     {
         // Arrange: single buy of 10, balance only 4
         let history = vec![trade(1, "50", "10", true)];
 
@@ -526,10 +563,8 @@ mod tests {
     #[test]
     fn given_only_sells_when_lots_from_trades_then_returns_no_lots() {
         // Arrange
-        let history = vec![
-            trade(1, "100", "1", false),
-            trade(2, "101", "2", false),
-        ];
+        let history =
+            vec![trade(1, "100", "1", false), trade(2, "101", "2", false)];
 
         // Act
         let lots = lots_from_trades(5.0, history, true);
@@ -539,7 +574,8 @@ mod tests {
     }
 
     #[test]
-    fn given_quote_asset_holdings_when_lots_from_trades_then_uses_sells_and_inverted_price() {
+    fn given_quote_asset_holdings_when_lots_from_trades_then_uses_sells_and_inverted_price()
+     {
         // Arrange: holding quote (e.g. BYN on USD/BYN). Selling base acquires quote.
         let history = vec![trade_with_quote(1, "2.0", "10", "20", false)];
 
@@ -553,7 +589,8 @@ mod tests {
     }
 
     #[test]
-    fn given_truncated_history_when_lots_from_trades_then_explains_only_available_qty() {
+    fn given_truncated_history_when_lots_from_trades_then_explains_only_available_qty()
+     {
         // Arrange: balance 100 but history only has one buy of 10
         let history = vec![trade(1, "10", "10", true)];
 
@@ -568,7 +605,8 @@ mod tests {
     }
 
     #[test]
-    fn given_usd_quoted_and_other_pairs_when_resolve_trade_pair_then_prefers_base_usd() {
+    fn given_usd_quoted_and_other_pairs_when_resolve_trade_pair_then_prefers_base_usd()
+     {
         // Arrange
         let info = exchange_info(vec![
             symbol_info("BTC/EUR", "BTC", "EUR"),
@@ -580,14 +618,12 @@ mod tests {
         let resolved = resolve_trade_pair(&info, "BTC");
 
         // Assert
-        assert_eq!(
-            resolved,
-            Some(("BTC/USD".to_string(), true))
-        );
+        assert_eq!(resolved, Some(("BTC/USD".to_string(), true)));
     }
 
     #[test]
-    fn given_asset_only_as_quote_when_resolve_trade_pair_then_asset_is_not_base() {
+    fn given_asset_only_as_quote_when_resolve_trade_pair_then_asset_is_not_base()
+     {
         // Arrange
         let info = exchange_info(vec![symbol_info("USD/BYN", "USD", "BYN")]);
 
@@ -624,7 +660,8 @@ mod tests {
     }
 
     #[test]
-    fn given_leverage_symbol_when_resolve_asset_name_then_looks_up_base_ticker() {
+    fn given_leverage_symbol_when_resolve_asset_name_then_looks_up_base_ticker()
+    {
         // Arrange
         let mut names = HashMap::new();
         names.insert("TSM".into(), "Taiwan Semiconductor".into());
@@ -658,5 +695,17 @@ mod tests {
 
         // Assert
         assert_eq!(symbol, "TSM");
+    }
+
+    #[test]
+    fn given_leverage_pair_when_lookup_symbol_then_returns_base_ticker() {
+        // Arrange
+        let raw = "TSM/USD_LEVERAGE";
+
+        // Act
+        let key = lookup_symbol(raw);
+
+        // Assert
+        assert_eq!(key, "TSM");
     }
 }

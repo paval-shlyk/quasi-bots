@@ -39,11 +39,11 @@ pub struct Asset {
     /// Live market value of the holding (`unit_market_price * amount`).
     pub cost: f64,
     pub profit_loss: f64,
-    pub profit_lost_percentage: f64,
+    pub profit_lost_pct: f64,
 
     pub average_entry_price: f64,
     pub unit_market_price: f64,
-    pub distance_from_entry_price: f64,
+    pub distance_from_entry_price_pct: f64,
 
     pub trades: Vec<AssetEntryTrade>,
 }
@@ -299,7 +299,7 @@ async fn spot_asset_from_balance(
     server_ts: u64,
 ) -> anyhow::Result<Option<Asset>> {
     let amount = balance.free + balance.locked;
-    if amount <= QTY_EPS || balance.asset == "USD" {
+    if amount <= QTY_EPS || balance.asset == "USD" || balance.asset == "BYN" {
         return Ok(None);
     }
 
@@ -349,8 +349,8 @@ async fn spot_asset_from_balance(
 
     let cost = amount * unit_market_price; // a live market value
     let profit_loss = cost - entry_cost;
-    let profit_lost_percentage = profit_loss / entry_cost * 100.0;
-    let distance_from_entry_price =
+    let profit_lost_pct = profit_loss / entry_cost * 100.0;
+    let distance_from_entry_price_pct =
         (unit_market_price - average_entry_price) / average_entry_price * 100.0;
 
     Ok(Some(Asset {
@@ -359,10 +359,10 @@ async fn spot_asset_from_balance(
         amount,
         cost,
         profit_loss,
-        profit_lost_percentage,
+        profit_lost_pct,
         average_entry_price,
         unit_market_price,
-        distance_from_entry_price,
+        distance_from_entry_price_pct,
         trades,
     }))
 }
@@ -410,10 +410,10 @@ fn build_leverage_assets(
                 cost: position.cost,
                 profit_loss: position.profit_loss,
                 // Derived below after optional merge of same-symbol positions.
-                profit_lost_percentage: 0.0,
+                profit_lost_pct: 0.0,
                 average_entry_price: 0.0,
                 unit_market_price: 0.0,
-                distance_from_entry_price: 0.0,
+                distance_from_entry_price_pct: 0.0,
                 trades: vec![AssetEntryTrade {
                     amount: position.open_qty,
                     entry_price: position.open_price,
@@ -434,9 +434,9 @@ fn build_leverage_assets(
 
             a.average_entry_price = entry_cost / a.amount;
             a.unit_market_price = a.cost / a.amount;
-            a.profit_lost_percentage = a.profit_loss / entry_cost * 100.0;
+            a.profit_lost_pct = a.profit_loss / entry_cost * 100.0;
 
-            a.distance_from_entry_price = (a.unit_market_price
+            a.distance_from_entry_price_pct = (a.unit_market_price
                 - a.average_entry_price)
                 / a.average_entry_price
                 * 100.0;

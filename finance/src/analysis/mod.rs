@@ -139,9 +139,10 @@ where
                 row.targets = t.map(|mut pt| {
                     let px = row.asset.unit_market_price;
                     if let Some(mean) = pt.mean
-                        && px.abs() > f64::EPSILON {
-                            pt.upside_pct = Some((mean - px) / px * 100.0);
-                        }
+                        && px.abs() > f64::EPSILON
+                    {
+                        pt.upside_pct = Some((mean - px) / px * 100.0);
+                    }
                     pt
                 });
             }
@@ -179,12 +180,12 @@ mod tests {
             0.0
         };
         let entry_cost = entry * amount;
-        let profit_lost_percentage = if entry_cost.abs() > f64::EPSILON {
+        let profit_lost_pct = if entry_cost.abs() > f64::EPSILON {
             pl / entry_cost * 100.0
         } else {
             0.0
         };
-        let distance_from_entry_price = if entry.abs() > f64::EPSILON {
+        let distance_from_entry_price_pct = if entry.abs() > f64::EPSILON {
             (unit_market_price - entry) / entry * 100.0
         } else {
             0.0
@@ -195,10 +196,10 @@ mod tests {
             amount,
             cost,
             profit_loss: pl,
-            profit_lost_percentage,
+            profit_lost_pct,
             average_entry_price: entry,
             unit_market_price,
-            distance_from_entry_price,
+            distance_from_entry_price_pct,
             trades: vec![AssetEntryTrade {
                 entry_price: entry,
                 amount,

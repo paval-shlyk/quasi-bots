@@ -106,65 +106,21 @@ async fn run_analyze(
     no_news: bool,
     news_limit: usize,
 ) -> anyhow::Result<finance::OwningAssets> {
-    use finance::analysis::{
-        FinnhubProvider, NullEarningsCalendarProvider, NullNewsProvider,
-        NullPriceTargetProvider, RssNewsProvider,
-    };
+    use finance::analysis::{FinnhubProvider, RssNewsProvider};
     use finance::{AnalysisServices, fetch_owning_assets_with_analysis};
 
-    let technicals = !no_technicals;
-
-    // FINNHUB_API_KEY enables targets + earnings; otherwise those fields stay empty.
-    match (env::var("FINNHUB_API_KEY").ok(), no_news) {
-        (Some(key), false) => {
-            let finnhub = FinnhubProvider::new(key);
-            let mut services = AnalysisServices::new(
-                finnhub.clone(),
-                finnhub,
-                RssNewsProvider::new(),
-            );
-            services.technicals = technicals;
-            services.news_limit = news_limit;
-            fetch_owning_assets_with_analysis(rc, &services).await
-        }
-        (Some(key), true) => {
-            let finnhub = FinnhubProvider::new(key);
-            let mut services = AnalysisServices::new(
-                finnhub.clone(),
-                finnhub,
-                NullNewsProvider,
-            );
-            services.technicals = technicals;
-            services.news_limit = news_limit;
-            fetch_owning_assets_with_analysis(rc, &services).await
-        }
-        (None, false) => {
-            eprintln!(
-                "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
-            );
-            let mut services = AnalysisServices::new(
-                NullPriceTargetProvider,
-                NullEarningsCalendarProvider,
-                RssNewsProvider::new(),
-            );
-            services.technicals = technicals;
-            services.news_limit = news_limit;
-            fetch_owning_assets_with_analysis(rc, &services).await
-        }
-        (None, true) => {
-            eprintln!(
-                "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
-            );
-            let mut services = AnalysisServices::new(
-                NullPriceTargetProvider,
-                NullEarningsCalendarProvider,
-                NullNewsProvider,
-            );
-            services.technicals = technicals;
-            services.news_limit = news_limit;
-            fetch_owning_assets_with_analysis(rc, &services).await
-        }
+    let finnhub = env::var("FINNHUB_API_KEY").ok().map(FinnhubProvider::new);
+    if finnhub.is_none() {
+        eprintln!(
+            "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
+        );
     }
+
+    let news = (!no_news).then(|| RssNewsProvider::with_limit(news_limit));
+
+    let mut services = AnalysisServices::new(finnhub.clone(), finnhub, news);
+    services.technicals = !no_technicals;
+    fetch_owning_assets_with_analysis(rc, &services).await
 }
 
 #[tokio::main]

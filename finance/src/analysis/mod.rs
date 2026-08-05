@@ -7,10 +7,8 @@ mod providers;
 pub use finnhub::FinnhubProvider;
 pub use news_rss::RssNewsProvider;
 pub use providers::{
-    AssetNewsItem, EarningsCalendarProvider, EarningsInfo,
-    MockEarningsCalendarProvider, MockNewsProvider, MockPriceTargetProvider,
-    NewsProvider, NullEarningsCalendarProvider, NullNewsProvider,
-    NullPriceTargetProvider, PriceTargetProvider, PriceTargets,
+    AssetNewsItem, EarningsCalendarProvider, EarningsInfo, NewsProvider,
+    PriceTargetProvider, PriceTargets,
 };
 
 use crate::indicators::{
@@ -76,25 +74,27 @@ impl OwningAssets {
     }
 }
 
-/// Services used to enrich holdings. Use mocks in tests.
+/// Services used to enrich holdings. Absent providers skip that field.
 pub struct AnalysisServices<T, E, N> {
-    pub targets: T,
-    pub earnings: E,
-    pub news: N,
+    pub targets: Option<T>,
+    pub earnings: Option<E>,
+    pub news: Option<N>,
     pub technicals: bool,
     pub technicals_config: AnalysisConfig,
-    pub news_limit: usize,
 }
 
 impl<T, E, N> AnalysisServices<T, E, N> {
-    pub fn new(targets: T, earnings: E, news: N) -> Self {
+    pub fn new(
+        targets: Option<T>,
+        earnings: Option<E>,
+        news: Option<N>,
+    ) -> Self {
         Self {
             targets,
             earnings,
             news,
             technicals: true,
             technicals_config: AnalysisConfig::default(),
-            news_limit: 5,
         }
     }
 }
@@ -107,7 +107,10 @@ pub async fn fetch_owning_assets(
     Ok(OwningAssets::from_holdings(holdings))
 }
 
-/// Holdings + technicals / targets / earnings / news (soft-fail per field).
+/// Holdings + technicals / targets / earnings / news.
+///
+/// Configured providers must return a DTO or error (errors propagate).
+/// Missing providers leave the corresponding fields empty.
 pub async fn fetch_owning_assets_with_analysis<T, E, N>(
     api: &RestClient,
     services: &AnalysisServices<T, E, N>,
@@ -134,33 +137,34 @@ where
             }
         }
 
-        match services.targets.targets(&key).await {
-            Ok(t) => {
-                row.targets = t.map(|mut pt| {
-                    let px = row.asset.unit_market_price;
-                    if let Some(mean) = pt.mean
-                        && px.abs() > f64::EPSILON
-                    {
-                        pt.upside_pct = Some((mean - px) / px * 100.0);
-                    }
-                    pt
-                });
+        if let Some(provider) = &services.targets {
+            let mut pt = provider
+                .targets(&key)
+                .await
+                .map_err(|e| anyhow::anyhow!("targets for {key}: {e}"))?;
+            let px = row.asset.unit_market_price;
+            if let Some(mean) = pt.mean
+                && px.abs() > f64::EPSILON
+            {
+                pt.upside_pct = Some((mean - px) / px * 100.0);
             }
-            Err(e) => tracing::warn!("targets for {key}: {e}"),
+            row.targets = Some(pt);
         }
 
-        match services.earnings.earnings(&key).await {
-            Ok(e) => row.earnings = e,
-            Err(e) => tracing::warn!("earnings for {key}: {e}"),
+        if let Some(provider) = &services.earnings {
+            row.earnings = Some(
+                provider
+                    .earnings(&key)
+                    .await
+                    .map_err(|e| anyhow::anyhow!("earnings for {key}: {e}"))?,
+            );
         }
 
-        match services
-            .news
-            .recent(&key, row.asset.name.as_deref(), services.news_limit)
-            .await
-        {
-            Ok(items) => row.news = items,
-            Err(e) => tracing::warn!("news for {key}: {e}"),
+        if let Some(provider) = &services.news {
+            row.news = provider
+                .recent(&key, row.asset.name.as_deref())
+                .await
+                .map_err(|e| anyhow::anyhow!("news for {key}: {e}"))?;
         }
     }
 
@@ -241,31 +245,5 @@ mod tests {
 
         // Assert
         assert!(owning.assets.is_empty());
-    }
-
-    #[tokio::test]
-    async fn given_mock_providers_when_enrich_fields_then_targets_earnings_news_present()
-     {
-        // Arrange
-        let targets = MockPriceTargetProvider {
-            mean: 150.0,
-            high: 180.0,
-            low: 120.0,
-        };
-        let earnings = MockEarningsCalendarProvider;
-        let news = MockNewsProvider;
-
-        // Act
-        let t = targets.targets("TEST").await.unwrap().unwrap();
-        let e = earnings.earnings("TEST").await.unwrap().unwrap();
-        let n = news.recent("TEST", Some("Test"), 3).await.unwrap();
-
-        // Assert
-        assert_eq!(t.mean, Some(150.0));
-        assert_eq!(t.source, "mock");
-        assert!(e.next_report_at.is_some());
-        assert_eq!(e.source, "mock");
-        assert_eq!(n.len(), 1);
-        assert!(n[0].title.contains("TEST"));
     }
 }

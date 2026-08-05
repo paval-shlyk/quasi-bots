@@ -5,15 +5,27 @@ use feed_rs::parser;
 use super::providers::{AssetNewsItem, NewsProvider};
 
 /// Fetches a Google News RSS query for the symbol (and optional name).
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct RssNewsProvider {
     client: reqwest::Client,
+    limit: usize,
+}
+
+impl Default for RssNewsProvider {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RssNewsProvider {
     pub fn new() -> Self {
+        Self::with_limit(5)
+    }
+
+    pub fn with_limit(limit: usize) -> Self {
         Self {
             client: reqwest::Client::new(),
+            limit,
         }
     }
 
@@ -34,9 +46,8 @@ impl NewsProvider for RssNewsProvider {
         &self,
         symbol: &str,
         name: Option<&str>,
-        limit: usize,
     ) -> anyhow::Result<Vec<AssetNewsItem>> {
-        if limit == 0 {
+        if self.limit == 0 {
             return Ok(vec![]);
         }
 
@@ -55,16 +66,14 @@ impl NewsProvider for RssNewsProvider {
             .map_err(|e| anyhow::anyhow!("rss parse: {e}"))?;
 
         let mut items = Vec::new();
-        for entry in feed.entries.into_iter().take(limit) {
+        for entry in feed.entries.into_iter().take(self.limit) {
             let title = entry.title.map(|t| t.content).unwrap_or_default();
             if title.is_empty() {
                 continue;
             }
             let url = entry.links.first().map(|l| l.href.clone());
             let summary = entry.summary.map(|s| s.content);
-            let published_at = entry
-                .published
-                .or(entry.updated);
+            let published_at = entry.published.or(entry.updated);
 
             items.push(AssetNewsItem {
                 title,

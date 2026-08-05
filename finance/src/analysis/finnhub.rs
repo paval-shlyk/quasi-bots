@@ -67,36 +67,23 @@ struct FinnhubEarningsRow {
 }
 
 impl PriceTargetProvider for FinnhubProvider {
-    async fn targets(
-        &self,
-        symbol: &str,
-    ) -> anyhow::Result<Option<PriceTargets>> {
+    async fn targets(&self, symbol: &str) -> anyhow::Result<PriceTargets> {
         let raw: FinnhubPriceTarget = self
             .get_json("/stock/price-target", &[("symbol", symbol)])
             .await?;
 
-        if raw.target_mean.is_none()
-            && raw.target_high.is_none()
-            && raw.target_low.is_none()
-        {
-            return Ok(None);
-        }
-
-        Ok(Some(PriceTargets {
+        Ok(PriceTargets {
             mean: raw.target_mean,
             high: raw.target_high,
             low: raw.target_low,
             upside_pct: None,
             source: "finnhub".into(),
-        }))
+        })
     }
 }
 
 impl EarningsCalendarProvider for FinnhubProvider {
-    async fn earnings(
-        &self,
-        symbol: &str,
-    ) -> anyhow::Result<Option<EarningsInfo>> {
+    async fn earnings(&self, symbol: &str) -> anyhow::Result<EarningsInfo> {
         // Window: 1y past → 1y future
         let from = (Utc::now() - chrono::Duration::days(365))
             .format("%Y-%m-%d")
@@ -134,11 +121,7 @@ impl EarningsCalendarProvider for FinnhubProvider {
         let last = dated.iter().rev().find(|(dt, _)| *dt <= now);
         let next = dated.iter().find(|(dt, _)| *dt > now);
 
-        if last.is_none() && next.is_none() {
-            return Ok(None);
-        }
-
-        Ok(Some(EarningsInfo {
+        Ok(EarningsInfo {
             next_report_at: next.map(|(dt, _)| *dt),
             last_report_at: last.map(|(dt, _)| *dt),
             eps_estimate: next
@@ -146,7 +129,7 @@ impl EarningsCalendarProvider for FinnhubProvider {
                 .or_else(|| last.and_then(|(_, r)| r.eps_estimate)),
             eps_actual: last.and_then(|(_, r)| r.eps_actual),
             source: "finnhub".into(),
-        }))
+        })
     }
 }
 

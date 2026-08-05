@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use crate::investment::{Balance, ExchangeInfo, RestClient, Trade};
+use crate::{
+    TradingPosition,
+    investment::{Balance, ExchangeInfo, RestClient, Trade},
+};
 
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
@@ -36,9 +39,11 @@ pub struct Asset {
     /// Live market value of the holding (`unit_market_price * amount`).
     pub cost: f64,
     pub profit_loss: f64,
+    pub profit_lost_percentage: f64,
 
     pub average_entry_price: f64,
     pub unit_market_price: f64,
+    pub distance_from_entry_price: f64,
 
     pub trades: Vec<AssetTrade>,
 }
@@ -344,6 +349,9 @@ async fn spot_asset_from_balance(
 
     let cost = amount * unit_market_price; // a live market value
     let profit_loss = cost - entry_cost;
+    let profit_lost_percentage = profit_loss / entry_cost * 100.0;
+    let distance_from_entry_price =
+        (unit_market_price - average_entry_price) / average_entry_price * 100.0;
 
     Ok(Some(Asset {
         name: resolve_asset_name(name_by_symbol, &symbol),
@@ -351,10 +359,90 @@ async fn spot_asset_from_balance(
         amount,
         cost,
         profit_loss,
+        profit_lost_percentage,
         average_entry_price,
         unit_market_price,
+        distance_from_entry_price,
         trades,
     }))
+}
+
+fn build_leverage_assets(
+    positions: Vec<TradingPosition>,
+    name_by_symbol: &HashMap<String, String>,
+) -> Vec<Asset> {
+    let mut assets_by_symbol = HashMap::<String, Asset>::new();
+
+    for position in positions {
+        assert_eq!(
+            position.close_price, 0.0,
+            "Only long operations are supported"
+        );
+
+        let symbol = normalize_symbol(&position.symbol);
+        let name = resolve_asset_name(&name_by_symbol, &symbol);
+
+        if position.open_qty.abs() <= QTY_EPS {
+            tracing::warn!(
+                "Too small owning assets: {} count={}",
+                position.symbol,
+                position.open_qty
+            );
+            continue;
+        }
+
+        assets_by_symbol
+            .entry(symbol.clone())
+            .and_modify(|a| {
+                a.profit_loss += position.profit_loss;
+                a.cost += position.cost;
+                a.amount += position.open_qty;
+
+                a.trades.push(AssetTrade {
+                    entry_price: position.open_price,
+                    amount: position.open_qty,
+                });
+            })
+            .or_insert(Asset {
+                symbol,
+                name,
+                amount: position.open_qty,
+                cost: position.cost,
+                profit_loss: position.profit_loss,
+                // Derived below after optional merge of same-symbol positions.
+                profit_lost_percentage: 0.0,
+                average_entry_price: 0.0,
+                unit_market_price: 0.0,
+                distance_from_entry_price: 0.0,
+                trades: vec![AssetTrade {
+                    amount: position.open_qty,
+                    entry_price: position.open_price,
+                }],
+            });
+    }
+
+    assets_by_symbol
+        .into_values()
+        .map(|mut a| {
+            assert!(!a.trades.is_empty());
+
+            // Entry notional from open lots; cost is live market value (exchange).
+            let entry_cost: f64 =
+                a.trades.iter().map(|t| t.entry_price * t.amount).sum();
+
+            assert!(a.amount.abs() > QTY_EPS);
+
+            a.average_entry_price = entry_cost / a.amount;
+            a.unit_market_price = a.cost / a.amount;
+            a.profit_lost_percentage = a.profit_loss / entry_cost * 100.0;
+
+            a.distance_from_entry_price = (a.unit_market_price
+                - a.average_entry_price)
+                / a.average_entry_price
+                * 100.0;
+            a
+        })
+        .collect::<Vec<_>>()
 }
 
 /// Spot balances + leverage positions as raw holdings (no external analysis).
@@ -395,75 +483,9 @@ pub async fn fetch_holding_assets(
         spot_assets.push(asset);
     }
 
-    let mut assets_by_symbol = HashMap::<String, Asset>::new();
+    let leverage_assets = build_leverage_assets(positions, &name_by_symbol);
 
-    for position in positions {
-        assert_eq!(
-            position.close_price, 0.0,
-            "Only long operations are supported"
-        );
-
-        let symbol = normalize_symbol(&position.symbol);
-        let name = resolve_asset_name(&name_by_symbol, &symbol);
-
-        if position.open_qty.abs() <= QTY_EPS {
-            tracing::warn!(
-                "Too small owning assets: {} count={}",
-                position.symbol,
-                position.open_qty
-            );
-            continue;
-        }
-
-        let unit_market_price = position.cost / position.open_qty;
-
-        assets_by_symbol
-            .entry(symbol.clone())
-            .and_modify(|a| {
-                a.profit_loss += position.profit_loss;
-                a.cost += position.cost;
-                a.amount += position.open_qty;
-                a.average_entry_price += position.open_price;
-
-                a.trades.push(AssetTrade {
-                    entry_price: position.open_price,
-                    amount: position.open_qty,
-                });
-            })
-            .or_insert(Asset {
-                symbol,
-                name,
-                amount: position.open_qty,
-                cost: position.cost,
-                profit_loss: position.profit_loss,
-                average_entry_price: position.open_price,
-                unit_market_price,
-                trades: vec![AssetTrade {
-                    amount: position.open_qty,
-                    entry_price: position.open_price,
-                }],
-            });
-    }
-
-    let leverage_assets = assets_by_symbol
-        .into_values()
-        .map(|mut a| {
-            assert!(!a.trades.is_empty());
-            a.average_entry_price /= a.trades.len() as f64;
-            // Recompute after merge: cost is live market value, so unit = cost / qty.
-            a.unit_market_price = if a.amount.abs() > QTY_EPS {
-                a.cost / a.amount
-            } else {
-                0.0
-            };
-            a
-        })
-        .collect::<Vec<_>>();
-
-    let mut assets = spot_assets;
-    assets.extend(leverage_assets);
-
-    Ok(assets)
+    Ok([spot_assets, leverage_assets].concat())
 }
 
 pub fn new_pair(base: &str, quote: &str) -> String {

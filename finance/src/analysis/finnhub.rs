@@ -11,15 +11,24 @@ const FINNHUB_BASE: &str = "https://finnhub.io/api/v1";
 
 #[derive(Debug, Clone)]
 pub struct FinnhubProvider {
-    api_key: String,
     client: reqwest::Client,
 }
 
 impl FinnhubProvider {
     pub fn new(api_key: impl Into<String>) -> Self {
+        let api_key = api_key.into();
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert(
+            "X-Finnhub-Token",
+            reqwest::header::HeaderValue::from_str(&api_key)
+                .expect("FINNHUB_API_KEY must be a valid header value"),
+        );
+
         Self {
-            api_key: api_key.into(),
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .default_headers(headers)
+                .build()
+                .expect("failed to build Finnhub HTTP client"),
         }
     }
 
@@ -28,13 +37,14 @@ impl FinnhubProvider {
         path: &str,
         query: &[(&str, &str)],
     ) -> anyhow::Result<T> {
-        let mut url = format!("{FINNHUB_BASE}{path}?token={}", self.api_key);
-        for (k, v) in query {
-            url.push('&');
+        let mut url = format!("{FINNHUB_BASE}{path}");
+        for (i, (k, v)) in query.iter().enumerate() {
+            url.push(if i == 0 { '?' } else { '&' });
             url.push_str(&urlencoding::encode(k));
             url.push('=');
             url.push_str(&urlencoding::encode(v));
         }
+        // Auth: default header `X-Finnhub-Token` set in `new`.
         let resp = self.client.get(url).send().await?.error_for_status()?;
         Ok(resp.json().await?)
     }

@@ -22,7 +22,7 @@ pub struct Portfolio {
 #[derive(
     Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug,
 )]
-pub struct AssetTrade {
+pub struct AssetEntryTrade {
     pub entry_price: f64,
     pub amount: f64,
 }
@@ -45,7 +45,7 @@ pub struct Asset {
     pub unit_market_price: f64,
     pub distance_from_entry_price: f64,
 
-    pub trades: Vec<AssetTrade>,
+    pub trades: Vec<AssetEntryTrade>,
 }
 
 pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
@@ -215,7 +215,7 @@ fn lots_from_trades(
     balance_qty: f64,
     mut trades: Vec<Trade>,
     asset_is_base: bool,
-) -> Vec<AssetTrade> {
+) -> Vec<AssetEntryTrade> {
     trades.sort_by_key(|t| std::cmp::Reverse(t.time));
 
     let mut remaining = balance_qty;
@@ -256,7 +256,7 @@ fn lots_from_trades(
 
         let take = qty.min(remaining);
         if take > QTY_EPS {
-            lots.push(AssetTrade {
+            lots.push(AssetEntryTrade {
                 entry_price,
                 amount: take,
             });
@@ -380,7 +380,7 @@ fn build_leverage_assets(
         );
 
         let symbol = normalize_symbol(&position.symbol);
-        let name = resolve_asset_name(&name_by_symbol, &symbol);
+        let name = resolve_asset_name(name_by_symbol, &symbol);
 
         if position.open_qty.abs() <= QTY_EPS {
             tracing::warn!(
@@ -398,7 +398,7 @@ fn build_leverage_assets(
                 a.cost += position.cost;
                 a.amount += position.open_qty;
 
-                a.trades.push(AssetTrade {
+                a.trades.push(AssetEntryTrade {
                     entry_price: position.open_price,
                     amount: position.open_qty,
                 });
@@ -414,7 +414,7 @@ fn build_leverage_assets(
                 average_entry_price: 0.0,
                 unit_market_price: 0.0,
                 distance_from_entry_price: 0.0,
-                trades: vec![AssetTrade {
+                trades: vec![AssetEntryTrade {
                     amount: position.open_qty,
                     entry_price: position.open_price,
                 }],

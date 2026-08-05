@@ -81,9 +81,90 @@ enum Commands {
         symbol: String,
     },
 
+    /// Holdings with derived market/pnl/weight only (no external analysis)
     OwningAssets {
         url: String,
     },
+    /// Holdings + technicals, price targets, earnings, and news
+    Analyze {
+        url: String,
+        /// Skip Yahoo technicals
+        #[arg(long)]
+        no_technicals: bool,
+        /// Skip RSS news
+        #[arg(long)]
+        no_news: bool,
+        /// Max news items per symbol (default 5)
+        #[arg(long, default_value_t = 5)]
+        news_limit: usize,
+    },
+}
+
+async fn run_analyze(
+    rc: &finance::investment::RestClient,
+    no_technicals: bool,
+    no_news: bool,
+    news_limit: usize,
+) -> anyhow::Result<finance::OwningAssets> {
+    use finance::analysis::{
+        FinnhubProvider, NullEarningsCalendarProvider, NullNewsProvider,
+        NullPriceTargetProvider, RssNewsProvider,
+    };
+    use finance::{AnalysisServices, fetch_owning_assets_with_analysis};
+
+    let technicals = !no_technicals;
+
+    // FINNHUB_API_KEY enables targets + earnings; otherwise those fields stay empty.
+    match (env::var("FINNHUB_API_KEY").ok(), no_news) {
+        (Some(key), false) => {
+            let finnhub = FinnhubProvider::new(key);
+            let mut services = AnalysisServices::new(
+                finnhub.clone(),
+                finnhub,
+                RssNewsProvider::new(),
+            );
+            services.technicals = technicals;
+            services.news_limit = news_limit;
+            fetch_owning_assets_with_analysis(rc, &services).await
+        }
+        (Some(key), true) => {
+            let finnhub = FinnhubProvider::new(key);
+            let mut services = AnalysisServices::new(
+                finnhub.clone(),
+                finnhub,
+                NullNewsProvider,
+            );
+            services.technicals = technicals;
+            services.news_limit = news_limit;
+            fetch_owning_assets_with_analysis(rc, &services).await
+        }
+        (None, false) => {
+            eprintln!(
+                "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
+            );
+            let mut services = AnalysisServices::new(
+                NullPriceTargetProvider,
+                NullEarningsCalendarProvider,
+                RssNewsProvider::new(),
+            );
+            services.technicals = technicals;
+            services.news_limit = news_limit;
+            fetch_owning_assets_with_analysis(rc, &services).await
+        }
+        (None, true) => {
+            eprintln!(
+                "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
+            );
+            let mut services = AnalysisServices::new(
+                NullPriceTargetProvider,
+                NullEarningsCalendarProvider,
+                NullNewsProvider,
+            );
+            services.technicals = technicals;
+            services.news_limit = news_limit;
+            fetch_owning_assets_with_analysis(rc, &services).await
+        }
+    }
 }
 
 #[tokio::main]
@@ -259,9 +340,25 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
-            let v = finance::investment::fetch_owning_assets(&rc).await?;
+            let v = finance::fetch_owning_assets(&rc).await?;
 
-            println!("{:#?}", v);
+            println!("{}", serde_json::to_string_pretty(&v)?);
+        }
+        Commands::Analyze {
+            url,
+            no_technicals,
+            no_news,
+            news_limit,
+        } => {
+            let api_key = env::var("API_KEY").expect("API_KEY required");
+            let api_secret =
+                env::var("API_SECRET").expect("API_SECRET required");
+            let rc =
+                finance::investment::RestClient::new(url, api_key, api_secret);
+
+            let v =
+                run_analyze(&rc, no_technicals, no_news, news_limit).await?;
+            println!("{}", serde_json::to_string_pretty(&v)?);
         }
     }
 

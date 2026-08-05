@@ -1,10 +1,15 @@
+pub mod analysis;
 pub mod expenses;
+pub mod indicators;
 pub mod investment;
-pub mod metrics;
 pub mod model;
 mod recommendations;
 mod state;
 
+pub use analysis::{
+    AnalysisServices, AssetWithAnalysis, OwningAssets, fetch_owning_assets,
+    fetch_owning_assets_with_analysis,
+};
 pub use state::FinanceState;
 
 pub use investment::*;

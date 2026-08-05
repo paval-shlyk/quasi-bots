@@ -19,7 +19,14 @@ impl PriceTargetProvider for MockPriceTargetProvider {
             mean: Some(self.mean),
             high: Some(self.high),
             low: Some(self.low),
+            number_of_analysts: Some(10),
+            recommendation_mean: Some(2.0),
+            recommendation_key: Some("buy".into()),
             upside_pct: None,
+            eps_estimate_current_year: Some(5.0),
+            eps_estimate_next_year: Some(5.5),
+            eps_growth_current_year: Some(0.1),
+            eps_estimate_analysts: Some(12),
             source: "mock".into(),
         })
     }

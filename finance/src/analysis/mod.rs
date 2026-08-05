@@ -3,6 +3,7 @@
 mod finnhub;
 mod news_rss;
 mod providers;
+mod yahoo_targets;
 
 pub use finnhub::FinnhubProvider;
 pub use news_rss::RssNewsProvider;
@@ -10,6 +11,7 @@ pub use providers::{
     AssetNewsItem, EarningsCalendarProvider, EarningsInfo, NewsProvider,
     PriceTargetProvider, PriceTargets,
 };
+pub use yahoo_targets::YahooPriceTargetProvider;
 
 use crate::indicators::{
     AnalysisConfig, TechnicalIndicators, snapshot_from_yahoo,
@@ -109,8 +111,9 @@ pub async fn fetch_owning_assets(
 
 /// Holdings + technicals / targets / earnings / news.
 ///
-/// Configured providers must return a DTO or error (errors propagate).
-/// Missing providers leave the corresponding fields empty.
+/// Missing providers leave fields empty. Per-symbol enrichment errors are
+/// soft-failed (warn + skip field) so one unknown ticker (e.g. index CFD
+/// `US500`) does not abort the whole portfolio.
 pub async fn fetch_owning_assets_with_analysis<T, E, N>(
     api: &RestClient,
     services: &AnalysisServices<T, E, N>,
@@ -138,33 +141,34 @@ where
         }
 
         if let Some(provider) = &services.targets {
-            let mut pt = provider
-                .targets(&key)
-                .await
-                .map_err(|e| anyhow::anyhow!("targets for {key}: {e}"))?;
-            let px = row.asset.unit_market_price;
-            if let Some(mean) = pt.mean
-                && px.abs() > f64::EPSILON
-            {
-                pt.upside_pct = Some((mean - px) / px * 100.0);
+            match provider.targets(&key).await {
+                Ok(mut pt) => {
+                    let px = row.asset.unit_market_price;
+                    if let Some(mean) = pt.mean
+                        && px.abs() > f64::EPSILON
+                    {
+                        pt.upside_pct = Some((mean - px) / px * 100.0);
+                    }
+                    row.targets = Some(pt);
+                }
+                Err(e) => {
+                    tracing::warn!("targets for {key}: {e}");
+                }
             }
-            row.targets = Some(pt);
         }
 
         if let Some(provider) = &services.earnings {
-            row.earnings = Some(
-                provider
-                    .earnings(&key)
-                    .await
-                    .map_err(|e| anyhow::anyhow!("earnings for {key}: {e}"))?,
-            );
+            match provider.earnings(&key).await {
+                Ok(info) => row.earnings = Some(info),
+                Err(e) => tracing::warn!("earnings for {key}: {e}"),
+            }
         }
 
         if let Some(provider) = &services.news {
-            row.news = provider
-                .recent(&key, row.asset.name.as_deref())
-                .await
-                .map_err(|e| anyhow::anyhow!("news for {key}: {e}"))?;
+            match provider.recent(&key, row.asset.name.as_deref()).await {
+                Ok(items) => row.news = items,
+                Err(e) => tracing::warn!("news for {key}: {e}"),
+            }
         }
     }
 

@@ -272,10 +272,22 @@ fn normalize_symbol(symbol: &str) -> String {
 }
 
 /// Map exchange / leverage symbols to a lookup key (Yahoo, Finnhub, news).
-/// e.g. `TSM.` → `TSM`, `TSM/USD_LEVERAGE` → `TSM`.
+/// e.g. `TSM.` → `TSM`, `TSM/USD_LEVERAGE` → `TSM`, `US500` → `^GSPC`.
 pub fn lookup_symbol(symbol: &str) -> String {
     let s = normalize_symbol(symbol);
-    s.strip_suffix("/USD_LEVERAGE").unwrap_or(&s).to_string()
+    let s = s.strip_suffix("/USD_LEVERAGE").unwrap_or(&s);
+
+    // Broker CFD / index names → Yahoo-style symbols (technicals / news).
+    // Analyst price targets still often missing for pure indices.
+    match s {
+        "US500" | "SPX" | "SP500" | "SPX500" => "^GSPC".into(),
+        "US100" | "NDX" | "NAS100" | "USTEC" => "^NDX".into(),
+        "US30" | "DJIA" | "DOW" | "WALLSTREET30" => "^DJI".into(),
+        "DE40" | "DAX" | "GER40" => "^GDAXI".into(),
+        "UK100" | "FTSE" | "UK100GBP" => "^FTSE".into(),
+        "JP225" | "NI225" | "NIKKEI" => "^N225".into(),
+        other => other.to_string(),
+    }
 }
 
 fn resolve_asset_name(
@@ -729,5 +741,12 @@ mod tests {
 
         // Assert
         assert_eq!(key, "TSM");
+    }
+
+    #[test]
+    fn given_index_cfd_when_lookup_symbol_then_maps_to_yahoo_index() {
+        assert_eq!(lookup_symbol("US500"), "^GSPC");
+        assert_eq!(lookup_symbol("US100"), "^NDX");
+        assert_eq!(lookup_symbol("US30"), "^DJI");
     }
 }

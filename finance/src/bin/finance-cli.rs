@@ -106,19 +106,23 @@ async fn run_analyze(
     no_news: bool,
     news_limit: usize,
 ) -> anyhow::Result<finance::OwningAssets> {
-    use finance::analysis::{FinnhubProvider, RssNewsProvider};
+    use finance::analysis::{
+        FinnhubProvider, RssNewsProvider, YahooPriceTargetProvider,
+    };
     use finance::{AnalysisServices, fetch_owning_assets_with_analysis};
 
-    let finnhub = env::var("FINNHUB_API_KEY").ok().map(FinnhubProvider::new);
-    if finnhub.is_none() {
+    // Price targets: Yahoo (no key). Earnings: Finnhub when FINNHUB_API_KEY is set.
+    let targets = Some(YahooPriceTargetProvider::new());
+    let earnings = env::var("FINNHUB_API_KEY").ok().map(FinnhubProvider::new);
+    if earnings.is_none() {
         eprintln!(
-            "warning: FINNHUB_API_KEY not set; targets and earnings will be empty"
+            "warning: FINNHUB_API_KEY not set; earnings will be empty"
         );
     }
 
     let news = (!no_news).then(|| RssNewsProvider::with_limit(news_limit));
 
-    let mut services = AnalysisServices::new(finnhub.clone(), finnhub, news);
+    let mut services = AnalysisServices::new(targets, earnings, news);
     services.technicals = !no_technicals;
     fetch_owning_assets_with_analysis(rc, &services).await
 }

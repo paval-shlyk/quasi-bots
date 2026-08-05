@@ -115,9 +115,7 @@ async fn run_analyze(
     let targets = Some(YahooPriceTargetProvider::new());
     let earnings = env::var("FINNHUB_API_KEY").ok().map(FinnhubProvider::new);
     if earnings.is_none() {
-        eprintln!(
-            "warning: FINNHUB_API_KEY not set; earnings will be empty"
-        );
+        eprintln!("warning: FINNHUB_API_KEY not set; earnings will be empty");
     }
 
     let news = (!no_news).then(|| RssNewsProvider::with_limit(news_limit));

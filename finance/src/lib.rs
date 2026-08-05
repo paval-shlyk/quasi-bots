@@ -19,7 +19,8 @@ pub struct Config {
     //dummy rss source
     pub rss_source: reqwest::Url,
 
-    pub provider: investment::ProviderConfig,
+    pub dzengi_config: investment::DzengiConfig,
+    pub finn_hub_api_key: String,
 }
 
 pub async fn connect(
@@ -27,9 +28,9 @@ pub async fn connect(
     pool: &sqlx::SqlitePool,
 ) -> anyhow::Result<FinanceState> {
     let api = investment::RestClient::new(
-        config.provider.base_url.clone(),
-        config.provider.api_key.clone(),
-        config.provider.api_secret.clone(),
+        config.dzengi_config.base_url.clone(),
+        config.dzengi_config.api_key.clone(),
+        config.dzengi_config.api_secret.clone(),
     );
 
     expenses::init_predefined(pool).await?;

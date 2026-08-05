@@ -47,12 +47,10 @@ impl PriceTargetProvider for YahooPriceTargetProvider {
         let current_year = trends.iter().find(|t| t.period.to_string() == "0y");
         let next_year = trends.iter().find(|t| t.period.to_string() == "+1y");
 
-        let eps_cy = current_year.and_then(|t| {
-            t.earnings_estimate.avg.as_ref().map(money_to_f64)
-        });
-        let eps_ny = next_year.and_then(|t| {
-            t.earnings_estimate.avg.as_ref().map(money_to_f64)
-        });
+        let eps_cy = current_year
+            .and_then(|t| t.earnings_estimate.avg.as_ref().map(money_to_f64));
+        let eps_ny = next_year
+            .and_then(|t| t.earnings_estimate.avg.as_ref().map(money_to_f64));
         let eps_growth = current_year.and_then(|t| t.earnings_estimate.growth);
         let eps_analysts =
             current_year.and_then(|t| t.earnings_estimate.num_analysts);

@@ -8,7 +8,7 @@ use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub use config::ProviderConfig;
+pub use config::DzengiConfig;
 pub use model::*;
 pub use rest_api::RestClient;
 pub use routes::*;

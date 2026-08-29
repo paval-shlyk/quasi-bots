@@ -420,13 +420,12 @@ fn handle_key(
                 app.selected -= 1;
             }
         }
-        KeyCode::Down | KeyCode::Char('j') if app.focus == Focus::Tools => {
-            if !app.filtered_indices.is_empty()
+        KeyCode::Down | KeyCode::Char('j') if app.focus == Focus::Tools
+            && !app.filtered_indices.is_empty()
                 && app.selected + 1 < app.filtered_indices.len()
-            {
+            => {
                 app.selected += 1;
             }
-        }
         _ => {}
     }
 }

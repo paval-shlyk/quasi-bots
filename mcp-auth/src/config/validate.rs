@@ -1,9 +1,6 @@
 use serde::{Deserialize, Deserializer, de::Error as DeError};
 use url::Url;
 
-// one day
-const MAX_TOKEN_TTL_SECS: u64 = 86_400;
-
 /// Validate and normalize a public base URL (RFC 3986).
 ///
 /// See also: [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) resource server metadata.
@@ -55,44 +52,70 @@ pub fn validate_public_url(value: &str) -> Result<String, String> {
     Ok(normalized)
 }
 
-/// Validate Google OAuth client ID (trimmed, non-empty).
-pub fn validate_google_client_id(value: &str) -> Result<String, String> {
-    let trimmed = value.trim();
+/// Validate and normalize an external authorization server issuer URL.
+pub fn validate_authorization_server(value: &str) -> Result<String, String> {
+    let trimmed = value.trim().trim_end_matches('/');
     if trimmed.is_empty() {
-        return Err("auth.google.client_id must not be empty".into());
+        return Err("authorization_server must not be empty".into());
     }
-    Ok(trimmed.to_string())
+
+    let url = Url::parse(trimmed).map_err(|e| format!("invalid URL: {e}"))?;
+
+    match url.scheme() {
+        "http" | "https" => {}
+        scheme => {
+            return Err(format!(
+                "authorization_server scheme must be http or https, got {scheme}"
+            ));
+        }
+    }
+
+    if url.host().is_none() {
+        return Err("authorization_server must include a host".into());
+    }
+
+    if url.query().is_some() {
+        return Err(
+            "authorization_server must not contain a query string".into()
+        );
+    }
+
+    if url.fragment().is_some() {
+        return Err("authorization_server must not contain a fragment".into());
+    }
+
+    // Rebuild without trailing slash on path.
+    let mut normalized = format!(
+        "{}://{}",
+        url.scheme(),
+        url.host_str()
+            .ok_or("authorization_server must include a host")?
+    );
+    if let Some(port) = url.port() {
+        normalized.push(':');
+        normalized.push_str(&port.to_string());
+    }
+    let path = url.path().trim_end_matches('/');
+    if !path.is_empty() && path != "/" {
+        normalized.push_str(path);
+    }
+
+    Ok(normalized)
 }
 
-/// Validate allowlisted Google `sub` values.
-pub fn validate_allowed_google_subs(
+/// Validate allowlisted JWT `sub` values.
+pub fn validate_allowed_subs(
     values: Vec<String>,
 ) -> Result<Vec<String>, String> {
     let mut subs = Vec::new();
     for value in values {
         let trimmed = value.trim();
         if trimmed.is_empty() {
-            return Err(
-                "auth.google.allowed_google_subs must not contain empty values"
-                    .into(),
-            );
+            return Err("allowed_subs must not contain empty values".into());
         }
         subs.push(trimmed.to_string());
     }
     Ok(subs)
-}
-
-/// Validate access-token TTL in seconds.
-pub fn validate_token_ttl_secs(value: u64) -> Result<u64, String> {
-    if value == 0 {
-        return Err("token_ttl_secs must be greater than 0".into());
-    }
-    if value > MAX_TOKEN_TTL_SECS {
-        return Err(format!(
-            "token_ttl_secs must not exceed {MAX_TOKEN_TTL_SECS} seconds"
-        ));
-    }
-    Ok(value)
 }
 
 /// Validate an OAuth scope string ([RFC 6749 §3.3](https://datatracker.ietf.org/doc/html/rfc6749#section-3.3)).
@@ -156,41 +179,61 @@ where
     validate_public_url(&value).map_err(D::Error::custom)
 }
 
-pub fn deserialize_google_client_id<'de, D>(
+pub fn deserialize_authorization_server<'de, D>(
     deserializer: D,
 ) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
     let value = String::deserialize(deserializer)?;
-    validate_google_client_id(&value).map_err(D::Error::custom)
+    validate_authorization_server(&value).map_err(D::Error::custom)
 }
 
-pub fn deserialize_allowed_google_subs<'de, D>(
+pub fn deserialize_allowed_subs<'de, D>(
     deserializer: D,
 ) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let values = Vec::<String>::deserialize(deserializer)?;
-    validate_allowed_google_subs(values).map_err(D::Error::custom)
-}
-
-pub fn deserialize_token_ttl_secs<'de, D>(
-    deserializer: D,
-) -> Result<u64, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = u64::deserialize(deserializer)?;
-    validate_token_ttl_secs(value).map_err(D::Error::custom)
+    validate_allowed_subs(values).map_err(D::Error::custom)
 }
 
 pub fn deserialize_scope<'de, D>(deserializer: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let value = String::deserialize(deserializer)?;
+    let raw_value = toml::Value::deserialize(deserializer)?;
+    let value = match raw_value {
+        toml::Value::String(v) => v,
+        toml::Value::Array(values) => {
+            let mut scope = vec![];
+
+            for v in values.into_iter() {
+                let Some(v) = v.as_str().map(|v| v.trim()) else {
+                    return Err(D::Error::custom(
+                        "Only string is array element is supported",
+                    ));
+                };
+
+                if v.is_empty() {
+                    return Err(D::Error::custom(
+                        "scope must not contain empty segments",
+                    ));
+                }
+
+                scope.push(v.to_string())
+            }
+
+            scope.join(" ")
+        }
+        _unexp => {
+            return Err(D::Error::custom(
+                "Only raw string or array of strings are supported as a `scope`",
+            ));
+        }
+    };
+
     validate_scope(&value).map_err(D::Error::custom)
 }
 
@@ -205,10 +248,6 @@ where
         .into_iter()
         .map(|origin| validate_origin(&origin).map_err(D::Error::custom))
         .collect()
-}
-
-pub fn default_token_ttl() -> u64 {
-    3600
 }
 
 pub fn default_scope() -> String {
@@ -235,18 +274,37 @@ mod tests {
 
     const VALID: &str = r#"
 public_url = "http://127.0.0.1:8080"
-token_ttl_secs = 120
+authorization_server = "https://auth.example.com/realms/mcp"
 scope = "mcp"
 allowed_origins = []
-
-[auth.google]
-client_id = "123.apps.googleusercontent.com"
-allowed_google_subs = []
+allowed_subs = []
 "#;
 
     #[test]
     fn valid_config_parses() {
         parse_config(VALID).expect("valid config should parse");
+    }
+
+    #[test]
+    fn accepts_keycloak_realm_path() {
+        let cfg = parse_config(VALID).unwrap();
+        assert_eq!(
+            cfg.authorization_server,
+            "https://auth.example.com/realms/mcp"
+        );
+    }
+
+    #[test]
+    fn strips_trailing_slash_on_authorization_server() {
+        let cfg = parse_config(&VALID.replace(
+            "https://auth.example.com/realms/mcp",
+            "https://auth.example.com/realms/mcp/",
+        ))
+        .unwrap();
+        assert_eq!(
+            cfg.authorization_server,
+            "https://auth.example.com/realms/mcp"
+        );
     }
 
     #[test]
@@ -260,22 +318,23 @@ allowed_google_subs = []
     }
 
     #[test]
-    fn rejects_empty_google_client_id() {
+    fn rejects_empty_authorization_server() {
         let err = parse_config(&VALID.replace(
-            "client_id = \"123.apps.googleusercontent.com\"",
-            "client_id = \"   \"",
+            "authorization_server = \"https://auth.example.com/realms/mcp\"",
+            "authorization_server = \"   \"",
         ))
-        .expect_err("empty client_id");
-        assert!(err.to_string().contains("client_id"));
+        .expect_err("empty authorization_server");
+        assert!(err.to_string().contains("authorization_server"));
     }
 
     #[test]
-    fn rejects_zero_token_ttl() {
-        let err = parse_config(
-            &VALID.replace("token_ttl_secs = 120", "token_ttl_secs = 0"),
-        )
-        .expect_err("zero ttl");
-        assert!(err.to_string().contains("token_ttl_secs"));
+    fn rejects_authorization_server_with_query() {
+        let err = parse_config(&VALID.replace(
+            "https://auth.example.com/realms/mcp",
+            "https://auth.example.com/realms/mcp?x=1",
+        ))
+        .expect_err("query in authorization_server");
+        assert!(err.to_string().contains("authorization_server"));
     }
 
     #[test]
@@ -298,5 +357,39 @@ allowed_google_subs = []
     #[test]
     fn validate_scope_accepts_multiple() {
         assert!(validate_scope("read write").is_ok());
+    }
+
+    #[test]
+    fn scope_array_deserializes() {
+        let cfg = parse_config(
+            r#"
+public_url = "http://127.0.0.1:8080"
+authorization_server = "https://auth.example.com/realms/mcp"
+scope = ["openid", "mcp"]
+allowed_origins = []
+allowed_subs = []
+"#,
+        )
+        .expect("array scope should parse");
+        assert_eq!(cfg.scope, "openid mcp");
+    }
+
+    #[test]
+    fn resource_url_from_config() {
+        let cfg = parse_config(VALID).unwrap();
+        assert_eq!(cfg.resource_url(), "http://127.0.0.1:8080/mcp");
+        assert_eq!(
+            cfg.protected_resource_metadata_url(),
+            "http://127.0.0.1:8080/.well-known/oauth-protected-resource/mcp"
+        );
+    }
+
+    #[test]
+    fn subject_allowlist() {
+        let mut cfg = parse_config(VALID).unwrap();
+        assert!(cfg.subject_allowed("anyone"));
+        cfg.allowed_subs = vec!["alice".into()];
+        assert!(cfg.subject_allowed("alice"));
+        assert!(!cfg.subject_allowed("bob"));
     }
 }

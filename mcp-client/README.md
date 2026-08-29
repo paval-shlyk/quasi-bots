@@ -8,15 +8,15 @@ MCP **2025-11-25** Streamable HTTP client with a **ratatui** TUI for verifying s
 - Protocol version `2025-11-25`
 - List tools and call tools with JSON arguments
 - Auth:
-  - **Bearer token** via `--token` / `MCP_TOKEN`
-  - **OAuth 2.1 + PKCE** via `--login` (dynamic client registration + browser flow against `mcp-auth`)
+  - **Bearer token** via `--token` / `MCP_TOKEN` (JWT from the external AS)
+  - **OAuth 2.1 + PKCE** via `--login` (discovers AS via RFC 9728 PRM on the MCP host, then authorizes against Keycloak/Zitadel/…)
 
 ## How to get a Bearer token
 
-skill-master protects `/mcp` with OAuth. Tokens are issued only after a successful authorization code + PKCE flow (Google owner allowlist).
+skill-master protects `/mcp` as an OAuth **resource server**. Access tokens are JWTs issued by the external authorization server configured as `authorization_server` on the host (see [mcp-auth/README.md](../mcp-auth/README.md)).
 
 ```bash
-# Interactive OAuth, then open the TUI
+# Interactive OAuth (AS discovered from protected-resource metadata), then open the TUI
 cargo run -p mcp-client -- --url http://127.0.0.1:8080/mcp --login
 
 # Reuse a previously issued access token
@@ -24,7 +24,7 @@ export MCP_TOKEN='…'
 cargo run -p mcp-client -- --url http://127.0.0.1:8080/mcp
 ```
 
-After `--login`, the access token is printed once (and shown in the TUI log) so you can export `MCP_TOKEN` for later runs. Server-side tokens live in memory — restart skill-master and re-login.
+After `--login`, the access token is printed once (and shown in the TUI log) so you can export `MCP_TOKEN` for later runs. The AS must issue JWTs whose `aud` includes the MCP resource URI (e.g. `http://127.0.0.1:8080/mcp`).
 
 ## CLI
 

@@ -11,7 +11,7 @@
 - **knowledge**: Spaced repetition system logic.
 - **news**: News fetching and processing logic.
 - **telemetry**: Metrics and logging utilities.
-- **mcp-auth**: OAuth 2.1 authorization server library for MCP resource servers.
+- **mcp-auth**: OAuth 2.1 resource-server library for MCP hosts (RFC 9728 PRM + JWKS JWT validation; delegates authorization to Keycloak/Zitadel/…).
 - **mcp-client**: MCP Streamable HTTP client with a TUI for verifying servers.
 - **crypto**: Autonomous crypto trading worker (Binance spot + Polymarket) — **under development, not tested yet**.
 - **crypto-master**: Supervisor service that manages a fleet of crypto workers via gRPC — **under development**.
@@ -62,7 +62,7 @@ The primary user-facing surface today is **skill-master** as an **MCP server** (
 | **Trading** | Limited portfolio summary (not full bot control). |
 | **Search** | Web search via SerpAPI (Google). |
 
-Auth is handled by the nested OAuth flow (`mcp-auth`); see [mcp-auth/README.md](mcp-auth/README.md) and [mcp-client/README.md](mcp-client/README.md) for connecting a client.
+Auth is delegated to an external authorization server; skill-master only serves protected-resource metadata and validates JWTs (`mcp-auth`). See [mcp-auth/README.md](mcp-auth/README.md) and [mcp-client/README.md](mcp-client/README.md).
 
 ### Domain modules (libraries)
 

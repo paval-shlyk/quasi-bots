@@ -20,9 +20,7 @@ pub fn mount(
 ) -> Router<()> {
     let mut http_cfg = StreamableHttpServerConfig::default()
         .with_allowed_hosts(config.allowed_hosts())
-        .with_cancellation_token(cancel)
-        .with_stateful_mode(config.stateful_mode)
-        .with_json_response(config.json_response);
+        .with_cancellation_token(cancel);
 
     if !config.allowed_origins.is_empty() {
         http_cfg =

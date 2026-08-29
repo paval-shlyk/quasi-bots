@@ -11,15 +11,16 @@ use url::Url;
 use crate::config::ConnectOptions;
 use crate::{Error, Result};
 
-/// Run OAuth 2.1 + PKCE against the MCP resource server origin.
+/// Run OAuth 2.1 + PKCE for an MCP resource server.
 ///
 /// Returns the access token (without the `Bearer ` prefix).
 ///
 /// Flow:
-/// 1. Dynamic client registration at the authorization server
-/// 2. Local redirect listener on `opts.oauth_redirect`
-/// 3. Browser authorization (Google owner login on skill-master)
-/// 4. Code exchange → access token
+/// 1. Discover AS via RFC 9728 protected-resource metadata on the MCP host
+/// 2. Dynamic client registration (or CIMD) at the authorization server
+/// 3. Local redirect listener on `opts.oauth_redirect`
+/// 4. Browser authorization against the external AS (Keycloak, Zitadel, …)
+/// 5. Code exchange → JWT access token
 pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
     let redirect = Url::parse(&opts.oauth_redirect)
         .map_err(|e| Error::InvalidUrl(format!("redirect URI: {e}")))?;

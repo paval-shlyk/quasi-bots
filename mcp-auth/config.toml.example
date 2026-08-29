@@ -5,5 +5,3 @@ scope = "mcp"
 # Optional JWT sub allowlist (empty = any subject with a valid token)
 allowed_subs = []
 allowed_origins = []
-stateful_mode = false
-json_response = true

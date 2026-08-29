@@ -75,11 +75,14 @@ pub async fn bearer_auth_middleware(
         .and_then(|v| v.strip_prefix("Bearer "))
         .map(|s| s.to_string());
 
+    // `resource_url()` allocates; keep it alive for the validator borrows.
+    let resource = state.config.resource_url();
     let validator = JwtValidator {
         jwks: state.jwks.clone(),
-        expected_audience: &state.config.resource_url(),
+        expected_audience: &resource,
         expected_issuer: &state.config.authorization_server,
         expected_scope: &state.config.scope,
+        allowed_subs: &state.config.allowed_subs,
     };
 
     match token {
@@ -90,6 +93,9 @@ pub async fn bearer_auth_middleware(
             }
             Err(JwtError::InsufficientScope) => {
                 unauthorized_response(&state.config, "insufficient_scope", true)
+            }
+            Err(JwtError::SubjectNotAllowed) => {
+                unauthorized_response(&state.config, "invalid_token", false)
             }
             Err(e) => {
                 debug!(error = %e, "MCP bearer JWT rejected");

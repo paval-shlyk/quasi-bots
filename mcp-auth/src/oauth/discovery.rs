@@ -1,4 +1,3 @@
-use axum::http::uri;
 use jsonwebtoken::jwk::JwkSet;
 
 pub type DiscoveryError = Box<dyn std::error::Error + Send + Sync>;
@@ -52,22 +51,23 @@ pub async fn fetch_jwks(
         .await
         .map_err(|e| format!("Failed to parse Open ID configuration: {e}"))?;
 
-    let jwks_uri = match metadata.issuer.parse::<uri::Uri>() {
-        Ok(issuer_uri)
-            if let Some((jwks_uri, scheme)) = metadata.jwks_uri.as_ref().zip(issuer_uri.scheme())
-                && *scheme == uri::Scheme::HTTPS
-                && issuer_uri == trusted_issuer => {
-                    jwks_uri
-            }
-        Ok(_uri) => {
-            return Err(format!("The `jwks_uri` field is missing or issuer is not trusted: {metadata:?}").into())
-            }
-        Err(e) => {
-            return Err(format!("Failed to parse the `issuer` ({issuer}) as a valid URI: {e}", issuer= metadata.issuer).into());
-        }
+    // OpenID Connect Discovery: the `issuer` value MUST exactly match the
+    // Issuer Identifier used for discovery (here: configured authorization_server).
+    let discovered = metadata.issuer.trim_end_matches('/');
+    let trusted = trusted_issuer.trim_end_matches('/');
+    if discovered != trusted {
+        return Err(format!(
+            "OIDC issuer mismatch: discovery returned {discovered}, expected {trusted}"
+        )
+        .into());
+    }
+
+    let Some(jwks_uri) = metadata.jwks_uri.as_deref().filter(|u| !u.is_empty())
+    else {
+        return Err(
+            format!("The `jwks_uri` field is missing: {metadata:?}").into()
+        );
     };
 
-    let set = fetch_jwks_unchecked(client, jwks_uri).await?;
-
-    Ok(set)
+    fetch_jwks_unchecked(client, jwks_uri).await
 }

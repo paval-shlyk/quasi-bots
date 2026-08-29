@@ -71,14 +71,16 @@ pub fn spawn_jwks_refresh_task(
         loop {
             interval.tick().await;
 
-            let maybe_fresh_jwks = fetch_jwks(&client, &trusted_issuer)
-                .await
-                .inspect_err(|e| {
+            match fetch_jwks(&client, &trusted_issuer).await {
+                Ok(fresh) => {
+                    *jwks.write().await = Some(fresh);
+                }
+                Err(e) => {
+                    // Keep the last good key set; a transient AS outage must not
+                    // wipe JWKS and turn every MCP request into 401.
                     tracing::warn!("Failed to refresh jwks: {e}");
-                })
-                .ok();
-
-            *jwks.write().await = maybe_fresh_jwks;
+                }
+            }
         }
     })
 }
@@ -116,6 +118,7 @@ pub struct JwtValidator<'a> {
     pub expected_issuer: &'a str,
     pub expected_audience: &'a str,
     pub expected_scope: &'a str,
+    pub allowed_subs: &'a [String],
 }
 
 impl JwtValidator<'_> {
@@ -156,6 +159,10 @@ impl JwtValidator<'_> {
 
         let claims = data.claims;
 
+        if !subject_allowed(self.allowed_subs, &claims.sub) {
+            return Err(JwtError::SubjectNotAllowed);
+        }
+
         if !scope_satisfies(&claims, self.expected_scope) {
             return Err(JwtError::InsufficientScope);
         }
@@ -181,9 +188,24 @@ impl JwtValidator<'_> {
     }
 }
 
-/// Scope check: if the token carries scope/scp claims, require `required` to be present.
-/// Tokens without any scope claim are accepted (AS is trusted for authorization).
+fn subject_allowed(allowed_subs: &[String], sub: &str) -> bool {
+    allowed_subs.is_empty() || allowed_subs.iter().any(|s| s == sub)
+}
+
+/// Scope check: if the token carries scope/scp claims, every configured scope
+/// segment must be present. Tokens without any scope claim are accepted (AS is
+/// trusted for authorization).
+///
+/// `required` is the configured scope string (space-separated, RFC 6749 §3.3).
 fn scope_satisfies(claims: &AccessTokenClaims, required: &str) -> bool {
+    let required: Vec<&str> = required
+        .split_whitespace()
+        .filter(|s| !s.is_empty())
+        .collect();
+    if required.is_empty() {
+        return true;
+    }
+
     let mut granted = Vec::new();
     if let Some(scope) = &claims.scope {
         granted.extend(scope.split_whitespace().map(|s| s.to_string()));
@@ -194,7 +216,9 @@ fn scope_satisfies(claims: &AccessTokenClaims, required: &str) -> bool {
     if granted.is_empty() {
         return true;
     }
-    granted.iter().any(|s| s == required)
+    required
+        .iter()
+        .all(|need| granted.iter().any(|have| have == need))
 }
 
 #[cfg(test)]
@@ -221,7 +245,16 @@ mod tests {
             scp: None,
         };
         assert!(scope_satisfies(&claims, "mcp"));
+        assert!(scope_satisfies(&claims, "openid mcp"));
         assert!(!scope_satisfies(&claims, "admin"));
+        assert!(!scope_satisfies(&claims, "mcp admin"));
+    }
+
+    #[test]
+    fn subject_allowlist() {
+        assert!(subject_allowed(&[], "anyone"));
+        assert!(subject_allowed(&[String::from("alice")], "alice"));
+        assert!(!subject_allowed(&[String::from("alice")], "bob"));
     }
 
     #[derive(Serialize)]

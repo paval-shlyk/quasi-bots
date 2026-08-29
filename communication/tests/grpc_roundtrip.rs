@@ -203,6 +203,7 @@ struct MockMaster {
 }
 
 impl MockMaster {
+    #[allow(clippy::result_large_err)]
     async fn worker_client(
         &self,
     ) -> Result<WorkerServiceClient<Channel>, Status> {

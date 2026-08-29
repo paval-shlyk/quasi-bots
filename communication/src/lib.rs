@@ -45,6 +45,9 @@ pub mod serde_timestamp {
 }
 
 pub mod proto {
+    // tonic/prost codegen: service methods return `Result<_, tonic::Status>`,
+    // and Status is large enough to trip clippy on every RPC signature.
+    #![allow(clippy::large_enum_variant, clippy::result_large_err)]
     tonic::include_proto!("crypto");
 }
 

@@ -1,6 +1,8 @@
 public_url = "http://127.0.0.1:8080"
 # External AS issuer (Zitadel instance / Keycloak realm)
 authorization_server = "https://auth.example.com"
+# Include Zitadel `urn:zitadel:iam:org:project:id:{PROJECT_ID}:aud` so MCP
+# clients request an access token whose audience includes this API.
 scope = "mcp"
 # Optional token sub allowlist (empty = any subject with an active token)
 allowed_subs = []

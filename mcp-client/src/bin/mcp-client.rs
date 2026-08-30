@@ -42,15 +42,22 @@ struct Cli {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // When running the TUI, keep tracing off stderr noise unless RUST_LOG is set.
+    let cli = Cli::parse();
+
+    // Default: quiet for TUI; richer when logging in / headless debugging.
+    // Override anytime with RUST_LOG (e.g. RUST_LOG=debug,mcp_client=trace,rmcp=debug).
+    let default_filter = if cli.login || cli.headless_list {
+        "info,mcp_client=debug,rmcp=info"
+    } else {
+        "warn,mcp_client=info"
+    };
     let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("warn"));
+        .unwrap_or_else(|_| EnvFilter::new(default_filter));
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .with_writer(std::io::stderr)
+        .with_target(true)
         .init();
-
-    let cli = Cli::parse();
 
     let mut opts = ConnectOptions {
         url: cli.url,

@@ -2,7 +2,11 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 
-use rmcp::transport::auth::OAuthState;
+use oauth2::TokenResponse;
+use rmcp::transport::auth::{
+    AuthorizationManager, AuthorizationMetadata, OAuthClientConfig,
+    OAuthTokenResponse,
+};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;
@@ -11,17 +15,20 @@ use url::Url;
 use crate::config::ConnectOptions;
 use crate::{Error, Result};
 
-/// Run OAuth 2.1 + PKCE for an MCP resource server.
+/// Run OAuth 2.1 + PKCE for an MCP resource server (Zitadel-oriented).
 ///
-/// Returns the access token (without the `Bearer ` prefix).
-///
-/// Flow:
-/// 1. Discover AS via RFC 9728 protected-resource metadata on the MCP host
-/// 2. Dynamic client registration (or CIMD) at the authorization server
-/// 3. Local redirect listener on `opts.oauth_redirect`
-/// 4. Browser authorization against the external AS (Keycloak, Zitadel, …)
-/// 5. Code exchange → JWT access token
+/// - DCR with `application_type: "native"` + `token_endpoint_auth_method: "none"`
+/// - Authorization code + PKCE
+/// - Returns the opaque (or JWT) **access_token** for `Authorization: Bearer`
 pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
+    tracing::info!(
+        mcp_url = %opts.url,
+        redirect = %opts.oauth_redirect,
+        scope = %opts.scope,
+        client_name = %opts.client_name,
+        "starting MCP OAuth login"
+    );
+
     let redirect = Url::parse(&opts.oauth_redirect)
         .map_err(|e| Error::InvalidUrl(format!("redirect URI: {e}")))?;
 
@@ -46,8 +53,7 @@ pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
             "failed to bind OAuth redirect listener on {addr}: {e}"
         ))
     })?;
-
-    tracing::info!("OAuth redirect listener on http://{addr}{path}");
+    tracing::info!(%addr, %path, "OAuth redirect listener ready");
 
     let (tx, rx) = oneshot::channel::<Result<(String, String)>>();
     let expected_path = path.to_string();
@@ -56,48 +62,214 @@ pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
         let _ = tx.send(result);
     });
 
-    let mut oauth = OAuthState::new(&opts.url, None)
+    let mut manager = AuthorizationManager::new(opts.url.as_str())
         .await
         .map_err(Error::oauth)?;
+    let metadata = manager.discover_metadata().await.map_err(|e| {
+        tracing::error!(error = %e, "OAuth discovery / AS metadata failed");
+        Error::oauth(e)
+    })?;
+    tracing::info!(
+        authorization_endpoint = %metadata.authorization_endpoint,
+        token_endpoint = %metadata.token_endpoint,
+        registration_endpoint = ?metadata.registration_endpoint,
+        "authorization server metadata"
+    );
+    manager.set_metadata(metadata.clone());
 
-    let scopes: Vec<&str> = if opts.scope.is_empty() {
-        vec![]
-    } else {
-        vec![opts.scope.as_str()]
-    };
+    let scopes = resolve_scopes(&manager, opts);
+    let scope_refs: Vec<&str> = scopes.iter().map(String::as_str).collect();
+    tracing::info!(?scopes, "requesting OAuth scopes");
 
-    oauth
-        .start_authorization(
-            &scopes,
-            opts.oauth_redirect.as_str(),
-            Some(opts.client_name.as_str()),
+    let client_id = register_native_public_client(
+        &metadata,
+        &opts.client_name,
+        &opts.oauth_redirect,
+        &scopes,
+    )
+    .await?;
+    tracing::info!(%client_id, "DCR succeeded (native public client)");
+
+    manager
+        .configure_client(
+            OAuthClientConfig::new(
+                client_id.clone(),
+                opts.oauth_redirect.clone(),
+            )
+            .with_scopes(scopes.clone()),
         )
-        .await
         .map_err(Error::oauth)?;
 
-    let auth_url = oauth.get_authorization_url().await.map_err(Error::oauth)?;
-    tracing::info!("Open authorization URL:\n{auth_url}");
+    let auth_url = manager.get_authorization_url(&scope_refs).await.map_err(
+        |e| {
+            tracing::error!(error = %e, "failed to build authorization URL");
+            Error::oauth(e)
+        },
+    )?;
+    tracing::info!(%auth_url, "authorization URL ready");
     eprintln!("\n=== MCP OAuth ===");
     eprintln!("Open this URL in a browser to authorize:\n{auth_url}\n");
     open_browser(&auth_url);
 
+    tracing::info!("waiting for OAuth redirect callback…");
     let (code, state) = rx
         .await
         .map_err(|_| Error::Oauth("OAuth callback channel closed".into()))??;
 
-    oauth
-        .handle_callback(&code, &state)
-        .await
-        .map_err(Error::oauth)?;
+    tracing::info!(
+        code_len = code.len(),
+        "authorization code received; exchanging at token endpoint"
+    );
 
-    // rmcp's OAuthState::get_access_token does not work in Authorized state;
-    // pull the manager out and read the token from there.
-    let manager = oauth.into_authorization_manager().ok_or_else(|| {
-        Error::Oauth("OAuth completed but manager missing".into())
+    let token_response = manager
+        .exchange_code_for_token(&code, &state)
+        .await
+        .map_err(|e| {
+        tracing::error!(error = %e, "token endpoint / code exchange failed");
+        Error::oauth(e)
     })?;
 
-    let token = manager.get_access_token().await.map_err(Error::oauth)?;
-    Ok(token)
+    let access_token = token_response.access_token().secret().to_string();
+    log_token_endpoint_response(&token_response);
+
+    Ok(access_token)
+}
+
+/// CLI / default scopes, whitespace-split.
+fn cli_scopes(opts: &ConnectOptions) -> Vec<String> {
+    opts.scope
+        .split_whitespace()
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+        .collect()
+}
+
+/// Prefer RFC 9728 PRM `scopes_supported` (includes the Zitadel project
+/// audience URN) and merge `--scope` plus OIDC `openid` / `offline_access`.
+fn resolve_scopes(
+    manager: &AuthorizationManager,
+    opts: &ConnectOptions,
+) -> Vec<String> {
+    let defaults = cli_scopes(opts);
+    let default_refs: Vec<&str> = defaults.iter().map(String::as_str).collect();
+    let selected = manager.select_scopes(None, &default_refs);
+    merge_oauth_scopes(selected, &defaults)
+}
+
+fn merge_oauth_scopes(
+    mut scopes: Vec<String>,
+    extra: &[String],
+) -> Vec<String> {
+    for scope in extra {
+        if !scopes.iter().any(|s| s == scope) {
+            scopes.push(scope.clone());
+        }
+    }
+    if !scopes.iter().any(|s| s == "openid") {
+        scopes.insert(0, "openid".into());
+    }
+    if !scopes.is_empty() && !scopes.iter().any(|s| s == "offline_access") {
+        scopes.push("offline_access".into());
+    }
+    scopes
+}
+
+async fn register_native_public_client(
+    metadata: &AuthorizationMetadata,
+    client_name: &str,
+    redirect_uri: &str,
+    scopes: &[String],
+) -> Result<String> {
+    let registration_url = metadata.registration_endpoint.as_ref().ok_or_else(|| {
+        Error::Oauth(
+            "AS metadata has no registration_endpoint — enable Zitadel dynamic client registration \
+             (dynamicClientRegistration.enabled + allowUnauthenticated for MCP)"
+                .into(),
+        )
+    })?;
+
+    let body = serde_json::json!({
+        "client_name": client_name,
+        "redirect_uris": [redirect_uri],
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "token_endpoint_auth_method": "none",
+        "application_type": "native",
+        "scope": scopes.join(" "),
+    });
+
+    tracing::info!(%registration_url, "POST dynamic client registration");
+
+    let http = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| Error::Oauth(e.to_string()))?;
+
+    let response = http
+        .post(registration_url)
+        .header(reqwest::header::CONTENT_TYPE, "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| Error::Oauth(format!("DCR request failed: {e}")))?;
+
+    let status = response.status();
+    let text = response
+        .text()
+        .await
+        .map_err(|e| Error::Oauth(format!("DCR read body failed: {e}")))?;
+
+    if !status.is_success() {
+        tracing::error!(%status, body = %text, "DCR rejected");
+        return Err(Error::Oauth(format!("DCR HTTP {status}: {text}")));
+    }
+
+    let value: serde_json::Value =
+        serde_json::from_str(&text).map_err(|e| {
+            Error::Oauth(format!("DCR JSON parse failed: {e}; body={text}"))
+        })?;
+
+    value
+        .get("client_id")
+        .and_then(|v| v.as_str())
+        .map(str::to_string)
+        .ok_or_else(|| {
+            Error::Oauth(format!("DCR response missing client_id: {text}"))
+        })
+}
+
+fn log_token_endpoint_response(token: &OAuthTokenResponse) {
+    let access = token.access_token().secret();
+    let expires_in = token.expires_in().map(|d| d.as_secs());
+    let scopes: Option<Vec<String>> = token
+        .scopes()
+        .map(|s| s.iter().map(|x| x.to_string()).collect());
+    let has_refresh = token.refresh_token().is_some();
+    let has_id_token = token.extra_fields().0.contains_key("id_token");
+
+    tracing::info!(
+        expires_in_secs = ?expires_in,
+        scopes = ?scopes,
+        access_token_len = access.len(),
+        has_refresh_token = has_refresh,
+        has_id_token,
+        "token endpoint response"
+    );
+
+    eprintln!("\n=== Access token ===");
+    eprintln!("len={} preview={}", access.len(), token_preview(access));
+    eprintln!("expires_in={expires_in:?} scope={scopes:?}");
+}
+
+fn token_preview(token: &str) -> String {
+    let token = token.trim();
+    if token.len() > 16 {
+        format!("{}…{}", &token[..8], &token[token.len() - 6..])
+    } else if token.is_empty() {
+        "(empty)".into()
+    } else {
+        token.to_string()
+    }
 }
 
 async fn accept_callback(
@@ -105,14 +277,14 @@ async fn accept_callback(
     expected_path: &str,
 ) -> Result<(String, String)> {
     let (mut socket, peer) = listener.accept().await?;
-    tracing::debug!("OAuth callback connection from {peer}");
+    tracing::debug!(%peer, "OAuth callback connection");
 
     let mut buf = vec![0u8; 8192];
     let n = socket.read(&mut buf).await?;
     let request = String::from_utf8_lossy(&buf[..n]);
 
     let first_line = request.lines().next().unwrap_or("");
-    // GET /callback?code=...&state=... HTTP/1.1
+    tracing::debug!(%first_line, "OAuth callback request line");
     let target = first_line.split_whitespace().nth(1).ok_or_else(|| {
         Error::Oauth(format!("malformed callback request: {first_line}"))
     })?;
@@ -125,10 +297,10 @@ async fn accept_callback(
     if parsed.path() != expected_path
         && parsed.path() != expected_path.trim_end_matches('/')
     {
-        // Still try to extract params; some browsers may normalize path.
         tracing::warn!(
-            "callback path mismatch: got {}, expected {expected_path}",
-            parsed.path()
+            got = %parsed.path(),
+            expected = %expected_path,
+            "callback path mismatch"
         );
     }
 
@@ -140,6 +312,7 @@ async fn accept_callback(
             .get("error_description")
             .map(|s| s.as_str())
             .unwrap_or("");
+        tracing::error!(error = %err, description = %desc, "authorization denied by AS");
         let body = html_page(
             "Authorization failed",
             &format!(
@@ -203,8 +376,43 @@ fn html_page(title: &str, body: &str) -> String {
 }
 
 fn open_browser(url: &str) {
-    // Best-effort; always print the URL so the user can open it manually.
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_oauth_scopes;
+
+    #[test]
+    fn merge_keeps_prm_audience_scope_and_adds_oidc() {
+        let selected = vec![
+            "mcp".into(),
+            "urn:zitadel:iam:org:project:id:385518470088884515:aud".into(),
+        ];
+        let extra = vec!["mcp".into()];
+        let merged = merge_oauth_scopes(selected, &extra);
+        assert!(merged.iter().any(|s| s == "openid"));
+        assert!(merged.iter().any(|s| s == "mcp"));
+        assert!(
+            merged.iter().any(|s| s
+                == "urn:zitadel:iam:org:project:id:385518470088884515:aud")
+        );
+        assert!(merged.iter().any(|s| s == "offline_access"));
+    }
+
+    #[test]
+    fn merge_falls_back_to_cli_scopes() {
+        let extra = vec!["mcp".into()];
+        let merged = merge_oauth_scopes(Vec::new(), &extra);
+        assert_eq!(
+            merged,
+            vec![
+                "openid".to_string(),
+                "mcp".to_string(),
+                "offline_access".to_string()
+            ]
+        );
+    }
 }
 
 /// Shared token holder so the TUI can update credentials after OAuth.

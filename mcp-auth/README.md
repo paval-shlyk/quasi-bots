@@ -12,7 +12,7 @@ Authorization (login, consent, token minting) is **delegated** to an external au
 | Area | Details |
 |------|---------|
 | **Resource metadata** | RFC 9728 PRM at `/.well-known/oauth-protected-resource[/mcp]` |
-| **Token validation** | Introspection (`active`, `iss`, `aud` = resource URI, scope, optional `sub` allowlist) |
+| **Token validation** | Introspection (`active`, `iss`, scope, optional `sub` allowlist) |
 | **Middleware** | `bearer_auth_middleware` for protecting `/mcp` |
 | **Discovery** | OIDC `introspection_endpoint` from `{issuer}/.well-known/openid-configuration` |
 
@@ -45,30 +45,35 @@ introspection_client_id = "your-api-app-client-id"
 |-------|-------------|
 | `public_url` | Public origin — **scheme + host + port only** |
 | `authorization_server` | AS issuer URL (OIDC discovery base) |
-| `scope` | Advertised in PRM + `WWW-Authenticate` |
+| `scope` | Advertised in PRM (`scopes_supported` is split) + `WWW-Authenticate`. Include Zitadel `urn:zitadel:iam:org:project:id:{id}:aud` so clients request the API audience. |
 | `allowed_subs` | Optional `sub` allowlist |
 | `introspection_client_id` | Zitadel **API** application client id (Basic) |
 | `introspection_client_secret` | API app secret; if omitted/empty, filled from `INTROSPECTION_CLIENT_SECRET` at TOML parse time |
 
-Derived: **resource / expected `aud`** = `{public_url}/mcp`.
+Derived: **resource URI** = `{public_url}/mcp` (RFC 9728).
 
 ## Zitadel setup
 
 1. Enable OIDC / DCR for MCP clients as needed.
 2. Create an **API** application with **Basic** authentication (this is the RS’s introspect client, not the MCP user’s client).
 3. Set `introspection_client_id` and export `INTROSPECTION_CLIENT_SECRET`.
-4. Clients may receive **opaque** access tokens (`token_type: Bearer`). skill-master asks Zitadel’s `/oauth/v2/introspect` whether each token is `active` and reads claims from the JSON response — it does **not** decode a JWT locally.
+4. Advertise the project-audience scope so Zitadel will let **this API** introspect the token (`active: true`):
 
-Introspection response must include `aud` containing `{public_url}/mcp` (configure audience / API resource in Zitadel accordingly).
+   `urn:zitadel:iam:org:project:id:{PROJECT_ID}:aud`
+
+   Put it in `scope` next to `mcp` (see [skill-master/config.toml](../skill-master/config.toml)). Clients that honor RFC 9728 `scopes_supported` will request it.
+
+5. Clients may receive **opaque** access tokens (`token_type: Bearer`). skill-master asks Zitadel’s `/oauth/v2/introspect` whether each token is `active` and reads claims from the JSON response — it does **not** decode a JWT locally.
+
+`{active: false}` on a fresh token usually means the client omitted the project-audience scope.
 
 ## Token validation rules
 
 1. Call AS introspection with the Bearer token (client_secret_basic).
 2. Require `active: true`.
 3. If `iss` present → must match `authorization_server`.
-4. `aud` must include `{public_url}/mcp`.
-5. If `scope` present → must include configured scope segments.
-6. If `allowed_subs` non-empty → `sub` must be listed.
+4. If `scope` present → must include configured **permission** scopes (`mcp`). Project-audience URNs are advertised to clients but not required in the granted scope.
+5. If `allowed_subs` non-empty → `sub` must be listed.
 
 Invalid / inactive tokens → `401` with `WWW-Authenticate` including `resource_metadata`.
 

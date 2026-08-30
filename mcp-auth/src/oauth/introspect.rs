@@ -4,7 +4,6 @@
 //!
 //! - [RFC 7662](https://datatracker.ietf.org/doc/html/rfc7662) — Token Introspection
 //! - [RFC 6750](https://datatracker.ietf.org/doc/html/rfc6750) — Bearer Token Usage
-//! - [RFC 8707](https://datatracker.ietf.org/doc/html/rfc8707) — Resource Indicators
 //! - [MCP Authorization](https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization)
 
 use std::collections::HashMap;
@@ -76,7 +75,6 @@ pub struct TokenValidator<'a> {
     pub client_secret: &'a str,
 
     pub expected_issuer: &'a str,
-    pub expected_audience: &'a str,
     pub expected_scope: &'a str,
     pub allowed_subs: &'a [String],
 }
@@ -101,10 +99,17 @@ impl TokenValidator<'_> {
             .ok_or(AuthError::OpenIdConfigUnavailable)?;
 
         let resp = self.introspect(&endpoint, token).await?;
+        tracing::debug!(
+            active = resp.active,
+            aud = ?resp.aud,
+            client_id = ?resp.client_id,
+            scope = ?resp.scope,
+            iss = ?resp.iss,
+            "introspection response"
+        );
         apply_introspection_claims(
             &resp,
             self.expected_issuer,
-            self.expected_audience,
             self.expected_scope,
             self.allowed_subs,
         )
@@ -150,11 +155,15 @@ impl TokenValidator<'_> {
 pub fn apply_introspection_claims(
     response: &IntrospectionResponse,
     expected_issuer: &str,
-    expected_audience: &str,
     expected_scope: &str,
     allowed_subs: &[String],
 ) -> Result<ValidatedToken, AuthError> {
     if !response.active {
+        tracing::warn!(
+            iss = ?response.iss,
+            client_id = ?response.client_id,
+            "introspection returned active=false"
+        );
         return Err(AuthError::Inactive);
     }
 
@@ -169,21 +178,6 @@ pub fn apply_introspection_claims(
         return Err(AuthError::Invalid(format!(
             "iss mismatch: got {iss}, expected {expected}"
         )));
-    }
-
-    // Require audience to include our MCP resource URI.
-    match &response.aud {
-        None => {
-            return Err(AuthError::Invalid(
-                "introspection response missing aud".into(),
-            ));
-        }
-        Some(aud) if !audience_includes(aud, expected_audience) => {
-            return Err(AuthError::Invalid(format!(
-                "aud does not include resource {expected_audience}; got {aud}"
-            )));
-        }
-        Some(_) => {}
     }
 
     let sub =
@@ -204,16 +198,6 @@ pub fn apply_introspection_claims(
     }
 
     Ok(ValidatedToken { sub })
-}
-
-fn audience_includes(aud: &Value, expected: &str) -> bool {
-    match aud {
-        Value::String(s) => s == expected,
-        Value::Array(items) => items
-            .iter()
-            .any(|v| v.as_str().map(|s| s == expected).unwrap_or(false)),
-        _ => false,
-    }
 }
 
 fn subject_allowed(allowed_subs: &[String], sub: &str) -> bool {
@@ -258,16 +242,22 @@ mod tests {
         .unwrap()
     }
 
+    fn apply(
+        response: &IntrospectionResponse,
+        scope: &str,
+        allowed_subs: &[String],
+    ) -> Result<ValidatedToken, AuthError> {
+        apply_introspection_claims(
+            response,
+            "https://auth.example.com",
+            scope,
+            allowed_subs,
+        )
+    }
+
     #[test]
     fn accepts_valid_active_token() {
-        let v = apply_introspection_claims(
-            &active_response(),
-            "https://auth.example.com",
-            "http://127.0.0.1:8080/mcp",
-            "mcp",
-            &[],
-        )
-        .unwrap();
+        let v = apply(&active_response(), "mcp", &[]).unwrap();
         assert_eq!(v.sub, "user-1");
     }
 
@@ -275,89 +265,22 @@ mod tests {
     fn rejects_inactive() {
         let mut r = active_response();
         r.active = false;
-        let err = apply_introspection_claims(
-            &r,
-            "https://auth.example.com",
-            "http://127.0.0.1:8080/mcp",
-            "mcp",
-            &[],
-        )
-        .unwrap_err();
+        let err = apply(&r, "mcp", &[]).unwrap_err();
         assert!(matches!(err, AuthError::Inactive));
-    }
-
-    #[test]
-    fn rejects_wrong_audience() {
-        let mut r = active_response();
-        r.aud = Some(json!("other-client"));
-        let err = apply_introspection_claims(
-            &r,
-            "https://auth.example.com",
-            "http://127.0.0.1:8080/mcp",
-            "mcp",
-            &[],
-        )
-        .unwrap_err();
-        assert!(matches!(err, AuthError::Invalid(_)));
-    }
-
-    #[test]
-    fn accepts_audience_array_containing_resource() {
-        let mut r = active_response();
-        r.aud = Some(json!(["client-id", "http://127.0.0.1:8080/mcp"]));
-        assert!(
-            apply_introspection_claims(
-                &r,
-                "https://auth.example.com",
-                "http://127.0.0.1:8080/mcp",
-                "mcp",
-                &[],
-            )
-            .is_ok()
-        );
-    }
-
-    #[test]
-    fn rejects_missing_audience() {
-        let mut r = active_response();
-        r.aud = None;
-        assert!(
-            apply_introspection_claims(
-                &r,
-                "https://auth.example.com",
-                "http://127.0.0.1:8080/mcp",
-                "mcp",
-                &[],
-            )
-            .is_err()
-        );
     }
 
     #[test]
     fn rejects_missing_scope_segment() {
         let mut r = active_response();
         r.scope = Some("openid".into());
-        let err = apply_introspection_claims(
-            &r,
-            "https://auth.example.com",
-            "http://127.0.0.1:8080/mcp",
-            "mcp",
-            &[],
-        )
-        .unwrap_err();
+        let err = apply(&r, "mcp", &[]).unwrap_err();
         assert!(matches!(err, AuthError::InsufficientScope));
     }
 
     #[test]
     fn rejects_disallowed_sub() {
-        let err = apply_introspection_claims(
-            &active_response(),
-            "https://auth.example.com",
-            "http://127.0.0.1:8080/mcp",
-            "mcp",
-            &[String::from("other")],
-        )
-        .unwrap_err();
+        let err = apply(&active_response(), "mcp", &[String::from("other")])
+            .unwrap_err();
         assert!(matches!(err, AuthError::SubjectNotAllowed));
     }
 
@@ -366,7 +289,6 @@ mod tests {
         let err = apply_introspection_claims(
             &active_response(),
             "https://other.example.com",
-            "http://127.0.0.1:8080/mcp",
             "mcp",
             &[],
         )

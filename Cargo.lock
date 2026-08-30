@@ -2812,7 +2812,6 @@ name = "mcp-client"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64",
  "clap",
  "crossterm 0.28.1",
  "oauth2",

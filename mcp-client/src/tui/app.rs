@@ -271,15 +271,10 @@ fn handle_event(app: &mut App, ev: WorkerEvent) {
             }
         }
         WorkerEvent::Token(token) => {
-            // Keep in memory for reconnect; also surface for the user.
-            let preview = if token.len() > 12 {
-                format!("{}…{}", &token[..6], &token[token.len() - 4..])
-            } else {
-                "(short token)".into()
-            };
             app.opts.token = Some(token.clone());
             app.push_log(LogEntry::success(format!(
-                "OAuth access token acquired ({preview}). Export MCP_TOKEN to reuse."
+                "OAuth access token acquired (len={}). Export MCP_TOKEN to reuse.",
+                token.len()
             )));
             app.push_log(LogEntry {
                 level: LogLevel::Info,

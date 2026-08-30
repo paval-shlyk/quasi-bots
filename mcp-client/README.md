@@ -8,15 +8,17 @@ MCP **2025-11-25** Streamable HTTP client with a **ratatui** TUI for verifying s
 - Protocol version `2025-11-25`
 - List tools and call tools with JSON arguments
 - Auth:
-  - **Bearer token** via `--token` / `MCP_TOKEN` (JWT from the external AS)
-  - **OAuth 2.1 + PKCE** via `--login` (discovers AS via RFC 9728 PRM on the MCP host, then authorizes against Keycloak/Zitadel/…)
+  - **Bearer token** via `--token` / `MCP_TOKEN` (opaque access token from the AS)
+  - **OAuth 2.1 + PKCE** via `--login` (PRM scopes → Zitadel DCR as native public client)
 
 ## How to get a Bearer token
 
-skill-master protects `/mcp` as an OAuth **resource server**. Access tokens are JWTs issued by the external authorization server configured as `authorization_server` on the host (see [mcp-auth/README.md](../mcp-auth/README.md)).
+skill-master protects `/mcp` as an OAuth **resource server**. Access tokens are typically **opaque** Bearer tokens from Zitadel; the server validates them via **RFC 7662 introspection** (see [mcp-auth/README.md](../mcp-auth/README.md)).
+
+`--login` discovers RFC 9728 protected-resource metadata and requests `scopes_supported` (including Zitadel’s `urn:zitadel:iam:org:project:id:{projectId}:aud`). Without that audience scope Zitadel introspects the token as `{active: false}`.
 
 ```bash
-# Interactive OAuth (AS discovered from protected-resource metadata), then open the TUI
+# Interactive OAuth, then open the TUI
 cargo run -p mcp-client -- --url http://127.0.0.1:8080/mcp --login
 
 # Reuse a previously issued access token
@@ -24,7 +26,7 @@ export MCP_TOKEN='…'
 cargo run -p mcp-client -- --url http://127.0.0.1:8080/mcp
 ```
 
-After `--login`, the access token is printed once (and shown in the TUI log) so you can export `MCP_TOKEN` for later runs. The AS must issue JWTs whose `aud` includes the MCP resource URI (e.g. `http://127.0.0.1:8080/mcp`).
+After `--login`, the access token is printed once so you can export `MCP_TOKEN`.
 
 ## CLI
 
@@ -55,23 +57,18 @@ mcp-client [OPTIONS]
 | `e` | Edit call args |
 | `q` | Quit |
 
-## Library
+## Debugging
 
-```rust
-use mcp_client::{ConnectOptions, McpSession};
-
-let opts = ConnectOptions {
-    url: "http://127.0.0.1:8080/mcp".into(),
-    token: Some(std::env::var("MCP_TOKEN")?),
-    ..ConnectOptions::default()
-};
-let session = McpSession::connect(opts).await?;
-let tools = session.list_tools().await?;
-let result = session.call_tool("knowledge_list_topics", serde_json::json!({})).await?;
-session.disconnect().await?;
+```bash
+RUST_LOG=debug,mcp_client=debug,rmcp=info \
+  cargo run -p mcp-client -- --url http://127.0.0.1:8080/mcp --login
 ```
+
+`--login` / `--headless-list` default to richer stderr logs unless `RUST_LOG` is set.
 
 ## Dev notes
 
 - OAuth discovery uses the MCP URL **origin** (scheme + host + port), not the `/mcp` path.
-- skill-master is typically `stateful_mode = false` and `json_response = true`; the client uses rmcp's Streamable HTTP client with `allow_stateless` enabled by default.
+- DCR registers `application_type: native` for loopback redirects (Zitadel).
+- Login prefers PRM `scopes_supported` over `--scope` (CLI scopes are merged in).
+- skill-master often runs Streamable HTTP in a stateless JSON mode; the client enables `allow_stateless`.

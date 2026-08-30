@@ -41,7 +41,9 @@ pub struct McpAuthConfig {
 
     /// Zitadel/Keycloak **API** application client id used by this RS to call
     /// the introspection endpoint (client_secret_basic).
-    #[serde(deserialize_with = "validate::deserialize_introspection_client_id")]
+    #[serde(
+        deserialize_with = "validate::deserialize_introspection_client_id"
+    )]
     pub introspection_client_id: String,
 
     /// Introspection API client secret.
@@ -55,10 +57,36 @@ pub struct McpAuthConfig {
     pub introspection_client_secret: Option<String>,
 }
 
+/// Zitadel reserved scope that adds `{project_id}` to the access-token audience.
+///
+/// Format: `urn:zitadel:iam:org:project:id:{projectId}:aud`
+pub fn zitadel_project_id_from_aud_scope(scope: &str) -> Option<&str> {
+    const PREFIX: &str = "urn:zitadel:iam:org:project:id:";
+    const SUFFIX: &str = ":aud";
+    let rest = scope.strip_prefix(PREFIX)?;
+    let id = rest.strip_suffix(SUFFIX)?;
+    if id.is_empty() || id.contains(':') {
+        return None;
+    }
+    Some(id)
+}
+
 impl McpAuthConfig {
-    /// Canonical MCP resource URI (RFC 8707 / RFC 9728) — expected introspection `aud`.
+    /// Canonical MCP resource URI (RFC 9728).
     pub fn resource_url(&self) -> String {
         format!("{}/mcp", self.public_url)
+    }
+
+    /// Permission scopes the access token must grant.
+    ///
+    /// Zitadel project-audience URNs are advertised to clients but not required
+    /// in the granted `scope`.
+    pub fn required_token_scopes(&self) -> String {
+        self.scope
+            .split_whitespace()
+            .filter(|s| zitadel_project_id_from_aud_scope(s).is_none())
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 
     /// RFC 9728 protected-resource metadata document URL (path-scoped).

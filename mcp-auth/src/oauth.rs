@@ -37,7 +37,7 @@ pub use openid_config::{CachedOpenIdConfig, OpenIdConfiguration};
 pub struct OAuthState {
     pub config: McpAuthConfig,
     pub openid_config: CachedOpenIdConfig,
-    pub http: reqwest::Client,
+    pub http_client: reqwest::Client,
     /// Resolved at boot from config / `INTROSPECTION_CLIENT_SECRET`.
     pub introspection_client_secret: String,
 }
@@ -60,14 +60,14 @@ pub async fn state(config: McpAuthConfig) -> anyhow::Result<SharedOAuthState> {
 
     let openid_config = new_cached_openid_configuration(&config).await?;
 
-    let http = reqwest::Client::builder()
+    let http_client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
         .build()?;
 
     Ok(Arc::new(OAuthState {
         config,
         openid_config,
-        http,
+        http_client,
         introspection_client_secret: secret,
     }))
 }
@@ -92,11 +92,24 @@ pub fn router() -> Router<SharedOAuthState> {
         .layer(cors)
 }
 
+#[tracing::instrument(
+    name = "bearer_auth_middleware",
+    skip(state, request, next),
+    fields(
+        http.method = %request.method(),
+        http.path = %request.uri().path(),
+        auth.has_bearer = tracing::field::Empty,
+        auth.outcome = tracing::field::Empty,
+        auth.sub = tracing::field::Empty,
+    )
+)]
 pub async fn bearer_auth_middleware(
     State(state): State<SharedOAuthState>,
     request: Request<Body>,
     next: Next,
 ) -> Response {
+    let span = tracing::Span::current();
+
     let token = request
         .headers()
         .get(axum::http::header::AUTHORIZATION)
@@ -104,21 +117,28 @@ pub async fn bearer_auth_middleware(
         .and_then(|v| v.strip_prefix("Bearer "))
         .map(|s| s.to_string());
 
-    let resource = state.config.resource_url();
+    span.record("auth.has_bearer", token.is_some());
+
+    let required_scope = state.config.required_token_scopes();
     let validator = TokenValidator {
         openid_config: state.openid_config.clone(),
-        client: &state.http,
+        client: &state.http_client,
         client_id: &state.config.introspection_client_id,
         client_secret: &state.introspection_client_secret,
         expected_issuer: &state.config.authorization_server,
-        expected_audience: &resource,
-        expected_scope: &state.config.scope,
+        expected_scope: &required_scope,
         allowed_subs: &state.config.allowed_subs,
     };
 
     match token {
-        Some(t) => match validator.validate(&t).await {
+        Some(t) => match validator
+            .validate(&t)
+            .await
+            .inspect_err(|e| tracing::warn!("Failed to validate token: {e}"))
+        {
             Ok(validated) => {
+                span.record("auth.outcome", "accepted");
+                span.record("auth.sub", validated.sub.as_str());
                 debug!(
                     sub = %validated.sub,
                     "MCP bearer token accepted (introspection)"
@@ -126,24 +146,29 @@ pub async fn bearer_auth_middleware(
                 next.run(request).await
             }
             Err(AuthError::InsufficientScope) => {
+                span.record("auth.outcome", "insufficient_scope");
                 unauthorized_response(&state.config, "insufficient_scope", true)
             }
             Err(AuthError::SubjectNotAllowed)
             | Err(AuthError::Inactive)
             | Err(AuthError::OpenIdConfigUnavailable) => {
+                span.record("auth.outcome", "invalid_token");
                 unauthorized_response(&state.config, "invalid_token", false)
             }
             Err(e) => {
+                span.record("auth.outcome", "rejected");
                 tracing::warn!(
                     error = %e,
                     expected_iss = %state.config.authorization_server,
-                    expected_aud = %resource,
                     "MCP bearer token rejected"
                 );
                 unauthorized_response(&state.config, "invalid_token", false)
             }
         },
-        None => unauthorized_response(&state.config, "invalid_token", false),
+        None => {
+            span.record("auth.outcome", "missing_bearer");
+            unauthorized_response(&state.config, "invalid_token", false)
+        }
     }
 }
 

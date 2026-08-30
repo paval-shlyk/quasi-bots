@@ -29,6 +29,12 @@ impl McpSession {
             .filter(|t| !t.is_empty())
             .ok_or(Error::AuthRequired)?;
 
+        tracing::info!(
+            url = %opts.url,
+            token_len = token.len(),
+            "connecting to MCP endpoint"
+        );
+
         let mut config =
             StreamableHttpClientTransportConfig::with_uri(opts.url.as_str());
         config = config.auth_header(token);
@@ -43,8 +49,10 @@ impl McpSession {
         )
         .with_protocol_version(ProtocolVersion::V_2025_11_25);
 
-        let service =
-            client_info.serve(transport).await.map_err(Error::service)?;
+        let service = client_info.serve(transport).await.map_err(|e| {
+            tracing::error!(error = %e, url = %opts.url, "MCP initialize / transport failed");
+            Error::service(e)
+        })?;
 
         let server = service.peer_info().map(ServerStatus::from).unwrap_or(
             ServerStatus {
@@ -54,6 +62,13 @@ impl McpSession {
                 instructions: None,
                 tools_enabled: false,
             },
+        );
+
+        tracing::info!(
+            server = %server.name,
+            version = %server.version,
+            protocol = %server.protocol_version,
+            "MCP session initialized"
         );
 
         Ok(Self {

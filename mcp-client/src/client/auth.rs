@@ -106,7 +106,8 @@ pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
             Error::oauth(e)
         },
     )?;
-    tracing::info!(%auth_url, "authorization URL ready");
+    let auth_url = with_select_account_prompt(&auth_url)?;
+    tracing::info!(%auth_url, "authorization URL ready (prompt=select_account)");
     eprintln!("\n=== MCP OAuth ===");
     eprintln!("Open this URL in a browser to authorize:\n{auth_url}\n");
     open_browser(&auth_url);
@@ -369,9 +370,30 @@ fn open_browser(url: &str) {
     let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
 
+/// Append Zitadel/OIDC `prompt=select_account` so the user can pick a session
+/// (or start a new login) instead of being silently bound to an existing one.
+fn with_select_account_prompt(auth_url: &str) -> Result<String> {
+    let mut url = Url::parse(auth_url).map_err(|e| {
+        Error::Oauth(format!("invalid authorization URL: {e}"))
+    })?;
+
+    let already_selects = url.query_pairs().any(|(key, value)| {
+        key == "prompt"
+            && value
+                .split_whitespace()
+                .any(|part| part == "select_account")
+    });
+    if !already_selects {
+        url.query_pairs_mut()
+            .append_pair("prompt", "select_account");
+    }
+
+    Ok(url.to_string())
+}
+
 #[cfg(test)]
 mod tests {
-    use super::with_oidc_scopes;
+    use super::{with_oidc_scopes, with_select_account_prompt};
 
     #[test]
     fn with_oidc_scopes_keeps_prm_and_adds_openid() {
@@ -388,6 +410,39 @@ mod tests {
                 "offline_access".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn select_account_prompt_is_appended() {
+        let url = with_select_account_prompt(
+            "https://auth.example.com/oauth/v2/authorize?client_id=abc&response_type=code",
+        )
+        .unwrap();
+        let parsed = url::Url::parse(&url).unwrap();
+        let prompts: Vec<(String, String)> = parsed
+            .query_pairs()
+            .map(|(k, v)| (k.into_owned(), v.into_owned()))
+            .collect();
+        assert!(
+            prompts
+                .iter()
+                .any(|(k, v)| k == "prompt" && v == "select_account"),
+            "prompt=select_account missing from {url}"
+        );
+    }
+
+    #[test]
+    fn select_account_prompt_is_not_duplicated() {
+        let url = with_select_account_prompt(
+            "https://auth.example.com/oauth/v2/authorize?prompt=select_account",
+        )
+        .unwrap();
+        let count = url::Url::parse(&url)
+            .unwrap()
+            .query_pairs()
+            .filter(|(k, v)| k == "prompt" && v == "select_account")
+            .count();
+        assert_eq!(count, 1);
     }
 }
 

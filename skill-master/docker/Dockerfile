@@ -1,4 +1,4 @@
-FROM rust:1.93-trixie AS chef
+FROM rust:1.98-trixie AS chef
 
 WORKDIR /build
 

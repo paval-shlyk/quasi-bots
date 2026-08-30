@@ -121,14 +121,10 @@ pub async fn bearer_auth_middleware(
 
     let validator = TokenValidator {
         openid_config: state.openid_config.clone(),
+        mcp_auth_config: &state.config,
         client: &state.http_client,
         client_id: &state.config.introspection_client_id,
         client_secret: &state.introspection_client_secret,
-        expected_issuer: &state.config.authorization_server,
-        expected_introspection_scopes: &state
-            .config
-            .required_introspection_scopes,
-        allowed_subs: &state.config.allowed_subs,
     };
 
     match token {

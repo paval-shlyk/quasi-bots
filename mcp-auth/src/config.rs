@@ -22,9 +22,7 @@ pub struct McpAuthConfig {
     pub authorization_server: String,
 
     /// Scopes advertised to MCP clients (RFC 9728 `scopes_supported`).
-    #[serde(
-        deserialize_with = "validate::deserialize_supported_scopes"
-    )]
+    #[serde(deserialize_with = "validate::deserialize_supported_scopes")]
     pub supported_scopes: Vec<String>,
 
     /// Scopes that must appear on a successful introspection response.

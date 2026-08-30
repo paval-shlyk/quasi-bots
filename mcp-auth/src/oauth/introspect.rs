@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::oauth::openid_config::CachedOpenIdConfig;
+use crate::{McpAuthConfig, oauth::openid_config::CachedOpenIdConfig};
 
 #[derive(Debug, Clone)]
 pub struct ValidatedToken {
@@ -69,14 +69,11 @@ pub struct IntrospectionResponse {
 /// Validates opaque Bearer tokens via the AS introspection endpoint.
 pub struct TokenValidator<'a> {
     pub openid_config: CachedOpenIdConfig,
+    pub mcp_auth_config: &'a McpAuthConfig,
     pub client: &'a reqwest::Client,
 
     pub client_id: &'a str,
     pub client_secret: &'a str,
-
-    pub expected_issuer: &'a str,
-    pub expected_introspection_scopes: &'a [String],
-    pub allowed_subs: &'a [String],
 }
 
 impl TokenValidator<'_> {
@@ -107,12 +104,7 @@ impl TokenValidator<'_> {
             iss = ?resp.iss,
             "introspection response"
         );
-        apply_introspection_claims(
-            &resp,
-            self.expected_issuer,
-            self.expected_introspection_scopes,
-            self.allowed_subs,
-        )
+        apply_introspection_claims(&resp, self.mcp_auth_config)
     }
 
     async fn introspect(
@@ -154,9 +146,7 @@ impl TokenValidator<'_> {
 /// Apply RS authorization policy to an introspection response.
 pub fn apply_introspection_claims(
     response: &IntrospectionResponse,
-    expected_issuer: &str,
-    expected_introspection_scopes: &[String],
-    allowed_subs: &[String],
+    config: &McpAuthConfig,
 ) -> Result<ValidatedToken, AuthError> {
     if !response.active {
         tracing::warn!(
@@ -172,7 +162,7 @@ pub fn apply_introspection_claims(
     };
 
     let iss = iss.trim_end_matches('/');
-    let expected = expected_issuer.trim_end_matches('/');
+    let expected = config.authorization_server.trim_end_matches('/');
 
     if iss != expected {
         return Err(AuthError::Invalid(format!(
@@ -189,13 +179,13 @@ pub fn apply_introspection_claims(
                 AuthError::Invalid("introspection response missing sub".into())
             })?;
 
-    if !subject_allowed(allowed_subs, &sub) {
+    if !subject_allowed(&config.allowed_subs, &sub) {
         return Err(AuthError::SubjectNotAllowed);
     }
 
     if !scope_satisfies(
         response.scope.as_deref(),
-        expected_introspection_scopes,
+        &config.required_introspection_scopes,
     ) {
         return Err(AuthError::InsufficientScope);
     }
@@ -225,6 +215,23 @@ mod tests {
     use super::*;
     use serde_json::json;
 
+    fn sample_config() -> McpAuthConfig {
+        toml::from_str(
+            r#"
+public_url = "http://127.0.0.1:8080"
+authorization_server = "https://auth.example.com"
+supported_scopes = ["mcp"]
+required_introspection_scopes = [
+    "openid",
+    "offline_access",
+    "urn:zitadel:iam:org:project:id:my_client_id:aud",
+]
+introspection_client_id = "rs-api-client"
+"#,
+        )
+        .unwrap()
+    }
+
     fn active_response() -> IntrospectionResponse {
         serde_json::from_value(json!({
             "active": true,
@@ -237,43 +244,27 @@ mod tests {
         .unwrap()
     }
 
-    fn required_scopes() -> Vec<String> {
-        vec![
-            "openid".into(),
-            "offline_access".into(),
-            "urn:zitadel:iam:org:project:id:my_client_id:aud".into(),
-        ]
-    }
-
-    fn apply(
-        response: &IntrospectionResponse,
-        required: &[String],
-        allowed_subs: &[String],
-    ) -> Result<ValidatedToken, AuthError> {
-        apply_introspection_claims(
-            response,
-            "https://auth.example.com",
-            required,
-            allowed_subs,
-        )
-    }
-
     #[test]
     fn accepts_valid_active_token() {
-        let v = apply(&active_response(), &required_scopes(), &[]).unwrap();
+        let v =
+            apply_introspection_claims(&active_response(), &sample_config())
+                .unwrap();
         assert_eq!(v.sub, "user-1");
     }
 
     #[test]
     fn accepts_without_mcp_scope() {
-        assert!(apply(&active_response(), &required_scopes(), &[]).is_ok());
+        assert!(
+            apply_introspection_claims(&active_response(), &sample_config())
+                .is_ok()
+        );
     }
 
     #[test]
     fn rejects_inactive() {
         let mut r = active_response();
         r.active = false;
-        let err = apply(&r, &required_scopes(), &[]).unwrap_err();
+        let err = apply_introspection_claims(&r, &sample_config()).unwrap_err();
         assert!(matches!(err, AuthError::Inactive));
     }
 
@@ -281,30 +272,25 @@ mod tests {
     fn rejects_missing_project_audience_scope() {
         let mut r = active_response();
         r.scope = Some("openid offline_access".into());
-        let err = apply(&r, &required_scopes(), &[]).unwrap_err();
+        let err = apply_introspection_claims(&r, &sample_config()).unwrap_err();
         assert!(matches!(err, AuthError::InsufficientScope));
     }
 
     #[test]
     fn rejects_disallowed_sub() {
-        let err = apply(
-            &active_response(),
-            &required_scopes(),
-            &[String::from("other")],
-        )
-        .unwrap_err();
+        let mut config = sample_config();
+        config.allowed_subs = vec!["other".into()];
+        let err = apply_introspection_claims(&active_response(), &config)
+            .unwrap_err();
         assert!(matches!(err, AuthError::SubjectNotAllowed));
     }
 
     #[test]
     fn rejects_issuer_mismatch() {
-        let err = apply_introspection_claims(
-            &active_response(),
-            "https://other.example.com",
-            &required_scopes(),
-            &[],
-        )
-        .unwrap_err();
+        let mut config = sample_config();
+        config.authorization_server = "https://other.example.com".into();
+        let err = apply_introspection_claims(&active_response(), &config)
+            .unwrap_err();
         assert!(matches!(err, AuthError::Invalid(_)));
     }
 }

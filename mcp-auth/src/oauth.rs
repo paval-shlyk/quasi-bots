@@ -3,8 +3,14 @@
 //! The host is an OAuth 2.1 **resource server**. Authorization is delegated to
 //! an external authorization server (e.g. Zitadel):
 //!
-//!   GET  /.well-known/oauth-protected-resource       — RFC 9728 metadata
-//!   GET  /.well-known/oauth-protected-resource/mcp   — path-scoped PRM
+//!   GET  /.well-known/oauth-protected-resource         — RFC 9728 metadata
+//!   GET  /.well-known/oauth-protected-resource/mcp     — path-scoped PRM
+//!   GET  /.well-known/oauth-authorization-server       — RFC 8414 (AS DTO)
+//!   GET  /.well-known/oauth-authorization-server/mcp   — path-scoped RFC 8414
+//!
+//! RFC 8414 is a **metadata facade**: `issuer` and authorize/token/register
+//! URLs are Zitadel's. Zitadel does not serve this well-known itself, and MCP
+//! agents probe the resource origin.
 //!
 //! Opaque Bearer access tokens on `/mcp` are validated via RFC 7662
 //! token introspection against the AS.
@@ -88,6 +94,14 @@ pub fn router() -> Router<SharedOAuthState> {
         .route(
             "/.well-known/oauth-protected-resource/mcp",
             get(routes::protected_resource_metadata),
+        )
+        .route(
+            "/.well-known/oauth-authorization-server",
+            get(routes::authorization_server_metadata),
+        )
+        .route(
+            "/.well-known/oauth-authorization-server/mcp",
+            get(routes::authorization_server_metadata),
         )
         .layer(cors)
 }

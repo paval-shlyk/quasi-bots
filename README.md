@@ -11,7 +11,7 @@
 - **knowledge**: Spaced repetition system logic.
 - **news**: News fetching and processing logic.
 - **telemetry**: Metrics and logging utilities.
-- **mcp-auth**: OAuth 2.1 resource-server library for MCP hosts (RFC 9728 PRM + RFC 7662 token introspection for opaque Bearer tokens; delegates authorization to Zitadel/…).
+- **mcp-auth**: OAuth 2.1 resource-server library for MCP hosts (RFC 9728 PRM + RFC 8414 AS metadata facade + RFC 7662 token introspection for opaque Bearer tokens; delegates authorization to Zitadel/…).
 - **mcp-client**: MCP Streamable HTTP client with a TUI for verifying servers.
 - **crypto**: Autonomous crypto trading worker (Binance spot + Polymarket) — **under development, not tested yet**.
 - **crypto-master**: Supervisor service that manages a fleet of crypto workers via gRPC — **under development**.

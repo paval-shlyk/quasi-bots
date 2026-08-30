@@ -29,6 +29,10 @@ pub struct McpAuthConfig {
     #[serde(default, deserialize_with = "validate::deserialize_scope_list")]
     pub required_introspection_scopes: Vec<String>,
 
+    /// Zitadel project role keys that must be present on the token
+    #[serde(default, deserialize_with = "validate::deserialize_scope_list")]
+    pub required_roles: Vec<String>,
+
     /// Optional token `sub` allowlist. Empty = any subject with an active token.
     #[serde(default, deserialize_with = "validate::deserialize_allowed_subs")]
     pub allowed_subs: Vec<String>,

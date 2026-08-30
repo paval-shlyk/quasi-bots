@@ -404,6 +404,7 @@ introspection_client_id = "rs-api-client"
         let cfg = parse_config(VALID).unwrap();
         assert_eq!(cfg.supported_scopes, vec!["mcp".to_string()]);
         assert!(cfg.required_introspection_scopes.is_empty());
+        assert!(cfg.required_roles.is_empty());
         assert_eq!(cfg.supported_scopes_param(), "mcp");
     }
 

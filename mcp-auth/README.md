@@ -48,6 +48,7 @@ introspection_client_id = "your-api-app-client-id"
 | `authorization_server` | AS issuer URL (OIDC discovery base) |
 | `supported_scopes` | Advertised in PRM `scopes_supported` and `WWW-Authenticate` (default `["mcp"]`) |
 | `required_introspection_scopes` | Must all appear in the introspection `scope` claim (e.g. `openid`, `offline_access`, project-audience URN) |
+| `required_roles` | Zitadel project role keys that must appear in the roles claim (empty = skip) |
 | `allowed_subs` | Optional `sub` allowlist |
 | `introspection_client_id` | Zitadel **API** application client id (Basic) |
 | `introspection_client_secret` | API app secret; if omitted/empty, filled from `INTROSPECTION_CLIENT_SECRET` at TOML parse time |
@@ -59,9 +60,10 @@ Derived: **resource URI** = `{public_url}/mcp` (RFC 9728).
 1. Enable OIDC / DCR for MCP clients as needed.
 2. Create an **API** application with **Basic** authentication (this is the RS’s introspect client, not the MCP user’s client).
 3. Set `introspection_client_id` and export `INTROSPECTION_CLIENT_SECRET`.
-4. Put Zitadel-granted scopes in `required_introspection_scopes` (see [skill-master/config.toml](../skill-master/config.toml)), including:
-
-   `urn:zitadel:iam:org:project:id:{PROJECT_ID}:aud`
+4. Put Zitadel-granted scopes in `required_introspection_scopes`, including
+   `urn:zitadel:iam:org:project:id:{PROJECT_ID}:aud`.
+5. Optional: project role `mcp`, grant it to users, enable role assertion, set
+   `required_roles = ["mcp"]` and advertise `urn:zitadel:iam:org:project:role:mcp`.
 
 5. Clients may receive **opaque** access tokens (`token_type: Bearer`). skill-master asks Zitadel’s `/oauth/v2/introspect` whether each token is `active` and reads claims from the JSON response — it does **not** decode a JWT locally.
 
@@ -73,7 +75,8 @@ Derived: **resource URI** = `{public_url}/mcp` (RFC 9728).
 2. Require `active: true`.
 3. If `iss` present → must match `authorization_server`.
 4. Introspection `scope` must include every `required_introspection_scopes` entry.
-5. If `allowed_subs` non-empty → `sub` must be listed.
+5. If `required_roles` is non-empty → those keys must appear in `urn:zitadel:iam:org:project:roles` (or `urn:zitadel:iam:org:project:{id}:roles`).
+6. If `allowed_subs` non-empty → `sub` must be listed.
 
 Invalid / inactive tokens → `401` with `WWW-Authenticate` including `resource_metadata`.
 

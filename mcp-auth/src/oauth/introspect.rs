@@ -32,6 +32,8 @@ pub enum AuthError {
     SubjectNotAllowed,
     #[error("required scope missing")]
     InsufficientScope,
+    #[error("required role missing")]
+    InsufficientRole,
 }
 
 /// RFC 7662 introspection response (subset + flatten for vendor fields).
@@ -96,14 +98,7 @@ impl TokenValidator<'_> {
             .ok_or(AuthError::OpenIdConfigUnavailable)?;
 
         let resp = self.introspect(&endpoint, token).await?;
-        tracing::debug!(
-            active = resp.active,
-            aud = ?resp.aud,
-            client_id = ?resp.client_id,
-            scope = ?resp.scope,
-            iss = ?resp.iss,
-            "introspection response"
-        );
+        tracing::debug!("Introspection response: {resp:?}");
         apply_introspection_claims(&resp, self.mcp_auth_config)
     }
 
@@ -190,6 +185,10 @@ pub fn apply_introspection_claims(
         return Err(AuthError::InsufficientScope);
     }
 
+    if !roles_satisfy(&response.extra, &config.required_roles) {
+        return Err(AuthError::InsufficientRole);
+    }
+
     Ok(ValidatedToken { sub })
 }
 
@@ -208,6 +207,42 @@ fn scope_satisfies(granted: Option<&str>, required: &[String]) -> bool {
     required
         .iter()
         .all(|need| granted.iter().any(|have| *have == need))
+}
+
+/// Zitadel puts project roles in vendor claims, not in `scope`.
+fn roles_satisfy(extra: &HashMap<String, Value>, required: &[String]) -> bool {
+    if required.is_empty() {
+        return true;
+    }
+
+    let granted = granted_zitadel_roles(extra);
+    required
+        .iter()
+        .all(|need| granted.iter().any(|have| *have == need))
+}
+
+fn granted_zitadel_roles(extra: &HashMap<String, Value>) -> Vec<&str> {
+    extra
+        .iter()
+        .filter(|(key, _)| is_zitadel_roles_claim(key))
+        .filter_map(|(_, value)| value.as_object())
+        .flat_map(|roles| roles.keys().map(String::as_str))
+        .collect()
+}
+
+fn is_zitadel_roles_claim(key: &str) -> bool {
+    if key == "urn:zitadel:iam:org:project:roles" {
+        return true;
+    }
+
+    let Some(rest) = key.strip_prefix("urn:zitadel:iam:org:project:") else {
+        return false;
+    };
+
+    let Some(project_id) = rest.strip_suffix(":roles") else {
+        return false;
+    };
+    !project_id.is_empty() && !project_id.contains(':')
 }
 
 #[cfg(test)]
@@ -292,5 +327,41 @@ introspection_client_id = "rs-api-client"
         let err = apply_introspection_claims(&active_response(), &config)
             .unwrap_err();
         assert!(matches!(err, AuthError::Invalid(_)));
+    }
+
+    #[test]
+    fn accepts_required_zitadel_role() {
+        let mut config = sample_config();
+        config.required_roles = vec!["mcp".into()];
+        let r = serde_json::from_value(json!({
+            "active": true,
+            "sub": "user-1",
+            "iss": "https://auth.example.com",
+            "scope": "openid urn:zitadel:iam:org:project:id:my_client_id:aud offline_access",
+            "urn:zitadel:iam:org:project:roles": { "mcp": { "1": "org" } }
+        }))
+        .unwrap();
+        assert!(apply_introspection_claims(&r, &config).is_ok());
+    }
+
+    #[test]
+    fn accepts_required_role_on_project_claim() {
+        let mut config = sample_config();
+        config.required_roles = vec!["mcp".into()];
+        let mut r = active_response();
+        r.extra.insert(
+            "urn:zitadel:iam:org:project:my_client_id:roles".into(),
+            json!({ "mcp": { "1": "org" } }),
+        );
+        assert!(apply_introspection_claims(&r, &config).is_ok());
+    }
+
+    #[test]
+    fn rejects_missing_required_role() {
+        let mut config = sample_config();
+        config.required_roles = vec!["mcp".into()];
+        let err = apply_introspection_claims(&active_response(), &config)
+            .unwrap_err();
+        assert!(matches!(err, AuthError::InsufficientRole));
     }
 }

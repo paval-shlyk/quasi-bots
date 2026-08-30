@@ -94,6 +94,7 @@ public_url = "http://127.0.0.1:8080"
 authorization_server = "https://auth.example.com"
 supported_scopes = ["mcp"]
 required_introspection_scopes = []
+required_roles = ["mcp"]
 # Optional token sub allowlist (empty = any subject with an active token)
 allowed_subs = []
 # RFC 7662 introspection

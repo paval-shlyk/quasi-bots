@@ -377,15 +377,14 @@ mod tests {
     fn with_oidc_scopes_keeps_prm_and_adds_openid() {
         let scopes = with_oidc_scopes(vec![
             "mcp".into(),
-            "urn:zitadel:iam:org:project:id:385518470088884515:aud".into(),
+            "urn:zitadel:iam:org:project:id:my_client_id:aud".into(),
         ]);
         assert_eq!(
             scopes,
             vec![
                 "openid".to_string(),
                 "mcp".to_string(),
-                "urn:zitadel:iam:org:project:id:385518470088884515:aud"
-                    .to_string(),
+                "urn:zitadel:iam:org:project:id:my_client_id:aud".to_string(),
                 "offline_access".to_string(),
             ]
         );

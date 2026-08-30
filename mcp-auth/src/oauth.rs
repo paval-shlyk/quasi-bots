@@ -146,6 +146,10 @@ pub async fn bearer_auth_middleware(
                 span.record("auth.outcome", "insufficient_scope");
                 unauthorized_response(&state.config, "insufficient_scope", true)
             }
+            Err(AuthError::InsufficientRole) => {
+                span.record("auth.outcome", "insufficient_role");
+                unauthorized_response(&state.config, "insufficient_role", true)
+            }
             Err(AuthError::SubjectNotAllowed)
             | Err(AuthError::Inactive)
             | Err(AuthError::OpenIdConfigUnavailable) => {

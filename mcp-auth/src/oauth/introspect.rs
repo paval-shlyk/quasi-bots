@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
-use crate::config::zitadel_project_id_from_aud_scope;
 use crate::oauth::openid_config::CachedOpenIdConfig;
 
 #[derive(Debug, Clone)]
@@ -76,7 +75,7 @@ pub struct TokenValidator<'a> {
     pub client_secret: &'a str,
 
     pub expected_issuer: &'a str,
-    pub expected_scope: &'a str,
+    pub expected_introspection_scopes: &'a [String],
     pub allowed_subs: &'a [String],
 }
 
@@ -111,7 +110,7 @@ impl TokenValidator<'_> {
         apply_introspection_claims(
             &resp,
             self.expected_issuer,
-            self.expected_scope,
+            self.expected_introspection_scopes,
             self.allowed_subs,
         )
     }
@@ -156,7 +155,7 @@ impl TokenValidator<'_> {
 pub fn apply_introspection_claims(
     response: &IntrospectionResponse,
     expected_issuer: &str,
-    expected_scope: &str,
+    expected_introspection_scopes: &[String],
     allowed_subs: &[String],
 ) -> Result<ValidatedToken, AuthError> {
     if !response.active {
@@ -194,7 +193,10 @@ pub fn apply_introspection_claims(
         return Err(AuthError::SubjectNotAllowed);
     }
 
-    if !scope_satisfies(response.scope.as_deref(), expected_scope) {
+    if !scope_satisfies(
+        response.scope.as_deref(),
+        expected_introspection_scopes,
+    ) {
         return Err(AuthError::InsufficientScope);
     }
 
@@ -205,25 +207,17 @@ fn subject_allowed(allowed_subs: &[String], sub: &str) -> bool {
     allowed_subs.is_empty() || allowed_subs.iter().any(|s| s == sub)
 }
 
-fn scope_satisfies(granted: Option<&str>, advertised: &str) -> bool {
-    let required: Vec<&str> = advertised
-        .split_whitespace()
-        .filter(|s| zitadel_project_id_from_aud_scope(s).is_some())
-        .collect();
-
+fn scope_satisfies(granted: Option<&str>, required: &[String]) -> bool {
     if required.is_empty() {
         return true;
     }
     let Some(granted) = granted else {
-        return true;
+        return false;
     };
     let granted: Vec<&str> = granted.split_whitespace().collect();
-    if granted.is_empty() {
-        return true;
-    }
     required
         .iter()
-        .all(|need| granted.iter().any(|have| have == need))
+        .all(|need| granted.iter().any(|have| *have == need))
 }
 
 #[cfg(test)]
@@ -243,38 +237,43 @@ mod tests {
         .unwrap()
     }
 
-    const ADVERTISED: &str =
-        "mcp urn:zitadel:iam:org:project:id:my_client_id:aud";
+    fn required_scopes() -> Vec<String> {
+        vec![
+            "openid".into(),
+            "offline_access".into(),
+            "urn:zitadel:iam:org:project:id:my_client_id:aud".into(),
+        ]
+    }
 
     fn apply(
         response: &IntrospectionResponse,
-        scope: &str,
+        required: &[String],
         allowed_subs: &[String],
     ) -> Result<ValidatedToken, AuthError> {
         apply_introspection_claims(
             response,
             "https://auth.example.com",
-            scope,
+            required,
             allowed_subs,
         )
     }
 
     #[test]
     fn accepts_valid_active_token() {
-        let v = apply(&active_response(), ADVERTISED, &[]).unwrap();
+        let v = apply(&active_response(), &required_scopes(), &[]).unwrap();
         assert_eq!(v.sub, "user-1");
     }
 
     #[test]
     fn accepts_without_mcp_scope() {
-        assert!(apply(&active_response(), ADVERTISED, &[]).is_ok());
+        assert!(apply(&active_response(), &required_scopes(), &[]).is_ok());
     }
 
     #[test]
     fn rejects_inactive() {
         let mut r = active_response();
         r.active = false;
-        let err = apply(&r, ADVERTISED, &[]).unwrap_err();
+        let err = apply(&r, &required_scopes(), &[]).unwrap_err();
         assert!(matches!(err, AuthError::Inactive));
     }
 
@@ -282,15 +281,18 @@ mod tests {
     fn rejects_missing_project_audience_scope() {
         let mut r = active_response();
         r.scope = Some("openid offline_access".into());
-        let err = apply(&r, ADVERTISED, &[]).unwrap_err();
+        let err = apply(&r, &required_scopes(), &[]).unwrap_err();
         assert!(matches!(err, AuthError::InsufficientScope));
     }
 
     #[test]
     fn rejects_disallowed_sub() {
-        let err =
-            apply(&active_response(), ADVERTISED, &[String::from("other")])
-                .unwrap_err();
+        let err = apply(
+            &active_response(),
+            &required_scopes(),
+            &[String::from("other")],
+        )
+        .unwrap_err();
         assert!(matches!(err, AuthError::SubjectNotAllowed));
     }
 
@@ -299,7 +301,7 @@ mod tests {
         let err = apply_introspection_claims(
             &active_response(),
             "https://other.example.com",
-            ADVERTISED,
+            &required_scopes(),
             &[],
         )
         .unwrap_err();

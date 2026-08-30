@@ -125,7 +125,9 @@ pub async fn bearer_auth_middleware(
         client_id: &state.config.introspection_client_id,
         client_secret: &state.introspection_client_secret,
         expected_issuer: &state.config.authorization_server,
-        expected_scope: &state.config.scope,
+        expected_introspection_scopes: &state
+            .config
+            .required_introspection_scopes,
         allowed_subs: &state.config.allowed_subs,
     };
 
@@ -179,7 +181,7 @@ fn unauthorized_response(
     let challenge = if insufficient_scope {
         format!(
             r#"Bearer realm="mcp", error="insufficient_scope", scope="{}", resource_metadata="{}""#,
-            config.scope,
+            config.supported_scopes_param(),
             config.protected_resource_metadata_url(),
         )
     } else {

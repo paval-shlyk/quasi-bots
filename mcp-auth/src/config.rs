@@ -21,12 +21,15 @@ pub struct McpAuthConfig {
     #[serde(deserialize_with = "validate::deserialize_authorization_server")]
     pub authorization_server: String,
 
-    /// OAuth scope advertised to clients.
+    /// Scopes advertised to MCP clients (RFC 9728 `scopes_supported`).
     #[serde(
-        default = "validate::default_scope",
-        deserialize_with = "validate::deserialize_scope"
+        deserialize_with = "validate::deserialize_supported_scopes"
     )]
-    pub scope: String,
+    pub supported_scopes: Vec<String>,
+
+    /// Scopes that must appear on a successful introspection response.
+    #[serde(default, deserialize_with = "validate::deserialize_scope_list")]
+    pub required_introspection_scopes: Vec<String>,
 
     /// Optional token `sub` allowlist. Empty = any subject with an active token.
     #[serde(default, deserialize_with = "validate::deserialize_allowed_subs")]
@@ -57,24 +60,15 @@ pub struct McpAuthConfig {
     pub introspection_client_secret: Option<String>,
 }
 
-/// Zitadel reserved scope that adds `{project_id}` to the access-token audience.
-///
-/// Format: `urn:zitadel:iam:org:project:id:{projectId}:aud`
-pub fn zitadel_project_id_from_aud_scope(scope: &str) -> Option<&str> {
-    const PREFIX: &str = "urn:zitadel:iam:org:project:id:";
-    const SUFFIX: &str = ":aud";
-    let rest = scope.strip_prefix(PREFIX)?;
-    let id = rest.strip_suffix(SUFFIX)?;
-    if id.is_empty() || id.contains(':') {
-        return None;
-    }
-    Some(id)
-}
-
 impl McpAuthConfig {
     /// Canonical MCP resource URI (RFC 9728).
     pub fn resource_url(&self) -> String {
         format!("{}/mcp", self.public_url)
+    }
+
+    /// Space-delimited `scope` parameter (RFC 6749) from `supported_scopes`.
+    pub fn supported_scopes_param(&self) -> String {
+        self.supported_scopes.join(" ")
     }
 
     /// RFC 9728 protected-resource metadata document URL (path-scoped).

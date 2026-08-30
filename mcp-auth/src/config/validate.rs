@@ -127,25 +127,36 @@ pub fn validate_allowed_subs(
     Ok(subs)
 }
 
-/// Validate an OAuth scope string ([RFC 6749 §3.3](https://datatracker.ietf.org/doc/html/rfc6749#section-3.3)).
-pub fn validate_scope(value: &str) -> Result<String, String> {
+/// Validate a single OAuth scope token ([RFC 6749 §3.3](https://datatracker.ietf.org/doc/html/rfc6749#section-3.3)).
+pub fn validate_scope_token(value: &str) -> Result<String, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Err("scope must not be empty".into());
+        return Err("scope must not contain empty segments".into());
     }
-
-    for part in trimmed.split(' ') {
-        if part.is_empty() {
-            return Err("scope must not contain empty segments".into());
-        }
-        if !part.bytes().all(|b| (0x21..=0x7E).contains(&b)) {
-            return Err(format!(
-                "scope segment '{part}' contains invalid characters"
-            ));
-        }
+    if trimmed
+        .bytes()
+        .any(|b| b == b' ' || !(0x21..=0x7E).contains(&b))
+    {
+        return Err(format!(
+            "scope segment '{trimmed}' contains invalid characters"
+        ));
     }
-
     Ok(trimmed.to_string())
+}
+
+fn parse_scope_list(raw: toml::Value) -> Result<Vec<String>, String> {
+    let toml::Value::Array(values) = raw else {
+        return Err("scope lists must be an array of strings".into());
+    };
+
+    let mut scopes = Vec::with_capacity(values.len());
+    for value in values {
+        let Some(segment) = value.as_str() else {
+            return Err("only string array elements are supported".into());
+        };
+        scopes.push(validate_scope_token(segment)?);
+    }
+    Ok(scopes)
 }
 
 /// Validate a browser origin ([RFC 6454](https://datatracker.ietf.org/doc/html/rfc6454)).
@@ -249,42 +260,31 @@ where
     validate_allowed_subs(values).map_err(D::Error::custom)
 }
 
-pub fn deserialize_scope<'de, D>(deserializer: D) -> Result<String, D::Error>
+pub fn deserialize_scope_list<'de, D>(
+    deserializer: D,
+) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let raw_value = toml::Value::deserialize(deserializer)?;
-    let value = match raw_value {
-        toml::Value::String(v) => v,
-        toml::Value::Array(values) => {
-            let mut scope = vec![];
+    parse_scope_list(raw_value).map_err(D::Error::custom)
+}
 
-            for v in values.into_iter() {
-                let Some(v) = v.as_str().map(|v| v.trim()) else {
-                    return Err(D::Error::custom(
-                        "Only string is array element is supported",
-                    ));
-                };
+pub fn deserialize_supported_scopes<'de, D>(
+    deserializer: D,
+) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let scopes = deserialize_scope_list(deserializer)?;
+    if scopes.is_empty() {
+        return Err(D::Error::custom("supported_scopes must not be empty"));
+    }
+    Ok(scopes)
+}
 
-                if v.is_empty() {
-                    return Err(D::Error::custom(
-                        "scope must not contain empty segments",
-                    ));
-                }
-
-                scope.push(v.to_string())
-            }
-
-            scope.join(" ")
-        }
-        _unexp => {
-            return Err(D::Error::custom(
-                "Only raw string or array of strings are supported as a `scope`",
-            ));
-        }
-    };
-
-    validate_scope(&value).map_err(D::Error::custom)
+pub fn default_supported_scopes() -> Vec<String> {
+    vec!["mcp".into()]
 }
 
 pub fn deserialize_allowed_origins<'de, D>(
@@ -300,10 +300,6 @@ where
         .collect()
 }
 
-pub fn default_scope() -> String {
-    "mcp".into()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -317,7 +313,7 @@ mod tests {
     const VALID: &str = r#"
 public_url = "http://127.0.0.1:8080"
 authorization_server = "https://auth.example.com/realms/mcp"
-scope = "mcp"
+supported_scopes = ["mcp"]
 allowed_origins = []
 allowed_subs = []
 introspection_client_id = "rs-api-client"
@@ -398,24 +394,57 @@ introspection_client_id = "rs-api-client"
     }
 
     #[test]
-    fn validate_scope_accepts_multiple() {
-        assert!(validate_scope("read write").is_ok());
+    fn validate_scope_token_rejects_space() {
+        assert!(validate_scope_token("read write").is_err());
+        assert!(validate_scope_token("mcp").is_ok());
     }
 
     #[test]
-    fn scope_array_deserializes() {
+    fn supported_scopes_default_is_mcp() {
+        let cfg = parse_config(VALID).unwrap();
+        assert_eq!(cfg.supported_scopes, vec!["mcp".to_string()]);
+        assert!(cfg.required_introspection_scopes.is_empty());
+        assert_eq!(cfg.supported_scopes_param(), "mcp");
+    }
+
+    #[test]
+    fn scope_lists_deserialize() {
         let cfg = parse_config(
             r#"
 public_url = "http://127.0.0.1:8080"
 authorization_server = "https://auth.example.com/realms/mcp"
-scope = ["openid", "mcp"]
+supported_scopes = ["mcp"]
+required_introspection_scopes = [
+    "openid",
+    "offline_access",
+    "urn:zitadel:iam:org:project:id:my_client_id:aud",
+]
 allowed_origins = []
 allowed_subs = []
 introspection_client_id = "rs-api-client"
 "#,
         )
-        .expect("array scope should parse");
-        assert_eq!(cfg.scope, "openid mcp");
+        .expect("scope lists should parse");
+        assert_eq!(cfg.supported_scopes, vec!["mcp".to_string()]);
+        assert_eq!(
+            cfg.required_introspection_scopes,
+            vec![
+                "openid".to_string(),
+                "offline_access".to_string(),
+                "urn:zitadel:iam:org:project:id:my_client_id:aud".to_string(),
+            ]
+        );
+    }
+
+    #[test]
+    fn rejects_empty_supported_scopes() {
+        let err =
+            parse_config(&VALID.replace(
+                "supported_scopes = [\"mcp\"]",
+                "supported_scopes = []",
+            ))
+            .expect_err("empty supported_scopes");
+        assert!(err.to_string().contains("supported_scopes"));
     }
 
     #[test]

@@ -16,13 +16,7 @@ impl ProtectedResourceMetadata {
         Self {
             resource: config.resource_url(),
             authorization_servers: vec![config.trusted_issuer().to_string()],
-            scopes_supported: Some(
-                config
-                    .scope
-                    .split_whitespace()
-                    .map(str::to_string)
-                    .collect(),
-            ),
+            scopes_supported: Some(config.supported_scopes.clone()),
         }
     }
 }
@@ -32,7 +26,7 @@ pub fn www_authenticate_challenge(config: &McpAuthConfig) -> String {
     format!(
         r#"Bearer realm="mcp", resource_metadata="{}", scope="{}""#,
         config.protected_resource_metadata_url(),
-        config.scope,
+        config.supported_scopes_param(),
     )
 }
 
@@ -45,7 +39,7 @@ mod tests {
             r#"
 public_url = "http://127.0.0.1:8080"
 authorization_server = "https://auth.example.com/realms/mcp"
-scope = "mcp"
+supported_scopes = ["mcp"]
 introspection_client_id = "rs-api-client"
 "#,
         )
@@ -61,22 +55,6 @@ introspection_client_id = "rs-api-client"
             vec!["https://auth.example.com/realms/mcp"]
         );
         assert_eq!(meta.scopes_supported.as_ref().unwrap(), &vec!["mcp"]);
-    }
-
-    #[test]
-    fn scopes_supported_splits_space_delimited_scope() {
-        let mut cfg = sample_config();
-        cfg.scope =
-            "mcp urn:zitadel:iam:org:project:id:385518470088884515:aud".into();
-        let meta = ProtectedResourceMetadata::from_config(&cfg);
-        assert_eq!(
-            meta.scopes_supported.as_ref().unwrap(),
-            &vec![
-                "mcp".to_string(),
-                "urn:zitadel:iam:org:project:id:385518470088884515:aud"
-                    .to_string(),
-            ]
-        );
     }
 
     #[test]

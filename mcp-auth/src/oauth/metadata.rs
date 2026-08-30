@@ -15,7 +15,7 @@ impl ProtectedResourceMetadata {
     pub fn from_config(config: &McpAuthConfig) -> Self {
         Self {
             resource: config.resource_url(),
-            authorization_servers: vec![config.issuer().to_string()],
+            authorization_servers: vec![config.trusted_issuer().to_string()],
             scopes_supported: Some(vec![config.scope.clone()]),
         }
     }
@@ -40,6 +40,7 @@ mod tests {
 public_url = "http://127.0.0.1:8080"
 authorization_server = "https://auth.example.com/realms/mcp"
 scope = "mcp"
+introspection_client_id = "rs-api-client"
 "#,
         )
         .unwrap()

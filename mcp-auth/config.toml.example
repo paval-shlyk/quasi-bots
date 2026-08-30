@@ -1,7 +1,13 @@
 public_url = "http://127.0.0.1:8080"
-# External AS issuer (Keycloak realm URL or Zitadel instance issuer)
-authorization_server = "https://auth.example.com/realms/mcp"
+# External AS issuer (Zitadel instance / Keycloak realm)
+authorization_server = "https://auth.example.com"
 scope = "mcp"
-# Optional JWT sub allowlist (empty = any subject with a valid token)
+# Optional token sub allowlist (empty = any subject with an active token)
 allowed_subs = []
 allowed_origins = []
+
+# API application credentials used by this RS to call /introspect (Basic auth).
+# Create an Application of type API in Zitadel with Basic authentication.
+introspection_client_id = "REPLACE_ME"
+# Prefer INTROSPECTION_CLIENT_SECRET env in production:
+# introspection_client_secret = ""

@@ -2,19 +2,19 @@
 
 OAuth 2.1 **resource server** library for MCP hosts. Nest its Axum routes and bearer middleware under a host application (e.g. [skill-master](../skill-master/)) that serves the MCP Streamable HTTP endpoint at `/mcp`.
 
-Authorization (login, consent, token minting) is **delegated** to an external authorization server such as **Keycloak** or **Zitadel**. This crate only:
+Authorization (login, consent, token minting) is **delegated** to an external authorization server such as **Zitadel**. This crate:
 
 1. Advertises **RFC 9728** protected-resource metadata pointing at that AS
-2. Validates inbound **JWT** access tokens via **OIDC discovery + JWKS**
+2. Validates inbound **opaque Bearer** access tokens via **RFC 7662 Token Introspection**
 
 ## Features
 
 | Area | Details |
 |------|---------|
 | **Resource metadata** | RFC 9728 PRM at `/.well-known/oauth-protected-resource[/mcp]` |
-| **Token validation** | JWT signature (JWKS), `iss`, `aud` = resource URI, `exp`, optional `sub` allowlist |
+| **Token validation** | Introspection (`active`, `iss`, `aud` = resource URI, scope, optional `sub` allowlist) |
 | **Middleware** | `bearer_auth_middleware` for protecting `/mcp` |
-| **Discovery** | OIDC `/.well-known/openid-configuration` (path-aware for Keycloak realms) |
+| **Discovery** | OIDC `introspection_endpoint` from `{issuer}/.well-known/openid-configuration` |
 
 ## Public API
 
@@ -22,90 +22,57 @@ Authorization (login, consent, token minting) is **delegated** to an external au
 use mcp_auth::{McpAuthConfig, oauth};
 
 let config: McpAuthConfig = /* load from TOML */;
-let oauth_state = oauth::state(config.clone()).await?; // OIDC discovery + JWKS fetch
+let oauth_state = oauth::state(config.clone()).await?; // discover introspect URL
 let oauth_router = oauth::router(); // PRM routes only
 
-// Nest under your host router:
 // .merge(oauth_router.with_state(oauth_state.clone()))
 // .nest_service("/mcp", mcp_service.layer(bearer_auth_middleware))
 ```
 
 ## Configuration
 
-```bash
-cp mcp-auth/config.toml.example mcp-auth/config.toml
-```
-
 ```toml
 public_url = "http://127.0.0.1:8080"
-authorization_server = "https://auth.example.com/realms/mcp"
+authorization_server = "https://auth.example.com"
 scope = "mcp"
 allowed_subs = []
 allowed_origins = []
-stateful_mode = false
-json_response = true
+introspection_client_id = "your-api-app-client-id"
+# introspection_client_secret = ""  # prefer INTROSPECTION_CLIENT_SECRET
 ```
 
 | Field | Description |
 |-------|-------------|
-| `public_url` | Public origin for resource metadata — **scheme + host + port only, no path** |
-| `authorization_server` | External AS **issuer** URL (Keycloak realm or Zitadel issuer). Path allowed. |
-| `scope` | Scope advertised in PRM and `WWW-Authenticate` |
-| `allowed_subs` | Optional JWT `sub` allowlist (empty = any subject) |
-| `allowed_origins` | Browser origins for Streamable HTTP Origin validation |
-| `stateful_mode` | Streamable HTTP session mode (`false` = stateless) |
-| `json_response` | Return `application/json` instead of SSE when stateless |
+| `public_url` | Public origin — **scheme + host + port only** |
+| `authorization_server` | AS issuer URL (OIDC discovery base) |
+| `scope` | Advertised in PRM + `WWW-Authenticate` |
+| `allowed_subs` | Optional `sub` allowlist |
+| `introspection_client_id` | Zitadel **API** application client id (Basic) |
+| `introspection_client_secret` | API app secret; if omitted/empty, filled from `INTROSPECTION_CLIENT_SECRET` at TOML parse time |
 
-Derived values (not config):
+Derived: **resource / expected `aud`** = `{public_url}/mcp`.
 
-- **Resource / audience** = `{public_url}/mcp`
-- **JWKS URI** = from OIDC discovery of `authorization_server`
+## Zitadel setup
 
-## Authorization server setup (Keycloak / Zitadel)
+1. Enable OIDC / DCR for MCP clients as needed.
+2. Create an **API** application with **Basic** authentication (this is the RS’s introspect client, not the MCP user’s client).
+3. Set `introspection_client_id` and export `INTROSPECTION_CLIENT_SECRET`.
+4. Clients may receive **opaque** access tokens (`token_type: Bearer`). skill-master asks Zitadel’s `/oauth/v2/introspect` whether each token is `active` and reads claims from the JSON response — it does **not** decode a JWT locally.
 
-Clients discover the AS from protected-resource metadata, complete OAuth 2.1 + PKCE **against the AS**, and call MCP with the resulting JWT.
-
-### Audience (required)
-
-MCP requires the access token to be issued for this resource. Validation expects:
-
-```text
-aud includes "{public_url}/mcp"
-```
-
-Default Keycloak tokens often set `aud` to the client ID only. Configure an **audience mapper** (or Zitadel API / resource indicator) so access tokens include the MCP resource URI, e.g. `http://127.0.0.1:8080/mcp`.
-
-### Client registration
-
-Prefer one of:
-
-1. Pre-register the MCP client on the AS (redirect URIs such as `http://127.0.0.1:9876/callback`)
-2. Enable Dynamic Client Registration if your client supports it
-3. Client ID Metadata Documents if the AS supports them
-
-### Example Keycloak realm issuer
-
-```toml
-authorization_server = "https://keycloak.example.com/realms/mcp"
-```
-
-OIDC discovery is tried at:
-
-- `{issuer}/.well-known/openid-configuration`
-- path-inserted and RFC 8414 variants as fallback
+Introspection response must include `aud` containing `{public_url}/mcp` (configure audience / API resource in Zitadel accordingly).
 
 ## Token validation rules
 
-A request to `/mcp` must send `Authorization: Bearer <jwt>`. The JWT must:
+1. Call AS introspection with the Bearer token (client_secret_basic).
+2. Require `active: true`.
+3. If `iss` present → must match `authorization_server`.
+4. `aud` must include `{public_url}/mcp`.
+5. If `scope` present → must include configured scope segments.
+6. If `allowed_subs` non-empty → `sub` must be listed.
 
-1. Verify with a key from the AS JWKS (`kid` match, refresh on unknown kid)
-2. `iss` = configured `authorization_server`
-3. `aud` contains `{public_url}/mcp`
-4. Not be expired (60s clock skew)
-5. If `scope` / `scp` claims are present, include the configured `scope`
-6. If `allowed_subs` is non-empty, `sub` must be listed
+Invalid / inactive tokens → `401` with `WWW-Authenticate` including `resource_metadata`.
 
-Invalid / missing tokens → `401` with `WWW-Authenticate` including `resource_metadata`.
+Successful results are cached briefly (~45s) to limit introspect traffic.
 
 ## Testing
 
@@ -113,6 +80,6 @@ Invalid / missing tokens → `401` with `WWW-Authenticate` including `resource_m
 cargo test -p mcp-auth
 ```
 
-## Migration from the old embedded AS
+## Migration from JWKS
 
-Previous versions of this crate minted opaque tokens and ran Google OIDC + DCR on the host. That flow is **removed**. Clients must obtain JWTs from the external AS; restarting the host no longer invalidates AS-issued tokens (until they expire).
+Local JWKS JWT verification has been **removed**. Opaque tokens + introspection are the only supported path.

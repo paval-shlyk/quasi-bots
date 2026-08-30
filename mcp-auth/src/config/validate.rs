@@ -103,7 +103,16 @@ pub fn validate_authorization_server(value: &str) -> Result<String, String> {
     Ok(normalized)
 }
 
-/// Validate allowlisted JWT `sub` values.
+/// Validate introspection API client id (non-empty).
+pub fn validate_introspection_client_id(value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err("introspection_client_id must not be empty".into());
+    }
+    Ok(trimmed.to_string())
+}
+
+/// Validate allowlisted token `sub` values.
 pub fn validate_allowed_subs(
     values: Vec<String>,
 ) -> Result<Vec<String>, String> {
@@ -189,6 +198,47 @@ where
     validate_authorization_server(&value).map_err(D::Error::custom)
 }
 
+pub fn deserialize_introspection_client_id<'de, D>(
+    deserializer: D,
+) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value = String::deserialize(deserializer)?;
+    validate_introspection_client_id(&value).map_err(D::Error::custom)
+}
+
+const INTROSPECTION_CLIENT_SECRET_ENV: &str = "INTROSPECTION_CLIENT_SECRET";
+
+fn read_introspection_client_secret_env() -> Option<String> {
+    std::env::var(INTROSPECTION_CLIENT_SECRET_ENV)
+        .ok()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+}
+
+/// Read `INTROSPECTION_CLIENT_SECRET` (serde `default` when the TOML key is absent).
+pub fn introspection_client_secret_from_env() -> Option<String> {
+    read_introspection_client_secret_env()
+}
+
+/// TOML value (if non-empty) overrides env; empty/missing falls back to env.
+pub fn deserialize_introspection_client_secret<'de, D>(
+    deserializer: D,
+) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let from_toml = Option::<String>::deserialize(deserializer)?;
+    if let Some(value) = from_toml {
+        let trimmed = value.trim();
+        if !trimmed.is_empty() {
+            return Ok(Some(trimmed.to_string()));
+        }
+    }
+    Ok(read_introspection_client_secret_env())
+}
+
 pub fn deserialize_allowed_subs<'de, D>(
     deserializer: D,
 ) -> Result<Vec<String>, D::Error>
@@ -254,14 +304,6 @@ pub fn default_scope() -> String {
     "mcp".into()
 }
 
-pub fn default_stateful_mode() -> bool {
-    false
-}
-
-pub fn default_json_response() -> bool {
-    true
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -278,6 +320,7 @@ authorization_server = "https://auth.example.com/realms/mcp"
 scope = "mcp"
 allowed_origins = []
 allowed_subs = []
+introspection_client_id = "rs-api-client"
 "#;
 
     #[test]
@@ -368,6 +411,7 @@ authorization_server = "https://auth.example.com/realms/mcp"
 scope = ["openid", "mcp"]
 allowed_origins = []
 allowed_subs = []
+introspection_client_id = "rs-api-client"
 "#,
         )
         .expect("array scope should parse");
@@ -391,5 +435,44 @@ allowed_subs = []
         cfg.allowed_subs = vec!["alice".into()];
         assert!(cfg.subject_allowed("alice"));
         assert!(!cfg.subject_allowed("bob"));
+    }
+
+    #[test]
+    fn rejects_empty_introspection_client_id() {
+        let err = parse_config(&VALID.replace(
+            "introspection_client_id = \"rs-api-client\"",
+            "introspection_client_id = \"   \"",
+        ))
+        .expect_err("empty introspection_client_id");
+        assert!(err.to_string().contains("introspection_client_id"));
+    }
+
+    #[test]
+    fn secret_from_toml_wins() {
+        let cfg = parse_config(&format!(
+            "{VALID}\nintrospection_client_secret = \"s3cret\"\n"
+        ))
+        .unwrap();
+        assert_eq!(
+            cfg.introspection_client_secret.as_deref(),
+            Some("s3cret")
+        );
+    }
+
+    #[test]
+    fn empty_toml_secret_uses_env_helper_shape() {
+        // When TOML is empty/absent, deserializer falls back to env helper.
+        // We only assert the helper returns Option without mutating process env.
+        let _ = introspection_client_secret_from_env();
+        let cfg = parse_config(&format!(
+            "{VALID}\nintrospection_client_secret = \"\"\n"
+        ))
+        .unwrap();
+        // Result is either None or Some(env); never Some("").
+        assert!(
+            cfg.introspection_client_secret
+                .as_deref()
+                .is_none_or(|s| !s.is_empty())
+        );
     }
 }

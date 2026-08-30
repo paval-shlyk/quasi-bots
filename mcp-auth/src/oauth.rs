@@ -1,14 +1,16 @@
 //! MCP resource-server OAuth helpers.
 //!
 //! The host is an OAuth 2.1 **resource server**. Authorization is delegated to
-//! an external authorization server (Keycloak, Zitadel, …):
+//! an external authorization server (e.g. Zitadel):
 //!
 //!   GET  /.well-known/oauth-protected-resource       — RFC 9728 metadata
 //!   GET  /.well-known/oauth-protected-resource/mcp   — path-scoped PRM
 //!
-//! Bearer tokens on `/mcp` are JWTs validated via the AS JWKS (OIDC discovery).
+//! Opaque Bearer access tokens on `/mcp` are validated via RFC 7662
+//! token introspection against the AS.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use axum::{
     Router,
@@ -21,26 +23,53 @@ use axum::{
 };
 use tracing::debug;
 
-use crate::{config::McpAuthConfig, oauth::jwt::new_cached_jwks};
+use crate::config::McpAuthConfig;
+use crate::oauth::openid_config::new_cached_openid_configuration;
 
-mod discovery;
-mod jwt;
+mod introspect;
 mod metadata;
+mod openid_config;
 mod routes;
+
+pub use introspect::{AuthError, TokenValidator, ValidatedToken};
+pub use openid_config::{CachedOpenIdConfig, OpenIdConfiguration};
 
 pub struct OAuthState {
     pub config: McpAuthConfig,
-    pub jwks: jwt::CachedJwkSet,
+    pub openid_config: CachedOpenIdConfig,
+    pub http: reqwest::Client,
+    /// Resolved at boot from config / `INTROSPECTION_CLIENT_SECRET`.
+    pub introspection_client_secret: String,
 }
 
 pub type SharedOAuthState = Arc<OAuthState>;
 
-pub use jwt::{JwtError, JwtValidator, ValidatedToken};
-
 pub async fn state(config: McpAuthConfig) -> anyhow::Result<SharedOAuthState> {
-    let jwks = new_cached_jwks(config.clone()).await?;
+    let secret = config
+        .introspection_client_secret
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "introspection client secret missing: set introspection_client_secret \
+                 in config or INTROSPECTION_CLIENT_SECRET in the environment"
+            )
+        })?
+        .to_string();
 
-    Ok(Arc::new(OAuthState { config, jwks }))
+    let openid_config = new_cached_openid_configuration(&config).await?;
+
+    let http = reqwest::Client::builder()
+        .timeout(Duration::from_secs(15))
+        .build()?;
+
+    Ok(Arc::new(OAuthState {
+        config,
+        openid_config,
+        http,
+        introspection_client_secret: secret,
+    }))
 }
 
 pub fn router() -> Router<SharedOAuthState> {
@@ -75,12 +104,14 @@ pub async fn bearer_auth_middleware(
         .and_then(|v| v.strip_prefix("Bearer "))
         .map(|s| s.to_string());
 
-    // `resource_url()` allocates; keep it alive for the validator borrows.
     let resource = state.config.resource_url();
-    let validator = JwtValidator {
-        jwks: state.jwks.clone(),
-        expected_audience: &resource,
+    let validator = TokenValidator {
+        openid_config: state.openid_config.clone(),
+        client: &state.http,
+        client_id: &state.config.introspection_client_id,
+        client_secret: &state.introspection_client_secret,
         expected_issuer: &state.config.authorization_server,
+        expected_audience: &resource,
         expected_scope: &state.config.scope,
         allowed_subs: &state.config.allowed_subs,
     };
@@ -88,17 +119,27 @@ pub async fn bearer_auth_middleware(
     match token {
         Some(t) => match validator.validate(&t).await {
             Ok(validated) => {
-                debug!(sub = %validated.sub, "MCP bearer JWT accepted");
+                debug!(
+                    sub = %validated.sub,
+                    "MCP bearer token accepted (introspection)"
+                );
                 next.run(request).await
             }
-            Err(JwtError::InsufficientScope) => {
+            Err(AuthError::InsufficientScope) => {
                 unauthorized_response(&state.config, "insufficient_scope", true)
             }
-            Err(JwtError::SubjectNotAllowed) => {
+            Err(AuthError::SubjectNotAllowed)
+            | Err(AuthError::Inactive)
+            | Err(AuthError::OpenIdConfigUnavailable) => {
                 unauthorized_response(&state.config, "invalid_token", false)
             }
             Err(e) => {
-                debug!(error = %e, "MCP bearer JWT rejected");
+                tracing::warn!(
+                    error = %e,
+                    expected_iss = %state.config.authorization_server,
+                    expected_aud = %resource,
+                    "MCP bearer token rejected"
+                );
                 unauthorized_response(&state.config, "invalid_token", false)
             }
         },
@@ -129,7 +170,7 @@ fn unauthorized_response(
 
     let description = match error {
         "insufficient_scope" => "token is missing required scope",
-        _ => "valid Bearer JWT required",
+        _ => "valid Bearer access token required",
     };
     let body = serde_json::json!({
         "error": error,

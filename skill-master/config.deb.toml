@@ -91,7 +91,10 @@ urls = [
 
 [mcp]
 public_url = "http://127.0.0.1:8080"
-authorization_server = "https://auth.example.com/realms/mcp"
+authorization_server = "https://auth.example.com"
 scope = "mcp"
-# Optional JWT sub allowlist (empty = any subject with a valid token)
+# Optional token sub allowlist (empty = any subject with an active token)
 allowed_subs = []
+# RFC 7662 introspection
+introspection_client_id = "REPLACE_ME"
+# introspection_client_secret = ""  # prefer INTROSPECTION_CLIENT_SECRET env

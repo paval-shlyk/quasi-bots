@@ -1,8 +1,12 @@
 use crate::AppState;
 use axum::extract::State;
 use axum::{Router, http::StatusCode, response::IntoResponse, routing::get};
+use tokio_util::sync::CancellationToken;
 
-pub async fn create_routes(state: AppState) -> Router<()> {
+pub async fn create_routes(
+    state: AppState,
+    token: CancellationToken,
+) -> Router<()> {
     let router = Router::new()
         .route("/health", get(health_check))
         .route("/metrics", get(get_metrics))
@@ -16,7 +20,7 @@ pub async fn create_routes(state: AppState) -> Router<()> {
         state.clone(),
         oauth_state.clone(),
         &state.config.mcp,
-        tokio_util::sync::CancellationToken::new(),
+        token,
     );
 
     Router::new()

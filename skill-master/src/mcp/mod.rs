@@ -16,11 +16,11 @@ pub fn mount(
     app_state: AppState,
     oauth_state: mcp_auth::oauth::SharedOAuthState,
     config: &McpAuthConfig,
-    cancel: CancellationToken,
+    token: CancellationToken,
 ) -> Router<()> {
     let mut http_cfg = StreamableHttpServerConfig::default()
         .with_allowed_hosts(config.allowed_hosts())
-        .with_cancellation_token(cancel);
+        .with_cancellation_token(token);
 
     if !config.allowed_origins.is_empty() {
         http_cfg =

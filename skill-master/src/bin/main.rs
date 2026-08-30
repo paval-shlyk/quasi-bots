@@ -1,4 +1,5 @@
 use clap::Parser;
+use tokio_util::sync::CancellationToken;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -76,7 +77,9 @@ pub async fn main() {
         git_commit
     );
 
-    let app = skill_master::routes::create_routes(state).await;
+    let token = CancellationToken::new();
+
+    let app = skill_master::routes::create_routes(state, token.clone()).await;
 
     let signal =
         shutdown_signal().expect("Failed to construct shutdown signal");
@@ -89,7 +92,10 @@ pub async fn main() {
     tracing::info!("Starting server on {}", addr);
 
     axum::serve(listener, app.into_make_service())
-        .with_graceful_shutdown(signal)
+        .with_graceful_shutdown(async move {
+            signal.await;
+            token.cancel();
+        })
         .await
         .expect("Failed to start server");
 }

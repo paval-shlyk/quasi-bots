@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use serde_json::Value;
 
+use crate::config::zitadel_project_id_from_aud_scope;
 use crate::oauth::openid_config::CachedOpenIdConfig;
 
 #[derive(Debug, Clone)]
@@ -204,16 +205,16 @@ fn subject_allowed(allowed_subs: &[String], sub: &str) -> bool {
     allowed_subs.is_empty() || allowed_subs.iter().any(|s| s == sub)
 }
 
-fn scope_satisfies(granted: Option<&str>, required: &str) -> bool {
-    let required: Vec<&str> = required
+fn scope_satisfies(granted: Option<&str>, advertised: &str) -> bool {
+    let required: Vec<&str> = advertised
         .split_whitespace()
-        .filter(|s| !s.is_empty())
+        .filter(|s| zitadel_project_id_from_aud_scope(s).is_some())
         .collect();
+
     if required.is_empty() {
         return true;
     }
     let Some(granted) = granted else {
-        // No scope claim → trust AS.
         return true;
     };
     let granted: Vec<&str> = granted.split_whitespace().collect();
@@ -236,11 +237,14 @@ mod tests {
             "sub": "user-1",
             "iss": "https://auth.example.com",
             "aud": "http://127.0.0.1:8080/mcp",
-            "scope": "openid mcp",
+            "scope": "openid urn:zitadel:iam:org:project:id:my_client_id:aud offline_access",
             "exp": 9999999999_i64
         }))
         .unwrap()
     }
+
+    const ADVERTISED: &str =
+        "mcp urn:zitadel:iam:org:project:id:my_client_id:aud";
 
     fn apply(
         response: &IntrospectionResponse,
@@ -257,30 +261,36 @@ mod tests {
 
     #[test]
     fn accepts_valid_active_token() {
-        let v = apply(&active_response(), "mcp", &[]).unwrap();
+        let v = apply(&active_response(), ADVERTISED, &[]).unwrap();
         assert_eq!(v.sub, "user-1");
+    }
+
+    #[test]
+    fn accepts_without_mcp_scope() {
+        assert!(apply(&active_response(), ADVERTISED, &[]).is_ok());
     }
 
     #[test]
     fn rejects_inactive() {
         let mut r = active_response();
         r.active = false;
-        let err = apply(&r, "mcp", &[]).unwrap_err();
+        let err = apply(&r, ADVERTISED, &[]).unwrap_err();
         assert!(matches!(err, AuthError::Inactive));
     }
 
     #[test]
-    fn rejects_missing_scope_segment() {
+    fn rejects_missing_project_audience_scope() {
         let mut r = active_response();
-        r.scope = Some("openid".into());
-        let err = apply(&r, "mcp", &[]).unwrap_err();
+        r.scope = Some("openid offline_access".into());
+        let err = apply(&r, ADVERTISED, &[]).unwrap_err();
         assert!(matches!(err, AuthError::InsufficientScope));
     }
 
     #[test]
     fn rejects_disallowed_sub() {
-        let err = apply(&active_response(), "mcp", &[String::from("other")])
-            .unwrap_err();
+        let err =
+            apply(&active_response(), ADVERTISED, &[String::from("other")])
+                .unwrap_err();
         assert!(matches!(err, AuthError::SubjectNotAllowed));
     }
 
@@ -289,7 +299,7 @@ mod tests {
         let err = apply_introspection_claims(
             &active_response(),
             "https://other.example.com",
-            "mcp",
+            ADVERTISED,
             &[],
         )
         .unwrap_err();

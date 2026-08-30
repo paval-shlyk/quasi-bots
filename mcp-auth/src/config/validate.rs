@@ -429,14 +429,6 @@ introspection_client_id = "rs-api-client"
     }
 
     #[test]
-    fn required_token_scopes_omit_zitadel_project_audience() {
-        let mut cfg = parse_config(VALID).unwrap();
-        cfg.scope =
-            "mcp urn:zitadel:iam:org:project:id:my_client_id:aud".into();
-        assert_eq!(cfg.required_token_scopes(), "mcp");
-    }
-
-    #[test]
     fn subject_allowlist() {
         let mut cfg = parse_config(VALID).unwrap();
         assert!(cfg.subject_allowed("anyone"));

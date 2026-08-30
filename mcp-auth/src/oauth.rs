@@ -119,14 +119,13 @@ pub async fn bearer_auth_middleware(
 
     span.record("auth.has_bearer", token.is_some());
 
-    let required_scope = state.config.required_token_scopes();
     let validator = TokenValidator {
         openid_config: state.openid_config.clone(),
         client: &state.http_client,
         client_id: &state.config.introspection_client_id,
         client_secret: &state.introspection_client_secret,
         expected_issuer: &state.config.authorization_server,
-        expected_scope: &required_scope,
+        expected_scope: &state.config.scope,
         allowed_subs: &state.config.allowed_subs,
     };
 

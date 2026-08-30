@@ -77,18 +77,6 @@ impl McpAuthConfig {
         format!("{}/mcp", self.public_url)
     }
 
-    /// Permission scopes the access token must grant.
-    ///
-    /// Zitadel project-audience URNs are advertised to clients but not required
-    /// in the granted `scope`.
-    pub fn required_token_scopes(&self) -> String {
-        self.scope
-            .split_whitespace()
-            .filter(|s| zitadel_project_id_from_aud_scope(s).is_none())
-            .collect::<Vec<_>>()
-            .join(" ")
-    }
-
     /// RFC 9728 protected-resource metadata document URL (path-scoped).
     pub fn protected_resource_metadata_url(&self) -> String {
         format!(

@@ -144,27 +144,17 @@ fn cli_scopes(opts: &ConnectOptions) -> Vec<String> {
         .collect()
 }
 
-/// Prefer RFC 9728 PRM `scopes_supported` (includes the Zitadel project
-/// audience URN) and merge `--scope` plus OIDC `openid` / `offline_access`.
+/// Prefer RFC 9728 PRM `scopes_supported`; `--scope` is only the fallback.
 fn resolve_scopes(
     manager: &AuthorizationManager,
     opts: &ConnectOptions,
 ) -> Vec<String> {
     let defaults = cli_scopes(opts);
     let default_refs: Vec<&str> = defaults.iter().map(String::as_str).collect();
-    let selected = manager.select_scopes(None, &default_refs);
-    merge_oauth_scopes(selected, &defaults)
+    with_oidc_scopes(manager.select_scopes(None, &default_refs))
 }
 
-fn merge_oauth_scopes(
-    mut scopes: Vec<String>,
-    extra: &[String],
-) -> Vec<String> {
-    for scope in extra {
-        if !scopes.iter().any(|s| s == scope) {
-            scopes.push(scope.clone());
-        }
-    }
+fn with_oidc_scopes(mut scopes: Vec<String>) -> Vec<String> {
     if !scopes.iter().any(|s| s == "openid") {
         scopes.insert(0, "openid".into());
     }
@@ -381,35 +371,22 @@ fn open_browser(url: &str) {
 
 #[cfg(test)]
 mod tests {
-    use super::merge_oauth_scopes;
+    use super::with_oidc_scopes;
 
     #[test]
-    fn merge_keeps_prm_audience_scope_and_adds_oidc() {
-        let selected = vec![
+    fn with_oidc_scopes_keeps_prm_and_adds_openid() {
+        let scopes = with_oidc_scopes(vec![
             "mcp".into(),
             "urn:zitadel:iam:org:project:id:385518470088884515:aud".into(),
-        ];
-        let extra = vec!["mcp".into()];
-        let merged = merge_oauth_scopes(selected, &extra);
-        assert!(merged.iter().any(|s| s == "openid"));
-        assert!(merged.iter().any(|s| s == "mcp"));
-        assert!(
-            merged.iter().any(|s| s
-                == "urn:zitadel:iam:org:project:id:385518470088884515:aud")
-        );
-        assert!(merged.iter().any(|s| s == "offline_access"));
-    }
-
-    #[test]
-    fn merge_falls_back_to_cli_scopes() {
-        let extra = vec!["mcp".into()];
-        let merged = merge_oauth_scopes(Vec::new(), &extra);
+        ]);
         assert_eq!(
-            merged,
+            scopes,
             vec![
                 "openid".to_string(),
                 "mcp".to_string(),
-                "offline_access".to_string()
+                "urn:zitadel:iam:org:project:id:385518470088884515:aud"
+                    .to_string(),
+                "offline_access".to_string(),
             ]
         );
     }

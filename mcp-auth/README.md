@@ -72,7 +72,7 @@ Derived: **resource URI** = `{public_url}/mcp` (RFC 9728).
 1. Call AS introspection with the Bearer token (client_secret_basic).
 2. Require `active: true`.
 3. If `iss` present → must match `authorization_server`.
-4. If `scope` present → must include configured **permission** scopes (`mcp`). Project-audience URNs are advertised to clients but not required in the granted scope.
+4. If introspection `scope` is present → must include advertised `urn:zitadel:iam:org:project:id:{id}:aud` values. `mcp` is advertised to clients; Zitadel does not grant it.
 5. If `allowed_subs` non-empty → `sub` must be listed.
 
 Invalid / inactive tokens → `401` with `WWW-Authenticate` including `resource_metadata`.

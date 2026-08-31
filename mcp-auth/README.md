@@ -5,18 +5,16 @@ OAuth 2.1 **resource server** library for MCP hosts. Nest its Axum routes and be
 Authorization (login, consent, token minting) is **delegated** to an external authorization server such as **Zitadel**. This crate:
 
 1. Advertises **RFC 9728** protected-resource metadata pointing at that AS
-2. Advertises **RFC 8414** authorization-server metadata (Zitadel endpoints) so MCP agents that probe the resource origin can discover authorize / token / DCR
-3. Validates inbound **opaque Bearer** access tokens via **RFC 7662 Token Introspection**
+2. Validates inbound **opaque Bearer** access tokens via **RFC 7662 Token Introspection**
 
 ## Features
 
 | Area | Details |
 |------|---------|
 | **Resource metadata** | RFC 9728 PRM at `/.well-known/oauth-protected-resource[/mcp]` |
-| **AS metadata** | RFC 8414 at `/.well-known/oauth-authorization-server[/mcp]` (Zitadel `issuer` + endpoints; MCP overlays `S256` / `none` / RS scopes) |
 | **Token validation** | Introspection (`active`, `iss`, scope, optional `sub` allowlist) |
 | **Middleware** | `bearer_auth_middleware` for protecting `/mcp` |
-| **Discovery** | OIDC document from `{issuer}/.well-known/openid-configuration` |
+| **Discovery** | OIDC `introspection_endpoint` from `{issuer}/.well-known/openid-configuration` |
 
 ## Public API
 
@@ -25,7 +23,7 @@ use mcp_auth::{McpAuthConfig, oauth};
 
 let config: McpAuthConfig = /* load from TOML */;
 let oauth_state = oauth::state(config.clone()).await?; // discover introspect URL
-let oauth_router = oauth::router(); // PRM + RFC 8414 routes
+let oauth_router = oauth::router(); // PRM routes only
 
 // .merge(oauth_router.with_state(oauth_state.clone()))
 // .nest_service("/mcp", mcp_service.layer(bearer_auth_middleware))

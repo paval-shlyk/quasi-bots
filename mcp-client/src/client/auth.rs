@@ -373,8 +373,9 @@ fn open_browser(url: &str) {
 /// Append Zitadel/OIDC `prompt=select_account` so the user can pick a session
 /// (or start a new login) instead of being silently bound to an existing one.
 fn with_select_account_prompt(auth_url: &str) -> Result<String> {
-    let mut url = Url::parse(auth_url)
-        .map_err(|e| Error::Oauth(format!("invalid authorization URL: {e}")))?;
+    let mut url = Url::parse(auth_url).map_err(|e| {
+        Error::Oauth(format!("invalid authorization URL: {e}"))
+    })?;
 
     let already_selects = url.query_pairs().any(|(key, value)| {
         key == "prompt"

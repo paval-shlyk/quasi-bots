@@ -386,48 +386,67 @@ fn build_leverage_assets(
     let mut assets_by_symbol = HashMap::<String, Asset>::new();
 
     for position in positions {
-        assert_eq!(
-            position.close_price, 0.0,
-            "Only long operations are supported"
-        );
-
-        let symbol = normalize_symbol(&position.symbol);
-        let name = resolve_asset_name(name_by_symbol, &symbol);
-
-        if position.open_qty.abs() <= QTY_EPS {
+        // Live size is opened minus realized (e.g. opened 2, closed 1 → 1).
+        if position.open_qty < -QTY_EPS {
             tracing::warn!(
-                "Too small owning assets: {} count={}",
-                position.symbol,
-                position.open_qty
+                symbol = %position.symbol,
+                id = %position.id,
+                open_qty = position.open_qty,
+                close_qty = position.close_qty,
+                "Short operations are not supported yet. Ignore it"
             );
             continue;
         }
 
+        let remaining_qty = position.open_qty - position.close_qty;
+
+        let symbol = normalize_symbol(&position.symbol);
+        let name = resolve_asset_name(name_by_symbol, &symbol);
+
+        if remaining_qty <= QTY_EPS {
+            if position.open_qty.abs() <= QTY_EPS
+                && position.close_qty.abs() <= QTY_EPS
+            {
+                tracing::warn!(
+                    "Too small owning assets: {} count={}",
+                    position.symbol,
+                    remaining_qty
+                );
+            }
+            continue;
+        }
+
+        // Exchange cost/upl are for opened size; scale to leftover qty.
+        // TODO: use closed positions for historical performance review
+        let remaining_frac = remaining_qty / position.open_qty;
+        let remaining_cost = position.cost * remaining_frac;
+        let remaining_pl = position.profit_loss * remaining_frac;
+
         assets_by_symbol
             .entry(symbol.clone())
             .and_modify(|a| {
-                a.profit_loss += position.profit_loss;
-                a.cost += position.cost;
-                a.amount += position.open_qty;
+                a.profit_loss += remaining_pl;
+                a.cost += remaining_cost;
+                a.amount += remaining_qty;
 
                 a.trades.push(AssetEntryTrade {
                     entry_price: position.open_price,
-                    amount: position.open_qty,
+                    amount: remaining_qty,
                 });
             })
             .or_insert(Asset {
                 symbol,
                 name,
-                amount: position.open_qty,
-                cost: position.cost,
-                profit_loss: position.profit_loss,
+                amount: remaining_qty,
+                cost: remaining_cost,
+                profit_loss: remaining_pl,
                 // Derived below after optional merge of same-symbol positions.
                 profit_lost_pct: 0.0,
                 average_entry_price: 0.0,
                 unit_market_price: 0.0,
                 distance_from_entry_price_pct: 0.0,
                 trades: vec![AssetEntryTrade {
-                    amount: position.open_qty,
+                    amount: remaining_qty,
                     entry_price: position.open_price,
                 }],
             });
@@ -748,5 +767,140 @@ mod tests {
         assert_eq!(lookup_symbol("US500"), "^GSPC");
         assert_eq!(lookup_symbol("US100"), "^NDX");
         assert_eq!(lookup_symbol("US30"), "^DJI");
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn leverage_position(
+        id: &str,
+        symbol: &str,
+        open_qty: f64,
+        close_qty: f64,
+        open_price: f64,
+        close_price: f64,
+        cost: f64,
+        profit_loss: f64,
+    ) -> TradingPosition {
+        TradingPosition {
+            symbol: symbol.into(),
+            id: id.into(),
+            account_id: "acct".into(),
+            margin: 0.0,
+            fee: 0.0,
+            open_qty,
+            close_qty,
+            open_price,
+            close_price,
+            cost,
+            profit_loss,
+            created_at: chrono::DateTime::from_timestamp_millis(0).unwrap(),
+        }
+    }
+
+    #[test]
+    fn given_one_of_two_lots_closed_when_build_leverage_assets_then_keeps_remaining_open_minus_close()
+     {
+        // Arrange: two lots of 1; one fully closed (open == close), the other still open
+        let positions = vec![
+            leverage_position(
+                "open",
+                "TSM/USD_LEVERAGE",
+                1.0,
+                0.0,
+                100.0,
+                0.0,
+                110.0,
+                10.0,
+            ),
+            leverage_position(
+                "closed",
+                "TSM/USD_LEVERAGE",
+                1.0,
+                1.0,
+                100.0,
+                105.0,
+                0.0,
+                0.0,
+            ),
+        ];
+
+        // Act
+        let assets = build_leverage_assets(positions, &HashMap::new());
+
+        // Assert
+        assert_eq!(assets.len(), 1);
+        assert!((assets[0].amount - 1.0).abs() < QTY_EPS);
+        assert!((assets[0].cost - 110.0).abs() < QTY_EPS);
+        assert!((assets[0].profit_loss - 10.0).abs() < QTY_EPS);
+        assert_eq!(assets[0].trades.len(), 1);
+    }
+
+    #[test]
+    fn given_partially_closed_position_when_build_leverage_assets_then_amount_is_open_minus_close()
+     {
+        // Arrange: opened 2, closed 1 → live size 1
+        let positions = vec![leverage_position(
+            "partial",
+            "TSM/USD_LEVERAGE",
+            2.0,
+            1.0,
+            100.0,
+            105.0,
+            110.0,
+            10.0,
+        )];
+
+        // Act
+        let assets = build_leverage_assets(positions, &HashMap::new());
+
+        // Assert: leftover is half of opened size, so cost/upl scale 110→55, 10→5
+        assert_eq!(assets.len(), 1);
+        assert!((assets[0].amount - 1.0).abs() < QTY_EPS);
+        assert!((assets[0].cost - 55.0).abs() < QTY_EPS);
+        assert!((assets[0].profit_loss - 5.0).abs() < QTY_EPS);
+        assert!((assets[0].average_entry_price - 100.0).abs() < QTY_EPS);
+        assert!((assets[0].unit_market_price - 55.0).abs() < QTY_EPS);
+        assert_eq!(assets[0].trades[0].amount, 1.0);
+    }
+
+    #[test]
+    fn given_fully_closed_position_when_build_leverage_assets_then_skips_it() {
+        // Arrange: opened 2, closed 2
+        let positions = vec![leverage_position(
+            "closed",
+            "TSM/USD_LEVERAGE",
+            2.0,
+            2.0,
+            100.0,
+            105.0,
+            0.0,
+            0.0,
+        )];
+
+        // Act
+        let assets = build_leverage_assets(positions, &HashMap::new());
+
+        // Assert
+        assert!(assets.is_empty());
+    }
+
+    #[test]
+    fn given_short_position_when_build_leverage_assets_then_skips_it() {
+        // Arrange
+        let positions = vec![leverage_position(
+            "short",
+            "TSM/USD_LEVERAGE",
+            -2.0,
+            0.0,
+            100.0,
+            0.0,
+            200.0,
+            5.0,
+        )];
+
+        // Act
+        let assets = build_leverage_assets(positions, &HashMap::new());
+
+        // Assert
+        assert!(assets.is_empty());
     }
 }

@@ -131,6 +131,13 @@ async fn main() -> anyhow::Result<()> {
     // load .env if present
     let _ = dotenv();
 
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info".into()),
+        )
+        .init();
+
     match cli.cmd {
         Commands::Time { url } => {
             let api_key = env::var("API_KEY").unwrap_or_default();

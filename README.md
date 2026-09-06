@@ -75,6 +75,18 @@ These power the MCP tools above:
 
 ## CI pipeline
 
+### Local git hooks
+
+This repo keeps hooks under [`.git-hooks/`](.git-hooks/) (not `.git/hooks`). Enable them once per clone:
+
+```bash
+just install-hooks
+# or: git config core.hooksPath .git-hooks
+```
+
+`pre-commit` runs **gitleaks** on staged changes, then `cargo check` / `clippy`. CI runs the same scan via `just lint` → `just gitleaks` in the existing **check** job (`.github/workflows/ci.yml`). Install [gitleaks](https://github.com/gitleaks/gitleaks#installing) locally (or let `just gitleaks` fetch it).
+
+
 Workflow: [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
 Release **version** is `{major.minor from skill-master/Cargo.toml}.{github.run_number}` (optional manual prefix override on `workflow_dispatch`).

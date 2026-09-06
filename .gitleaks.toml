@@ -1,0 +1,26 @@
+# Gitleaks config for the quasi-bots Rust workspace.
+# Extends the default rule set (API keys, tokens, private keys, generic secrets).
+
+title = "quasi-bots"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Rust/Cargo noise, build artifacts, and known non-production fixtures"
+paths = [
+  # Cargo.lock checksums / dependency metadata can look secret-like
+  '''(^|/)Cargo\.lock$''',
+  # sqlx offline query data
+  '''(^|/)\.sqlx/''',
+  # local build output (also gitignored; keep for --no-git / protect scans)
+  '''(^|/)target/''',
+  # Test-only RSA key used by mcp-auth unit tests (not a real credential)
+  '''(^|/)mcp-auth/tests/fixtures/test_rsa_private\.pem$''',
+]
+
+# Empty string placeholders in tracked config templates (e.g. skill-master/config.deb.toml)
+# must remain; only allow truly empty assignments so real secrets are still caught.
+regexes = [
+  '''(?i)(?:api[_-]?key|api[_-]?secret|client[_-]?secret|access[_-]?token|auth[_-]?token|password|secret)\s*=\s*""''',
+]

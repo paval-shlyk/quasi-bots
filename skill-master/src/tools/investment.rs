@@ -84,7 +84,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots). Pass include_trades=true for lots. For indicators/earnings/targets/news use trading_analysis."
+        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots); pass include_trades=true for lots. Digs use trading_analysis. Each asset: weight_book_pct = |MV|/positions_value×100 (Σ≈100%), weight_nav_pct = |MV|/NAV×100 (CFD may Σ>100%); weight_percentage is a deprecated compat alias (NAV when known, else book)."
     )]
     async fn trading_positions(
         &self,

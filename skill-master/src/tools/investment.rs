@@ -1,9 +1,11 @@
 use finance::{
-    AnalysisInclude, AnalysisServices,
+    AnalysisInclude, AnalysisServices, PositionsInclude,
     analysis::{
         AssetNewsItem, FinnhubProvider, NewsProvider, YahooPriceTargetProvider,
     },
+    analysis_includes_from_positions,
     indicators::AnalysisConfig,
+    positions_want_trades,
 };
 use rmcp::{
     handler::server::wrapper::{Json, Parameters},
@@ -19,6 +21,10 @@ struct TradingPositionsArgs {
     /// Optional symbol filter; omit = all open names.
     #[serde(default)]
     symbols: Option<Vec<String>>,
+    /// Opt-in extras. Allowed: `trades`, `indicators`, `earnings`, `targets`,
+    /// `news`. Empty / omitted = lean book (no lots, no research).
+    #[serde(default)]
+    include: Vec<PositionsInclude>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -80,23 +86,73 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Fetch opened trading positions (Dzengi book only: size, mark, P/L, lots)"
+        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Default is lean (no lots). Pass include=[\"trades\"] for lots; include indicators/earnings/targets/news for research (or use trading_analysis)."
     )]
     async fn trading_positions(
         &self,
         Parameters(args): Parameters<TradingPositionsArgs>,
     ) -> Result<Json<finance::OwningAssets>, String> {
-        finance::fetch_owning_assets(
+        let include_trades = positions_want_trades(&args.include);
+        let mut owning = finance::fetch_owning_assets(
             self.state.finance_state.api(),
             args.symbols.as_deref(),
+            include_trades,
         )
         .await
-        .map(Json)
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+        let research = analysis_includes_from_positions(&args.include);
+        if !research.is_empty() {
+            let symbols: Vec<String> =
+                if let Some(filter) = args.symbols.as_ref() {
+                    filter.clone()
+                } else {
+                    owning
+                        .assets
+                        .iter()
+                        .map(|a| a.asset.symbol.clone())
+                        .collect()
+                };
+            if !symbols.is_empty() {
+                let want_news = research.contains(&AnalysisInclude::News);
+                let want_targets = research.contains(&AnalysisInclude::Targets);
+                let want_earnings =
+                    research.contains(&AnalysisInclude::Earnings);
+                let want_indicators =
+                    research.contains(&AnalysisInclude::Indicators);
+
+                let services = AnalysisServices {
+                    news: want_news.then(|| NewsBankProvider {
+                        pool: self.state.news_state.pool.clone(),
+                        limit: 3,
+                    }),
+                    targets: want_targets.then(YahooPriceTargetProvider::new),
+                    earnings: want_earnings.then(|| {
+                        FinnhubProvider::new(
+                            &self.state.finance_state.config.finn_hub_api_key,
+                        )
+                    }),
+                    technicals: want_indicators,
+                    technicals_config: AnalysisConfig::default(),
+                };
+
+                let analysis = finance::fetch_asset_analysis(
+                    self.state.finance_state.api(),
+                    &services,
+                    &symbols,
+                    &research,
+                )
+                .await
+                .map_err(|e| e.to_string())?;
+                owning.analysis = analysis.symbols;
+            }
+        }
+
+        Ok(Json(owning))
     }
 
     #[tool(
-        description = "News, analyst targets, earnings, and technicals for named symbols"
+        description = "News, analyst targets, earnings, and technicals for named symbols. Pass include e.g. [\"indicators\"]. Mapping/history failures return per-symbol error (no silent wrong-instrument TA)."
     )]
     async fn trading_analysis(
         &self,

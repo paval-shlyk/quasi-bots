@@ -8,7 +8,9 @@ mod state;
 
 pub use analysis::{
     AnalysisInclude, AnalysisServices, AssetAnalysis, AssetWithWeight,
-    OwningAssets, SymbolAnalysis, fetch_asset_analysis, fetch_owning_assets,
+    OwningAssets, PositionsInclude, SymbolAnalysis,
+    analysis_includes_from_positions, fetch_asset_analysis,
+    fetch_owning_assets, positions_want_trades,
 };
 pub use state::FinanceState;
 

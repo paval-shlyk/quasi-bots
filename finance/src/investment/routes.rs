@@ -80,6 +80,8 @@ pub struct Asset {
     pub unrealized_pnl_pct: f64,
     pub currency: String,
 
+    /// Lot list; omitted from lean `trading_positions` unless `include_trades`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub trades: Vec<AssetEntryTrade>,
 }
 
@@ -362,9 +364,11 @@ fn normalize_symbol(symbol: &str) -> String {
 pub fn lookup_symbol(symbol: &str) -> String {
     let s = normalize_symbol(symbol);
     let s = s.strip_suffix("/USD_LEVERAGE").unwrap_or(&s);
+    let s = s.strip_suffix("/USD").unwrap_or(s);
 
     // Broker CFD / index names → Yahoo-style symbols (technicals / news).
     // Analyst price targets still often missing for pure indices.
+    // Collisions to avoid: GOLD (Barrick path), bare GSPC, TON-USD (junk token).
     match s {
         "US500" | "SPX" | "SP500" | "SPX500" => "^GSPC".into(),
         "US100" | "NDX" | "NAS100" | "USTEC" => "^NDX".into(),
@@ -373,7 +377,8 @@ pub fn lookup_symbol(symbol: &str) -> String {
         "UK100" | "FTSE" | "UK100GBP" => "^FTSE".into(),
         "JP225" | "NI225" | "NIKKEI" => "^N225".into(),
         "Gold" | "XAU" | "XAUm" | "XAUUSD" => "GC=F".into(),
-        "TON" => "TON-USD".into(),
+        // Yahoo `TON-USD` is a different ERC-20 (~0.005). Toncoin is TON11419-USD.
+        "TON" | "TONCOIN" => "TON11419-USD".into(),
         other => other.to_string(),
     }
 }
@@ -1197,7 +1202,24 @@ mod tests {
     #[test]
     fn given_gold_when_lookup_symbol_then_maps_to_gc_futures() {
         assert_eq!(lookup_symbol("Gold"), "GC=F");
-        assert_eq!(lookup_symbol("TON/USD_LEVERAGE"), "TON-USD");
+        assert_eq!(lookup_symbol("XAUUSD"), "GC=F");
+        assert_ne!(lookup_symbol("Gold"), "GOLD");
+    }
+
+    #[test]
+    fn given_ton_variants_when_lookup_symbol_then_maps_to_toncoin_yahoo_id() {
+        assert_eq!(lookup_symbol("TON"), "TON11419-USD");
+        assert_eq!(lookup_symbol("TON/USD_LEVERAGE"), "TON11419-USD");
+        assert_eq!(lookup_symbol("TON/USD"), "TON11419-USD");
+        assert_eq!(lookup_symbol("TONCOIN"), "TON11419-USD");
+        assert_ne!(lookup_symbol("TON"), "TON-USD");
+    }
+
+    #[test]
+    fn given_us500_when_lookup_symbol_then_maps_to_caret_gspc_not_bare_gspc() {
+        assert_eq!(lookup_symbol("US500"), "^GSPC");
+        assert_ne!(lookup_symbol("US500"), "GSPC");
+        assert_ne!(lookup_symbol("US500"), "SPY");
     }
 
     #[test]

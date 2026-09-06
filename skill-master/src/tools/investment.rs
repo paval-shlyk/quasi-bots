@@ -19,6 +19,10 @@ struct TradingPositionsArgs {
     /// Optional symbol filter; omit = all open names.
     #[serde(default)]
     symbols: Option<Vec<String>>,
+    /// When true, include per-lot `trades`. Default false = lean book.
+    /// Research digs use `trading_analysis`, not this tool.
+    #[serde(default)]
+    include_trades: bool,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -80,7 +84,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Fetch opened trading positions (Dzengi book only: size, mark, P/L, lots)"
+        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots). Pass include_trades=true for lots. For indicators/earnings/targets/news use trading_analysis."
     )]
     async fn trading_positions(
         &self,
@@ -89,6 +93,7 @@ impl SkillMasterMcpServer {
         finance::fetch_owning_assets(
             self.state.finance_state.api(),
             args.symbols.as_deref(),
+            args.include_trades,
         )
         .await
         .map(Json)
@@ -96,7 +101,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "News, analyst targets, earnings, and technicals for named symbols"
+        description = "News, analyst targets, earnings, and technicals for named symbols. Pass include e.g. [\"indicators\"]. Mapping/history failures return per-symbol error (no silent wrong-instrument TA)."
     )]
     async fn trading_analysis(
         &self,

@@ -75,6 +75,9 @@ pub struct AssetWithWeight {
 )]
 pub struct SymbolAnalysis {
     pub symbol: String,
+    /// Present when mapping / history / instrument checks fail for this symbol.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub indicators: Option<TechnicalIndicators>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -97,6 +100,9 @@ pub struct AssetAnalysis {
 )]
 pub struct OwningAssets {
     pub assets: Vec<AssetWithWeight>,
+    /// Unused on lean `trading_positions` (digs go via `trading_analysis`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub analysis: Vec<SymbolAnalysis>,
 }
 
 impl OwningAssets {
@@ -125,7 +131,10 @@ impl OwningAssets {
             })
             .collect();
 
-        Self { assets }
+        Self {
+            assets,
+            analysis: Vec::new(),
+        }
     }
 }
 
@@ -137,6 +146,25 @@ fn same_order_of_magnitude(a: f64, b: f64) -> bool {
     (0.1..=10.0).contains(&ratio)
 }
 
+/// Relative price agreement used before attaching Yahoo technicals to a broker mark.
+fn prices_agree(yahoo: f64, mark: f64, max_rel_diff: f64) -> bool {
+    if !same_order_of_magnitude(yahoo, mark) {
+        return false;
+    }
+    let denom = mark.abs().max(f64::EPSILON);
+    ((yahoo - mark).abs() / denom) <= max_rel_diff
+}
+
+/// Match broker symbols that differ by trailing `.` or `/USD_LEVERAGE`.
+fn symbols_match(requested: &str, holding: &str) -> bool {
+    if requested.eq_ignore_ascii_case(holding) {
+        return true;
+    }
+    let req = lookup_symbol(requested);
+    let hold = lookup_symbol(holding);
+    req.eq_ignore_ascii_case(&hold)
+}
+
 fn should_attach_targets(class: AssetClass, requested: bool) -> bool {
     requested && class == AssetClass::Equity
 }
@@ -146,9 +174,8 @@ fn filter_symbols(
     symbols: Option<&[String]>,
 ) -> Vec<Asset> {
     if let Some(symbols) = symbols {
-        holdings.retain(|a| {
-            symbols.iter().any(|s| s.eq_ignore_ascii_case(&a.symbol))
-        });
+        holdings
+            .retain(|a| symbols.iter().any(|s| symbols_match(s, &a.symbol)));
     }
     holdings
 }
@@ -187,22 +214,30 @@ async fn load_holdings_and_nav(
     Ok((holdings.assets, nav_from_wallet(cash, reserved)))
 }
 
-/// Dzengi book only (derived weights, lots). No research extras.
+/// Dzengi book only (derived weights, optional lots). No research extras.
+///
+/// When `include_trades` is false (default for MCP), lot arrays are cleared so
+/// the payload stays lean. Cost basis / marks are still computed from lots.
 pub async fn fetch_owning_assets(
     api: &RestClient,
     symbols: Option<&[String]>,
+    include_trades: bool,
 ) -> anyhow::Result<OwningAssets> {
     let (holdings, nav) = load_holdings_and_nav(api).await?;
-    Ok(OwningAssets::from_holdings(
-        filter_symbols(holdings, symbols),
-        nav,
-    ))
+    let mut holdings = filter_symbols(holdings, symbols);
+    if !include_trades {
+        for asset in &mut holdings {
+            asset.trades.clear();
+        }
+    }
+    Ok(OwningAssets::from_holdings(holdings, nav))
 }
 
 /// News / targets / earnings / indicators for named symbols. Not a position book.
 ///
 /// `symbols` must be non-empty. Empty `include` means all four blocks.
-/// Per-symbol enrichment errors are soft-failed (warn + skip field).
+/// Mapping / history / wrong-instrument failures set per-symbol `error`
+/// (never silently omit or attach the wrong instrument's TA).
 pub async fn fetch_asset_analysis<T, E, N>(
     api: &RestClient,
     services: &AnalysisServices<T, E, N>,
@@ -223,11 +258,13 @@ where
     let want_earnings = wants_block(include, AnalysisInclude::Earnings);
     let want_news = wants_block(include, AnalysisInclude::News);
 
+    // CFD vs Yahoo cash index / futures can diverge a few percent; reject beyond this.
+    const MAX_MARK_REL_DIFF: f64 = 0.10;
+
     let mut rows = Vec::with_capacity(symbols.len());
     for symbol in symbols {
-        let holding = holdings
-            .iter()
-            .find(|a| a.symbol.eq_ignore_ascii_case(symbol));
+        let holding =
+            holdings.iter().find(|a| symbols_match(symbol, &a.symbol));
         let class = holding
             .map(|h| h.asset_class)
             .unwrap_or_else(|| asset_class_fallback(symbol));
@@ -239,6 +276,7 @@ where
             symbol: holding
                 .map(|h| h.symbol.clone())
                 .unwrap_or_else(|| symbol.clone()),
+            error: None,
             indicators: None,
             targets: None,
             earnings: None,
@@ -248,28 +286,45 @@ where
         if want_indicators {
             match snapshot_from_yahoo(&key, &services.technicals_config).await {
                 Some(mut snap) => {
-                    let keep = match mark {
-                        Some(px) if same_order_of_magnitude(snap.price, px) => {
+                    match mark {
+                        Some(px)
+                            if prices_agree(
+                                snap.price,
+                                px,
+                                MAX_MARK_REL_DIFF,
+                            ) =>
+                        {
                             snap.price = px;
-                            true
+                            row.indicators = Some(snap);
                         }
                         Some(px) => {
                             tracing::warn!(
                                 symbol = %row.symbol,
                                 yahoo = snap.price,
                                 mark = px,
-                                "dropping indicators: Yahoo price is a different instrument"
+                                yahoo_key = %key,
+                                "rejecting indicators: Yahoo price disagrees with broker mark"
                             );
-                            false
+                            row.error = Some(format!(
+                                "yahoo map/history for {key}: price {:.6} disagrees with broker mark {:.6} (wrong instrument or stale map)",
+                                snap.price, px
+                            ));
                         }
-                        None => true,
-                    };
-                    if keep {
-                        row.indicators = Some(snap);
+                        None => {
+                            // No book mark to validate against — still return Yahoo TA.
+                            row.indicators = Some(snap);
+                        }
                     }
                 }
                 None => {
-                    tracing::debug!("no technicals for {key}");
+                    tracing::warn!(
+                        symbol = %row.symbol,
+                        yahoo_key = %key,
+                        "no Yahoo history for technicals"
+                    );
+                    row.error = Some(format!(
+                        "yahoo history unavailable for mapped symbol {key}"
+                    ));
                 }
             }
         }
@@ -420,6 +475,7 @@ mod tests {
     fn given_analysis_row_when_serialized_then_has_no_book_fields() {
         let row = SymbolAnalysis {
             symbol: "TSLA".into(),
+            error: None,
             indicators: None,
             targets: None,
             earnings: None,
@@ -486,5 +542,50 @@ mod tests {
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].symbol, "TSLA");
         assert_eq!(out[0].trades.len(), 1);
+    }
+
+    #[test]
+    fn given_leverage_alias_when_symbols_match_then_ton_matches_holding() {
+        assert!(symbols_match("TON", "TON/USD_LEVERAGE"));
+        assert!(symbols_match("TON/USD_LEVERAGE", "TON"));
+        assert!(!symbols_match("TON", "TSLA"));
+    }
+
+    #[test]
+    fn given_wrong_instrument_prices_when_prices_agree_then_rejects() {
+        // Barrick-like ~43 vs gold ~4278
+        assert!(!prices_agree(43.16, 4278.56, 0.05));
+        // Wrong Yahoo TON token ~0.005 vs broker Toncoin ~1.4
+        assert!(!prices_agree(0.005, 1.42, 0.05));
+        // Close CFD vs Yahoo index
+        assert!(prices_agree(7568.1, 7631.47, 0.05));
+        assert!(prices_agree(1.40, 1.42, 0.05));
+    }
+
+    #[test]
+    fn given_cleared_trades_when_serialized_then_lots_omitted() {
+        let mut asset = sample_asset(1.0, 80.0, 0.0, 80.0);
+        asset.trades.clear();
+        let owning = OwningAssets::from_holdings(vec![asset], Some(100.0));
+        let v = serde_json::to_value(&owning).unwrap();
+        assert!(v["assets"][0].get("trades").is_none());
+    }
+
+    #[test]
+    fn given_analysis_error_when_serialized_then_error_field_present() {
+        let row = SymbolAnalysis {
+            symbol: "TON/USD_LEVERAGE".into(),
+            error: Some(
+                "yahoo map/history for TON-USD: price 0.005000 disagrees with broker mark 1.420000 (wrong instrument or stale map)"
+                    .into(),
+            ),
+            indicators: None,
+            targets: None,
+            earnings: None,
+            news: Vec::new(),
+        };
+        let v = serde_json::to_value(&row).unwrap();
+        assert!(v.get("error").is_some());
+        assert!(v.get("indicators").is_none());
     }
 }

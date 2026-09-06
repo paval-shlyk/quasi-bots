@@ -315,7 +315,7 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
-            let v = finance::fetch_owning_assets(&rc, None).await?;
+            let v = finance::fetch_owning_assets(&rc, None, false).await?;
 
             println!("{}", serde_json::to_string_pretty(&v)?);
         }

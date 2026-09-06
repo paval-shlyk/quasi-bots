@@ -27,23 +27,52 @@ pub enum AssetClass {
     Other,
 }
 
+/// Wallet + book snapshot for MCP `trading_portfolio`.
+///
+/// Cash fields come from the Dzengi USD balance row. Position notionals and
+/// per-lot broker margin come from `/tradingPositions` and are **not** folded
+/// into `nav`. Prefer `reserved_cash` for total locked wallet cash; do **not**
+/// treat `margin_used` as total locked margin (it can be much smaller).
+///
+/// Legacy `current_volume` was removed on purpose (use `cash` / `reserved_cash`
+/// / `nav` / `historical_volume` instead).
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
     pub snapshot_at: DateTime<Utc>,
     pub currency: String,
+    /// USD wallet `free` (available). `None` if no USD balance row.
     pub cash: Option<f64>,
+    /// USD wallet `locked` (broker-reserved cash). With `cash`, this is the
+    /// Equity side of the wallet: `nav = cash + reserved_cash`. Independent of
+    /// `margin_used` and of CFD notionals in `positions_value`.
     pub reserved_cash: Option<f64>,
+    /// Σ open holding `market_value` (spot marks + leverage `cost` marks).
+    /// CFD notionals can dwarf `nav`; not added into `nav`.
     pub positions_value: f64,
+    /// Wallet Equity: `cash + reserved_cash` when both known. Never
+    /// `cash + positions_value`.
     pub nav: Option<f64>,
+    /// Σ open holding unrealized P/L.
     pub unrealized_pnl: f64,
+    /// Always `null` today (P1): not yet wired from ledger / closed-position
+    /// history. Do not infer realized P/L from other fields.
     pub realized_pnl: Option<f64>,
+    /// Same as `cash` (USD free). Not a margin-adjusted figure.
     pub buying_power: Option<f64>,
+    /// Σ Dzengi `TradingPosition.margin` for **all** open long lots, scaled by
+    /// remaining qty (`(open-close)/open`). Aggregated across every leveraged
+    /// product — not a single-name copy. Distinct from `reserved_cash` (wallet
+    /// `locked`); live books often show `margin_used` << `reserved_cash`. Use
+    /// `reserved_cash` for total locked cash; use this only as the sum of
+    /// broker per-position margin fields. Shorts are skipped.
     pub margin_used: Option<f64>,
 
     pub can_trade: bool,
     pub can_withdraw: bool,
     pub can_deposit: bool,
 
+    /// Lifetime deposit volume from ledger (USD-normalized), not live book size.
+    /// Replaces legacy `current_volume` for funding history.
     pub historical_volume: f64,
     pub total_fee_spending: f64,
     pub total_withdrawal: f64,
@@ -65,6 +94,9 @@ pub struct Asset {
     pub name: Option<String>,
     pub symbol: String,
     pub asset_class: AssetClass,
+    /// True when `/exchangeInfo` marks the name as leveraged/CFD (not spot).
+    /// Portfolio `margin_used` is the Σ of broker per-lot `margin` for open
+    /// longs; individual lot margin is not exposed on this asset row.
     pub leverage: bool,
 
     pub amount: f64,
@@ -95,6 +127,7 @@ pub struct DzengiSnapshot {
 
 pub struct Holdings {
     pub assets: Vec<Asset>,
+    /// Σ scaled open-long `TradingPosition.margin`; see [`Portfolio::margin_used`].
     pub margin_used: f64,
 }
 
@@ -597,6 +630,8 @@ fn build_leverage_assets(
         let remaining_frac = remaining_qty / position.open_qty;
         let remaining_market_value = position.cost * remaining_frac;
         let remaining_pl = position.profit_loss * remaining_frac;
+        // Aggregate broker per-lot margin across every open long product.
+        // Not wallet `reserved_cash` (USD locked); may be much smaller.
         margin_used += position.margin * remaining_frac;
 
         assets_by_symbol
@@ -1231,6 +1266,49 @@ mod tests {
     }
 
     #[test]
+    fn given_multiple_open_lots_when_build_leverage_assets_then_margin_sums_all_products()
+     {
+        // Arrange: margins on three products; one lot half-closed (frac 0.5)
+        let mut tsm = leverage_position(
+            "tsm",
+            "TSM/USD_LEVERAGE",
+            1.0,
+            0.0,
+            100.0,
+            0.0,
+            110.0,
+            10.0,
+        );
+        tsm.margin = 10.0;
+        let mut aapl = leverage_position(
+            "aapl",
+            "AAPL/USD_LEVERAGE",
+            2.0,
+            0.0,
+            50.0,
+            0.0,
+            200.0,
+            5.0,
+        );
+        aapl.margin = 20.0;
+        let mut us500 = leverage_position(
+            "us500", "US500", 2.0, 1.0, 4000.0, 0.0, 8000.0, 100.0,
+        );
+        us500.margin = 30.0; // remaining_frac = 0.5 → contributes 15
+
+        // Act
+        let (assets, margin) = build_leverage_assets(
+            vec![tsm, aapl, us500],
+            &HashMap::new(),
+            &exchange_info(vec![]),
+        );
+
+        // Assert: 10 + 20 + 15 = 45 — full cross-product aggregation, not one name
+        assert_eq!(assets.len(), 3);
+        assert!((margin - 45.0).abs() < QTY_EPS);
+    }
+
+    #[test]
     fn given_portfolio_when_serialized_then_has_snapshot_and_no_legacy_volume()
     {
         let p = Portfolio {
@@ -1255,6 +1333,12 @@ mod tests {
         assert!(v.get("snapshot_at").is_some());
         assert!(v.get("cash").is_some());
         assert!(v.get("nav").is_some());
+        assert!(v.get("reserved_cash").is_some());
+        assert!(v.get("margin_used").is_some());
+        // realized_pnl present but null until ledger wiring (P1)
+        assert!(v.get("realized_pnl").is_some());
+        assert!(v.get("realized_pnl").unwrap().is_null());
+        // current_volume intentionally dropped in trading snapshot (#5 / #8)
         assert!(v.get("current_volume").is_none());
         assert!(v.get("as_of").is_none());
     }

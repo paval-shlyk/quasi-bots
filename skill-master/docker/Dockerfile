@@ -24,7 +24,8 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 
 ARG GIT_COMMIT
-RUN GIT_COMMIT=$GIT_COMMIT cargo build --release --bin skill-master && \
+ARG IMAGE_TAG
+RUN GIT_COMMIT=$GIT_COMMIT IMAGE_TAG=$IMAGE_TAG cargo build --release --bin skill-master && \
     strip target/release/skill-master
 
 FROM debian:trixie-slim AS runtime

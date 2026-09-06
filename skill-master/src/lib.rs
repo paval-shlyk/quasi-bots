@@ -3,6 +3,7 @@ pub mod quotes;
 pub mod routes;
 pub mod search;
 pub mod tools;
+pub mod version;
 
 mod state;
 

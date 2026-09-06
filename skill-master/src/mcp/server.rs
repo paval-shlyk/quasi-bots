@@ -40,7 +40,7 @@ impl ServerHandler for SkillMasterMcpServer {
         )
         .with_server_info(Implementation::new(
             MCP_SERVER_NAME,
-            env!("CARGO_PKG_VERSION"),
+            crate::version::mcp_server_version(),
         ))
         .with_protocol_version(ProtocolVersion::V_2025_11_25)
         .with_instructions(

@@ -1,6 +1,6 @@
 use crate::AppState;
 use axum::extract::State;
-use axum::{Router, http::StatusCode, response::IntoResponse, routing::get};
+use axum::{Json, Router, response::IntoResponse, routing::get};
 use tokio_util::sync::CancellationToken;
 
 pub async fn create_routes(
@@ -30,7 +30,7 @@ pub async fn create_routes(
 }
 
 async fn health_check() -> impl IntoResponse {
-    (StatusCode::OK, "OK")
+    Json(crate::version::health_info())
 }
 
 async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {

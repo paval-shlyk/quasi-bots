@@ -29,7 +29,7 @@ fix:
 build-docker:
     #!/bin/bash
     GIT_COMMIT=$(git rev-parse HEAD)
-    docker buildx build --build-arg GIT_COMMIT=$GIT_COMMIT -t paval-shlyk/quasi-bots/skill-master:latest -f skill-master/docker/Dockerfile .
+    docker buildx build --build-arg GIT_COMMIT=$GIT_COMMIT --build-arg IMAGE_TAG=local -t paval-shlyk/quasi-bots/skill-master:latest -f skill-master/docker/Dockerfile .
 
 run-docker: build-docker
     docker run -it --rm --name skill-master-run \

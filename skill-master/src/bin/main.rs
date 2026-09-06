@@ -67,14 +67,11 @@ pub async fn main() {
 
     let state = skill_master::app_state(config.clone()).await;
 
-    let version = env!("CARGO_PKG_VERSION");
-    let git_commit = option_env!("GIT_COMMIT").unwrap_or("unknown");
-
     tracing::info!(
         "App state initialized in {:.2?} ms. Version: {}, Commit: {}",
         start.elapsed().as_millis(),
-        version,
-        git_commit
+        skill_master::version::mcp_server_version(),
+        skill_master::version::GIT_SHA
     );
 
     let token = CancellationToken::new();

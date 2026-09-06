@@ -1,7 +1,16 @@
-set -exuo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 export SQLX_OFFLINE=true
 
-cargo check --all
+# Match CI (`just gitleaks` / lint). Install: https://github.com/gitleaks/gitleaks#installing
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "gitleaks not found on PATH; install it so local commits match CI:"
+  echo "  https://github.com/gitleaks/gitleaks#installing"
+  exit 1
+fi
+gitleaks protect --staged --redact --config .gitleaks.toml
 
+set -x
+cargo check --all
 cargo clippy --all --all-targets --all-features -- -D warnings

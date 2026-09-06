@@ -2,6 +2,8 @@ lint:
     #!/bin/bash
     export SQLX_OFFLINE=true
 
+    just gitleaks
+
     cargo fmt --all --check
     if [ $? -ne 0 ]; then
         echo "Code is not formatted. Please run 'just fix' to format the code."
@@ -75,3 +77,19 @@ reset-db:
     sqlx migrate run --source=./skill-master/migrations
 
     cargo sqlx prepare --workspace -- --all-features --all-targets --all
+
+# Secret scan (same rules as pre-commit / intended CI). Installs gitleaks if missing.
+gitleaks:
+    #!/bin/bash
+    set -euo pipefail
+    if ! command -v gitleaks >/dev/null 2>&1; then
+      echo "Installing gitleaks..."
+      curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz" \
+        | sudo tar -xz -C /usr/local/bin gitleaks
+    fi
+    gitleaks detect --no-banner --config .gitleaks.toml
+
+# Point git at the repo's custom hooks (pre-commit runs gitleaks + cargo check/clippy).
+install-hooks:
+    git config core.hooksPath .git-hooks
+    @echo "core.hooksPath set to .git-hooks"

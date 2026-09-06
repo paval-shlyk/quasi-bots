@@ -17,8 +17,8 @@ use crate::indicators::{
     AnalysisConfig, TechnicalIndicators, snapshot_from_yahoo,
 };
 use crate::investment::{
-    Asset, AssetClass, RestClient, assemble_holdings, load_dzengi_snapshot,
-    lookup_symbol, nav_from_wallet, usd_wallet,
+    Asset, AssetClass, RestClient, assemble_holdings, asset_class_fallback,
+    load_dzengi_snapshot, lookup_symbol, nav_from_wallet, usd_wallet,
 };
 
 #[derive(
@@ -33,49 +33,48 @@ use crate::investment::{
     schemars::JsonSchema,
 )]
 #[serde(rename_all = "snake_case")]
-pub enum PositionInclude {
-    Trades,
+pub enum AnalysisInclude {
     Indicators,
     Earnings,
     Targets,
     News,
 }
 
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    serde::Serialize,
-    serde::Deserialize,
-    schemars::JsonSchema,
-)]
-pub struct PositionQuery {
-    #[serde(default)]
-    pub include: Vec<PositionInclude>,
-    #[serde(default)]
-    pub symbols: Option<Vec<String>>,
-}
-
-impl PositionQuery {
-    pub fn wants(&self, block: PositionInclude) -> bool {
-        self.include.contains(&block)
+impl AnalysisInclude {
+    pub fn all() -> Vec<Self> {
+        vec![Self::News, Self::Targets, Self::Earnings, Self::Indicators]
     }
 }
 
-/// Holding plus optional market/context analysis.
-///
-/// Mark/PnL metrics live on [`Asset`]; this wrapper only adds portfolio weight
-/// and external enrichment. Construct via [`OwningAssets::from_holdings`].
+fn wants_block(include: &[AnalysisInclude], block: AnalysisInclude) -> bool {
+    include.is_empty() || include.contains(&block)
+}
+
+fn require_symbols(symbols: &[String]) -> anyhow::Result<()> {
+    if symbols.is_empty() {
+        anyhow::bail!("trading_analysis requires at least one symbol");
+    }
+    Ok(())
+}
+
+/// Holding plus portfolio weight. Construct via [`OwningAssets::from_holdings`].
 #[derive(
     Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
 )]
-pub struct AssetWithAnalysis {
+pub struct AssetWithWeight {
     #[serde(flatten)]
     pub asset: Asset,
 
     /// Percent of NAV including cash (`market_value / nav × 100`).
     pub weight_percentage: f64,
+}
 
+/// Research extras for one symbol. Not a position.
+#[derive(
+    Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
+pub struct SymbolAnalysis {
+    pub symbol: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub indicators: Option<TechnicalIndicators>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,9 +88,15 @@ pub struct AssetWithAnalysis {
 #[derive(
     Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
 )]
+pub struct AssetAnalysis {
+    pub symbols: Vec<SymbolAnalysis>,
+}
+
+#[derive(
+    Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
+)]
 pub struct OwningAssets {
-    pub assets: Vec<AssetWithAnalysis>,
-    //todo: add total cost
+    pub assets: Vec<AssetWithWeight>,
 }
 
 impl OwningAssets {
@@ -113,13 +118,9 @@ impl OwningAssets {
                 } else {
                     0.0
                 };
-                AssetWithAnalysis {
+                AssetWithWeight {
                     asset,
                     weight_percentage,
-                    indicators: None,
-                    targets: None,
-                    earnings: None,
-                    news: Vec::new(),
                 }
             })
             .collect();
@@ -140,16 +141,14 @@ fn should_attach_targets(class: AssetClass, requested: bool) -> bool {
     requested && class == AssetClass::Equity
 }
 
-fn apply_query(mut holdings: Vec<Asset>, query: &PositionQuery) -> Vec<Asset> {
-    if let Some(symbols) = &query.symbols {
+fn filter_symbols(
+    mut holdings: Vec<Asset>,
+    symbols: Option<&[String]>,
+) -> Vec<Asset> {
+    if let Some(symbols) = symbols {
         holdings.retain(|a| {
             symbols.iter().any(|s| s.eq_ignore_ascii_case(&a.symbol))
         });
-    }
-    if !query.wants(PositionInclude::Trades) {
-        for a in &mut holdings {
-            a.trades.clear();
-        }
     }
     holdings
 }
@@ -188,67 +187,85 @@ async fn load_holdings_and_nav(
     Ok((holdings.assets, nav_from_wallet(cash, reserved)))
 }
 
-/// Holdings only; analysis fields empty except portfolio weights.
+/// Dzengi book only (derived weights, lots). No research extras.
 pub async fn fetch_owning_assets(
     api: &RestClient,
-    query: &PositionQuery,
+    symbols: Option<&[String]>,
 ) -> anyhow::Result<OwningAssets> {
     let (holdings, nav) = load_holdings_and_nav(api).await?;
     Ok(OwningAssets::from_holdings(
-        apply_query(holdings, query),
+        filter_symbols(holdings, symbols),
         nav,
     ))
 }
 
-/// Holdings + technicals / targets / earnings / news.
+/// News / targets / earnings / indicators for named symbols. Not a position book.
 ///
-/// Missing providers leave fields empty. Per-symbol enrichment errors are
-/// soft-failed (warn + skip field) so one unknown ticker (e.g. index CFD
-/// `US500`) does not abort the whole portfolio. Blocks are fetched only when
-/// `query.include` asks for them.
-pub async fn fetch_owning_assets_with_analysis<T, E, N>(
+/// `symbols` must be non-empty. Empty `include` means all four blocks.
+/// Per-symbol enrichment errors are soft-failed (warn + skip field).
+pub async fn fetch_asset_analysis<T, E, N>(
     api: &RestClient,
     services: &AnalysisServices<T, E, N>,
-    query: &PositionQuery,
-) -> anyhow::Result<OwningAssets>
+    symbols: &[String],
+    include: &[AnalysisInclude],
+) -> anyhow::Result<AssetAnalysis>
 where
     T: PriceTargetProvider,
     E: EarningsCalendarProvider,
     N: NewsProvider,
 {
-    let (holdings, nav) = load_holdings_and_nav(api).await?;
-    let mut owning =
-        OwningAssets::from_holdings(apply_query(holdings, query), nav);
+    require_symbols(symbols)?;
 
-    let want_indicators =
-        query.wants(PositionInclude::Indicators) && services.technicals;
-    let want_targets = query.wants(PositionInclude::Targets);
-    let want_earnings = query.wants(PositionInclude::Earnings);
-    let want_news = query.wants(PositionInclude::News);
+    let (holdings, _) = load_holdings_and_nav(api).await?;
+    let want_indicators = wants_block(include, AnalysisInclude::Indicators)
+        && services.technicals;
+    let want_targets = wants_block(include, AnalysisInclude::Targets);
+    let want_earnings = wants_block(include, AnalysisInclude::Earnings);
+    let want_news = wants_block(include, AnalysisInclude::News);
 
-    if !want_indicators && !want_targets && !want_earnings && !want_news {
-        return Ok(owning);
-    }
+    let mut rows = Vec::with_capacity(symbols.len());
+    for symbol in symbols {
+        let holding = holdings
+            .iter()
+            .find(|a| a.symbol.eq_ignore_ascii_case(symbol));
+        let class = holding
+            .map(|h| h.asset_class)
+            .unwrap_or_else(|| asset_class_fallback(symbol));
+        let name = holding.and_then(|h| h.name.as_deref());
+        let mark = holding.map(|h| h.unit_market_price);
+        let key = lookup_symbol(symbol);
 
-    for row in &mut owning.assets {
-        let key = lookup_symbol(&row.asset.symbol);
+        let mut row = SymbolAnalysis {
+            symbol: holding
+                .map(|h| h.symbol.clone())
+                .unwrap_or_else(|| symbol.clone()),
+            indicators: None,
+            targets: None,
+            earnings: None,
+            news: Vec::new(),
+        };
 
         if want_indicators {
             match snapshot_from_yahoo(&key, &services.technicals_config).await {
                 Some(mut snap) => {
-                    if same_order_of_magnitude(
-                        snap.price,
-                        row.asset.unit_market_price,
-                    ) {
-                        snap.price = row.asset.unit_market_price;
+                    let keep = match mark {
+                        Some(px) if same_order_of_magnitude(snap.price, px) => {
+                            snap.price = px;
+                            true
+                        }
+                        Some(px) => {
+                            tracing::warn!(
+                                symbol = %row.symbol,
+                                yahoo = snap.price,
+                                mark = px,
+                                "dropping indicators: Yahoo price is a different instrument"
+                            );
+                            false
+                        }
+                        None => true,
+                    };
+                    if keep {
                         row.indicators = Some(snap);
-                    } else {
-                        tracing::warn!(
-                            symbol = %row.asset.symbol,
-                            yahoo = snap.price,
-                            mark = row.asset.unit_market_price,
-                            "dropping indicators: Yahoo price is a different instrument"
-                        );
                     }
                 }
                 None => {
@@ -257,13 +274,12 @@ where
             }
         }
 
-        if should_attach_targets(row.asset.asset_class, want_targets)
+        if should_attach_targets(class, want_targets)
             && let Some(provider) = &services.targets
         {
             match provider.targets(&key).await {
                 Ok(mut pt) => {
-                    let px = row.asset.unit_market_price;
-                    if let Some(mean) = pt.mean
+                    if let (Some(mean), Some(px)) = (pt.mean, mark)
                         && px.abs() > f64::EPSILON
                     {
                         pt.upside_pct = Some((mean - px) / px * 100.0);
@@ -284,17 +300,16 @@ where
         }
 
         if want_news && let Some(provider) = &services.news {
-            match provider
-                .recent(&row.asset.symbol, row.asset.name.as_deref())
-                .await
-            {
+            match provider.recent(symbol, name).await {
                 Ok(items) => row.news = items.into_iter().take(3).collect(),
                 Err(e) => tracing::warn!("news for {key}: {e}"),
             }
         }
+
+        rows.push(row);
     }
 
-    Ok(owning)
+    Ok(AssetAnalysis { symbols: rows })
 }
 
 #[cfg(test)]
@@ -384,24 +399,64 @@ mod tests {
     }
 
     #[test]
-    fn given_default_include_when_serialized_then_is_flat_and_lean() {
+    fn given_book_when_serialized_then_is_flat_with_lots_and_no_research() {
         let holdings = vec![sample_asset(1.0, 80.0, 0.0, 80.0)];
-        let owning = OwningAssets::from_holdings(
-            apply_query(holdings, &PositionQuery::default()),
-            Some(100.0),
-        );
+        let owning = OwningAssets::from_holdings(holdings, Some(100.0));
         let v = serde_json::to_value(&owning).unwrap();
         let asset = &v["assets"][0];
         assert!(asset.get("symbol").is_some());
         assert!(asset.get("asset").is_none());
         assert!(asset.get("market_value").is_some());
+        assert!(asset.get("weight_percentage").is_some());
+        assert!(asset.get("trades").is_some());
         assert!(asset.get("cost").is_none());
-        assert!(asset.get("profit_loss").is_none());
-        assert!(asset.get("trades").is_none());
         assert!(asset.get("news").is_none());
         assert!(asset.get("indicators").is_none());
         assert!(asset.get("targets").is_none());
         assert!(asset.get("earnings").is_none());
+    }
+
+    #[test]
+    fn given_analysis_row_when_serialized_then_has_no_book_fields() {
+        let row = SymbolAnalysis {
+            symbol: "TSLA".into(),
+            indicators: None,
+            targets: None,
+            earnings: None,
+            news: vec![AssetNewsItem {
+                title: "Tesla headline".into(),
+                published_at: None,
+                url: Some("https://example.com".into()),
+                summary: None,
+                source: Some("markets".into()),
+            }],
+        };
+        let v = serde_json::to_value(&AssetAnalysis { symbols: vec![row] })
+            .unwrap();
+        let s = &v["symbols"][0];
+        assert_eq!(s["symbol"], "TSLA");
+        assert!(s.get("news").is_some());
+        assert!(s.get("amount").is_none());
+        assert!(s.get("market_value").is_none());
+        assert!(s.get("weight_percentage").is_none());
+        assert!(s.get("indicators").is_none());
+        assert!(s["news"][0].get("summary").is_none());
+    }
+
+    #[test]
+    fn given_empty_symbols_when_require_symbols_then_errors() {
+        let err = require_symbols(&[]).unwrap_err();
+        assert!(err.to_string().contains("at least one symbol"));
+    }
+
+    #[test]
+    fn given_empty_symbols_when_wants_block_then_all_blocks_are_on() {
+        assert!(wants_block(&[], AnalysisInclude::News));
+        assert!(wants_block(&[AnalysisInclude::News], AnalysisInclude::News));
+        assert!(!wants_block(
+            &[AnalysisInclude::News],
+            AnalysisInclude::Targets
+        ));
     }
 
     #[test]
@@ -420,20 +475,16 @@ mod tests {
     }
 
     #[test]
-    fn given_symbols_filter_when_apply_query_then_keeps_matching_and_strips_trades()
-     {
+    fn given_symbols_filter_when_filter_symbols_then_keeps_matching_lots() {
         let mut tsla = sample_asset(1.0, 80.0, 0.0, 80.0);
         tsla.symbol = "TSLA".into();
         let mut gold = sample_asset(1.0, 20.0, 0.0, 20.0);
         gold.symbol = "Gold".into();
         gold.asset_class = AssetClass::Commodity;
-        let query = PositionQuery {
-            include: vec![],
-            symbols: Some(vec!["TSLA".into()]),
-        };
-        let out = apply_query(vec![tsla, gold], &query);
+        let symbols = ["TSLA".to_string()];
+        let out = filter_symbols(vec![tsla, gold], Some(&symbols));
         assert_eq!(out.len(), 1);
         assert_eq!(out[0].symbol, "TSLA");
-        assert!(out[0].trades.is_empty());
+        assert_eq!(out[0].trades.len(), 1);
     }
 }

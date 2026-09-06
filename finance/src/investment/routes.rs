@@ -80,7 +80,6 @@ pub struct Asset {
     pub unrealized_pnl_pct: f64,
     pub currency: String,
 
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub trades: Vec<AssetEntryTrade>,
 }
 

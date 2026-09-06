@@ -1,5 +1,5 @@
 use finance::{
-    AnalysisServices, PositionInclude, PositionQuery,
+    AnalysisInclude, AnalysisServices,
     analysis::{
         AssetNewsItem, FinnhubProvider, NewsProvider, YahooPriceTargetProvider,
     },
@@ -16,13 +16,19 @@ use crate::mcp::server::SkillMasterMcpServer;
 
 #[derive(Debug, Default, Deserialize, JsonSchema)]
 struct TradingPositionsArgs {
-    /// Extra blocks to attach. Allowed: trades, indicators, earnings, targets, news.
-    /// Default is lean holdings only.
-    #[serde(default)]
-    include: Vec<PositionInclude>,
     /// Optional symbol filter; omit = all open names.
     #[serde(default)]
     symbols: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingAnalysisArgs {
+    /// Symbols to research. Required; at least one.
+    symbols: Vec<String>,
+    /// Blocks to attach. Allowed: news, targets, earnings, indicators.
+    /// Empty / omitted means all four.
+    #[serde(default)]
+    include: Vec<AnalysisInclude>,
 }
 
 struct NewsBankProvider {
@@ -73,29 +79,42 @@ impl SkillMasterMcpServer {
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "Fetch opened trading positions")]
+    #[tool(
+        description = "Fetch opened trading positions (Dzengi book only: size, mark, P/L, lots)"
+    )]
     async fn trading_positions(
         &self,
         Parameters(args): Parameters<TradingPositionsArgs>,
     ) -> Result<Json<finance::OwningAssets>, String> {
-        let query = PositionQuery {
-            include: args.include,
-            symbols: args.symbols,
-        };
-        let want_news = query.wants(PositionInclude::News);
-        let want_targets = query.wants(PositionInclude::Targets);
-        let want_earnings = query.wants(PositionInclude::Earnings);
-        let want_indicators = query.wants(PositionInclude::Indicators);
+        finance::fetch_owning_assets(
+            self.state.finance_state.api(),
+            args.symbols.as_deref(),
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
+    }
 
-        if !want_news && !want_targets && !want_earnings && !want_indicators {
-            return finance::fetch_owning_assets(
-                self.state.finance_state.api(),
-                &query,
-            )
-            .await
-            .map(Json)
-            .map_err(|e| e.to_string());
+    #[tool(
+        description = "News, analyst targets, earnings, and technicals for named symbols"
+    )]
+    async fn trading_analysis(
+        &self,
+        Parameters(args): Parameters<TradingAnalysisArgs>,
+    ) -> Result<Json<finance::AssetAnalysis>, String> {
+        if args.symbols.is_empty() {
+            return Err("trading_analysis requires at least one symbol".into());
         }
+
+        let include = if args.include.is_empty() {
+            AnalysisInclude::all()
+        } else {
+            args.include
+        };
+        let want_news = include.contains(&AnalysisInclude::News);
+        let want_targets = include.contains(&AnalysisInclude::Targets);
+        let want_earnings = include.contains(&AnalysisInclude::Earnings);
+        let want_indicators = include.contains(&AnalysisInclude::Indicators);
 
         let services = AnalysisServices {
             news: want_news.then(|| NewsBankProvider {
@@ -112,10 +131,11 @@ impl SkillMasterMcpServer {
             technicals_config: AnalysisConfig::default(),
         };
 
-        finance::fetch_owning_assets_with_analysis(
+        finance::fetch_asset_analysis(
             self.state.finance_state.api(),
             &services,
-            &query,
+            &args.symbols,
+            &include,
         )
         .await
         .map(Json)

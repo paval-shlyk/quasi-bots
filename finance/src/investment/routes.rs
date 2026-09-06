@@ -1,20 +1,51 @@
 use std::collections::HashMap;
 
+use chrono::{DateTime, Utc};
+
 use crate::{
-    TradingPosition,
+    AccountInformation, Currency, TradingPosition,
     investment::{Balance, ExchangeInfo, RestClient, Trade},
 };
 
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum AssetClass {
+    Equity,
+    Index,
+    Commodity,
+    Crypto,
+    Fx,
+    Other,
+}
+
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
+    pub snapshot_at: DateTime<Utc>,
+    pub currency: String,
+    pub cash: Option<f64>,
+    pub reserved_cash: Option<f64>,
+    pub positions_value: f64,
+    pub nav: Option<f64>,
+    pub unrealized_pnl: f64,
+    pub realized_pnl: Option<f64>,
+    pub buying_power: Option<f64>,
+    pub margin_used: Option<f64>,
+
     pub can_trade: bool,
     pub can_withdraw: bool,
     pub can_deposit: bool,
 
-    pub current_volume: f64,
     pub historical_volume: f64,
     pub total_fee_spending: f64,
-
     pub total_withdrawal: f64,
 }
 
@@ -33,44 +64,93 @@ pub struct AssetEntryTrade {
 pub struct Asset {
     pub name: Option<String>,
     pub symbol: String,
+    pub asset_class: AssetClass,
+    pub leverage: bool,
 
-    // summary about position
     pub amount: f64,
-    /// Live market value of the holding (`unit_market_price * amount`).
-    pub cost: f64,
-    pub profit_loss: f64,
-    pub profit_lost_pct: f64,
-
     pub average_entry_price: f64,
+    /// Lot-reconstructed entry notional (`sum(entry_price * amount)`), not broker `cost`.
+    pub cost_basis: f64,
+    /// Broker mark. Same source as `market_value`.
     pub unit_market_price: f64,
-    pub distance_from_entry_price_pct: f64,
+    /// Live market value of the holding (`unit_market_price * amount`).
+    pub market_value: f64,
+    pub unrealized_pnl: f64,
+    /// Percent, not fraction.
+    pub unrealized_pnl_pct: f64,
+    pub currency: String,
 
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub trades: Vec<AssetEntryTrade>,
 }
 
-pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
+pub struct DzengiSnapshot {
+    pub snapshot_at: DateTime<Utc>,
+    pub account: AccountInformation,
+    pub positions: Vec<TradingPosition>,
+    pub currencies: Vec<Currency>,
+    pub exchange_info: ExchangeInfo,
+}
+
+pub struct Holdings {
+    pub assets: Vec<Asset>,
+    pub margin_used: f64,
+}
+
+pub async fn load_dzengi_snapshot(
+    api: &RestClient,
+) -> anyhow::Result<DzengiSnapshot> {
     let server_ts = api.time().await?;
+    let (account, positions, currencies, exchange_info) = tokio::try_join!(
+        api.account(server_ts),
+        api.trading_positions(server_ts),
+        api.currencies(server_ts),
+        api.exchange_info(server_ts),
+    )?;
 
-    let account = api.account(server_ts).await?;
+    Ok(DzengiSnapshot {
+        snapshot_at: Utc::now(),
+        account,
+        positions,
+        currencies,
+        exchange_info,
+    })
+}
 
-    let mut current_volume = 0.0;
-
-    for b in account.balances {
-        tracing::info!("Fetching information for {}", b.asset);
-
-        if b.asset == "USD" {
-            current_volume += b.free;
-            current_volume += b.locked; // locked balance is also part of the portfolio, as it
-            // represents an asset that we own, but is currently not
-            // available for trading (e.g. because it's used as
-            // collateral for a margin position, or because it's part
-            // of an open order). So we should include it in the
-            // current volume calculation.
-            continue;
-        }
-
-        current_volume += estimate_price_in_usd(api, &b.asset, b.free).await?;
+pub fn usd_wallet(account: &AccountInformation) -> (Option<f64>, Option<f64>) {
+    match account.balances.iter().find(|b| b.asset == "USD") {
+        Some(b) => (Some(b.free), Some(b.locked)),
+        None => (None, None),
     }
+}
+
+pub fn nav_from_wallet(
+    cash: Option<f64>,
+    reserved_cash: Option<f64>,
+) -> Option<f64> {
+    match (cash, reserved_cash) {
+        (Some(c), Some(r)) => Some(c + r),
+        _ => None,
+    }
+}
+
+pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
+    let snapshot = load_dzengi_snapshot(api).await?;
+    let holdings = assemble_holdings(api, &snapshot).await?;
+
+    let (cash, reserved_cash) = usd_wallet(&snapshot.account);
+    if let Some(c) = cash {
+        anyhow::ensure!(c >= 0.0, "cash is negative: {c}");
+    }
+    let nav = nav_from_wallet(cash, reserved_cash);
+    if let Some(n) = nav {
+        anyhow::ensure!(n >= 0.0, "nav is negative: {n}");
+    }
+
+    let positions_value: f64 =
+        holdings.assets.iter().map(|a| a.market_value).sum();
+    let unrealized_pnl: f64 =
+        holdings.assets.iter().map(|a| a.unrealized_pnl).sum();
 
     //not included fee for banks to deposit account
     let mut total_fee = 0.0;
@@ -111,16 +191,23 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
         }
     }
 
-    //exchange commission
     Ok(Portfolio {
-        current_volume,
+        snapshot_at: snapshot.snapshot_at,
+        currency: "USD".into(),
+        cash,
+        reserved_cash,
+        positions_value,
+        nav,
+        unrealized_pnl,
+        realized_pnl: None,
+        buying_power: cash,
+        margin_used: Some(holdings.margin_used),
         historical_volume,
         total_withdrawal,
         total_fee_spending: total_fee,
-
-        can_trade: account.can_trade,
-        can_withdraw: account.can_withdraw,
-        can_deposit: account.can_deposit,
+        can_trade: snapshot.account.can_trade,
+        can_withdraw: snapshot.account.can_withdraw,
+        can_deposit: snapshot.account.can_deposit,
     })
 }
 
@@ -286,8 +373,79 @@ pub fn lookup_symbol(symbol: &str) -> String {
         "DE40" | "DAX" | "GER40" => "^GDAXI".into(),
         "UK100" | "FTSE" | "UK100GBP" => "^FTSE".into(),
         "JP225" | "NI225" | "NIKKEI" => "^N225".into(),
+        "Gold" | "XAU" | "XAUm" | "XAUUSD" => "GC=F".into(),
+        "TON" => "TON-USD".into(),
         other => other.to_string(),
     }
+}
+
+pub fn asset_class_from_dzengi(asset_type: &str) -> Option<AssetClass> {
+    match asset_type.to_ascii_uppercase().as_str() {
+        "EQUITY" => Some(AssetClass::Equity),
+        "INDEX" => Some(AssetClass::Index),
+        "COMMODITY" => Some(AssetClass::Commodity),
+        "CRYPTOCURRENCY" | "ICO" | "OPT_TOKENS" | "UTILITY_TOKENS" => {
+            Some(AssetClass::Crypto)
+        }
+        "CURRENCY" => Some(AssetClass::Fx),
+        "BOND" | "CREDIT" | "INTEREST_RATE" | "REAL_ESTATE" | "OTHER_ASSET" => {
+            Some(AssetClass::Other)
+        }
+        _ => None,
+    }
+}
+
+pub fn asset_class_fallback(symbol: &str) -> AssetClass {
+    let s = normalize_symbol(symbol);
+    let s = s.strip_suffix("/USD_LEVERAGE").unwrap_or(&s);
+    match s {
+        "US500" | "SPX" | "SP500" | "SPX500" | "US100" | "NDX" | "NAS100"
+        | "USTEC" | "US30" | "DJIA" | "DOW" | "WALLSTREET30" | "DE40"
+        | "DAX" | "GER40" | "UK100" | "FTSE" | "UK100GBP" | "JP225"
+        | "NI225" | "NIKKEI" => AssetClass::Index,
+        "Gold" | "Silver" | "XAU" | "XAUm" | "XAG" | "XAGm" | "XTI" | "XBR"
+        | "XNG" => AssetClass::Commodity,
+        "TON" | "BTC" | "ETH" | "BCH" | "LTC" | "XRP" => AssetClass::Crypto,
+        "WMT" | "TSLA" | "IBM" | "GOOGL" | "SNE" | "SONY" | "TSM" => {
+            AssetClass::Equity
+        }
+        _ => AssetClass::Other,
+    }
+}
+
+fn find_symbol_info<'a>(
+    exchange_info: &'a ExchangeInfo,
+    symbol: &str,
+) -> Option<&'a crate::investment::SymbolInfo> {
+    let normalized = normalize_symbol(symbol);
+    exchange_info
+        .symbols
+        .iter()
+        .find(|s| s.symbol == symbol)
+        .or_else(|| {
+            exchange_info
+                .symbols
+                .iter()
+                .find(|s| s.symbol == normalized)
+        })
+}
+
+pub fn classify_asset(
+    symbol: &str,
+    exchange_info: &ExchangeInfo,
+) -> (AssetClass, bool) {
+    let info = find_symbol_info(exchange_info, symbol);
+    let leverage = info
+        .and_then(|s| s.market_type.as_deref())
+        .is_some_and(|t| t.eq_ignore_ascii_case("LEVERAGE"))
+        || symbol.contains("_LEVERAGE");
+
+    let class = info
+        .and_then(|s| s.asset_type.as_deref())
+        .and_then(asset_class_from_dzengi)
+        .unwrap_or_else(|| asset_class_fallback(symbol));
+
+    (class, leverage)
 }
 
 fn resolve_asset_name(
@@ -359,22 +517,28 @@ async fn spot_asset_from_balance(
         1.0 / ticker.bid_price
     };
 
-    let cost = amount * unit_market_price; // a live market value
-    let profit_loss = cost - entry_cost;
-    let profit_lost_pct = profit_loss / entry_cost * 100.0;
-    let distance_from_entry_price_pct =
-        (unit_market_price - average_entry_price) / average_entry_price * 100.0;
+    let market_value = amount * unit_market_price;
+    let unrealized_pnl = market_value - entry_cost;
+    let unrealized_pnl_pct = if entry_cost.abs() > f64::EPSILON {
+        unrealized_pnl / entry_cost * 100.0
+    } else {
+        0.0
+    };
+    let (asset_class, leverage) = classify_asset(&symbol, exchange_info);
 
     Ok(Some(Asset {
         name: resolve_asset_name(name_by_symbol, &symbol),
         symbol,
+        asset_class,
+        leverage,
         amount,
-        cost,
-        profit_loss,
-        profit_lost_pct,
         average_entry_price,
+        cost_basis: entry_cost,
         unit_market_price,
-        distance_from_entry_price_pct,
+        market_value,
+        unrealized_pnl,
+        unrealized_pnl_pct,
+        currency: "USD".into(),
         trades,
     }))
 }
@@ -382,8 +546,10 @@ async fn spot_asset_from_balance(
 fn build_leverage_assets(
     positions: Vec<TradingPosition>,
     name_by_symbol: &HashMap<String, String>,
-) -> Vec<Asset> {
+    exchange_info: &ExchangeInfo,
+) -> (Vec<Asset>, f64) {
     let mut assets_by_symbol = HashMap::<String, Asset>::new();
+    let mut margin_used = 0.0;
 
     for position in positions {
         // Live size is opened minus realized (e.g. opened 2, closed 1 → 1).
@@ -402,6 +568,12 @@ fn build_leverage_assets(
 
         let symbol = normalize_symbol(&position.symbol);
         let name = resolve_asset_name(name_by_symbol, &symbol);
+        let (asset_class, leverage) = classify_asset(&symbol, exchange_info);
+        let currency = if position.currency.is_empty() {
+            "USD".to_string()
+        } else {
+            position.currency.clone()
+        };
 
         if remaining_qty <= QTY_EPS {
             if position.open_qty.abs() <= QTY_EPS
@@ -419,14 +591,15 @@ fn build_leverage_assets(
         // Exchange cost/upl are for opened size; scale to leftover qty.
         // TODO: use closed positions for historical performance review
         let remaining_frac = remaining_qty / position.open_qty;
-        let remaining_cost = position.cost * remaining_frac;
+        let remaining_market_value = position.cost * remaining_frac;
         let remaining_pl = position.profit_loss * remaining_frac;
+        margin_used += position.margin * remaining_frac;
 
         assets_by_symbol
             .entry(symbol.clone())
             .and_modify(|a| {
-                a.profit_loss += remaining_pl;
-                a.cost += remaining_cost;
+                a.unrealized_pnl += remaining_pl;
+                a.market_value += remaining_market_value;
                 a.amount += remaining_qty;
 
                 a.trades.push(AssetEntryTrade {
@@ -437,14 +610,16 @@ fn build_leverage_assets(
             .or_insert(Asset {
                 symbol,
                 name,
+                asset_class,
+                leverage,
                 amount: remaining_qty,
-                cost: remaining_cost,
-                profit_loss: remaining_pl,
-                // Derived below after optional merge of same-symbol positions.
-                profit_lost_pct: 0.0,
                 average_entry_price: 0.0,
+                cost_basis: 0.0,
                 unit_market_price: 0.0,
-                distance_from_entry_price_pct: 0.0,
+                market_value: remaining_market_value,
+                unrealized_pnl: remaining_pl,
+                unrealized_pnl_pct: 0.0,
+                currency,
                 trades: vec![AssetEntryTrade {
                     amount: remaining_qty,
                     entry_price: position.open_price,
@@ -452,53 +627,50 @@ fn build_leverage_assets(
             });
     }
 
-    assets_by_symbol
+    let assets = assets_by_symbol
         .into_values()
         .map(|mut a| {
             assert!(!a.trades.is_empty());
 
-            // Entry notional from open lots; cost is live market value (exchange).
             let entry_cost: f64 =
                 a.trades.iter().map(|t| t.entry_price * t.amount).sum();
 
             assert!(a.amount.abs() > QTY_EPS);
 
+            a.cost_basis = entry_cost;
             a.average_entry_price = entry_cost / a.amount;
-            a.unit_market_price = a.cost / a.amount;
-            a.profit_lost_pct = a.profit_loss / entry_cost * 100.0;
-
-            a.distance_from_entry_price_pct = (a.unit_market_price
-                - a.average_entry_price)
-                / a.average_entry_price
-                * 100.0;
+            a.unit_market_price = a.market_value / a.amount;
+            a.unrealized_pnl_pct = if entry_cost.abs() > f64::EPSILON {
+                a.unrealized_pnl / entry_cost * 100.0
+            } else {
+                0.0
+            };
             a
         })
-        .collect::<Vec<_>>()
+        .collect::<Vec<_>>();
+
+    (assets, margin_used)
 }
 
-/// Spot balances + leverage positions as raw holdings (no external analysis).
-pub async fn fetch_holding_assets(
+pub async fn assemble_holdings(
     api_client: &RestClient,
-) -> anyhow::Result<Vec<Asset>> {
+    snapshot: &DzengiSnapshot,
+) -> anyhow::Result<Holdings> {
     let server_ts = api_client.time().await?;
 
-    let (account, positions, currencies, exchange_info) = tokio::try_join!(
-        api_client.account(server_ts),
-        api_client.trading_positions(server_ts),
-        api_client.currencies(server_ts),
-        api_client.exchange_info(server_ts),
-    )?;
-
-    let name_by_symbol: HashMap<String, String> =
-        currencies.into_iter().map(|c| (c.symbol, c.name)).collect();
+    let name_by_symbol: HashMap<String, String> = snapshot
+        .currencies
+        .iter()
+        .map(|c| (c.symbol.clone(), c.name.clone()))
+        .collect();
 
     let mut spot_assets = Vec::new();
 
-    for balance in &account.balances {
+    for balance in &snapshot.account.balances {
         let Some(asset) = spot_asset_from_balance(
             api_client,
             balance,
-            &exchange_info,
+            &snapshot.exchange_info,
             &name_by_symbol,
             server_ts,
         )
@@ -514,9 +686,24 @@ pub async fn fetch_holding_assets(
         spot_assets.push(asset);
     }
 
-    let leverage_assets = build_leverage_assets(positions, &name_by_symbol);
+    let (leverage_assets, margin_used) = build_leverage_assets(
+        snapshot.positions.clone(),
+        &name_by_symbol,
+        &snapshot.exchange_info,
+    );
 
-    Ok([spot_assets, leverage_assets].concat())
+    Ok(Holdings {
+        assets: [spot_assets, leverage_assets].concat(),
+        margin_used,
+    })
+}
+
+/// Spot balances + leverage positions as raw holdings (no external analysis).
+pub async fn fetch_holding_assets(
+    api_client: &RestClient,
+) -> anyhow::Result<Vec<Asset>> {
+    let snapshot = load_dzengi_snapshot(api_client).await?;
+    Ok(assemble_holdings(api_client, &snapshot).await?.assets)
 }
 
 pub fn new_pair(base: &str, quote: &str) -> String {
@@ -563,6 +750,25 @@ mod tests {
             status: "TRADING".into(),
             base_asset: base.into(),
             quote_asset: quote.into(),
+            asset_type: None,
+            market_type: None,
+        }
+    }
+
+    fn symbol_info_typed(
+        symbol: &str,
+        base: &str,
+        quote: &str,
+        asset_type: &str,
+        market_type: &str,
+    ) -> SymbolInfo {
+        SymbolInfo {
+            symbol: symbol.into(),
+            status: "TRADING".into(),
+            base_asset: base.into(),
+            quote_asset: quote.into(),
+            asset_type: Some(asset_type.into()),
+            market_type: Some(market_type.into()),
         }
     }
 
@@ -792,6 +998,7 @@ mod tests {
             close_price,
             cost,
             profit_loss,
+            currency: "USD".into(),
             created_at: chrono::DateTime::from_timestamp_millis(0).unwrap(),
         }
     }
@@ -824,14 +1031,19 @@ mod tests {
         ];
 
         // Act
-        let assets = build_leverage_assets(positions, &HashMap::new());
+        let (assets, margin) = build_leverage_assets(
+            positions,
+            &HashMap::new(),
+            &exchange_info(vec![]),
+        );
 
         // Assert
         assert_eq!(assets.len(), 1);
         assert!((assets[0].amount - 1.0).abs() < QTY_EPS);
-        assert!((assets[0].cost - 110.0).abs() < QTY_EPS);
-        assert!((assets[0].profit_loss - 10.0).abs() < QTY_EPS);
+        assert!((assets[0].market_value - 110.0).abs() < QTY_EPS);
+        assert!((assets[0].unrealized_pnl - 10.0).abs() < QTY_EPS);
         assert_eq!(assets[0].trades.len(), 1);
+        assert!((margin - 0.0).abs() < QTY_EPS);
     }
 
     #[test]
@@ -850,13 +1062,18 @@ mod tests {
         )];
 
         // Act
-        let assets = build_leverage_assets(positions, &HashMap::new());
+        let (assets, _) = build_leverage_assets(
+            positions,
+            &HashMap::new(),
+            &exchange_info(vec![]),
+        );
 
         // Assert: leftover is half of opened size, so cost/upl scale 110→55, 10→5
         assert_eq!(assets.len(), 1);
         assert!((assets[0].amount - 1.0).abs() < QTY_EPS);
-        assert!((assets[0].cost - 55.0).abs() < QTY_EPS);
-        assert!((assets[0].profit_loss - 5.0).abs() < QTY_EPS);
+        assert!((assets[0].market_value - 55.0).abs() < QTY_EPS);
+        assert!((assets[0].unrealized_pnl - 5.0).abs() < QTY_EPS);
+        assert!((assets[0].cost_basis - 100.0).abs() < QTY_EPS);
         assert!((assets[0].average_entry_price - 100.0).abs() < QTY_EPS);
         assert!((assets[0].unit_market_price - 55.0).abs() < QTY_EPS);
         assert_eq!(assets[0].trades[0].amount, 1.0);
@@ -877,10 +1094,15 @@ mod tests {
         )];
 
         // Act
-        let assets = build_leverage_assets(positions, &HashMap::new());
+        let (assets, margin) = build_leverage_assets(
+            positions,
+            &HashMap::new(),
+            &exchange_info(vec![]),
+        );
 
         // Assert
         assert!(assets.is_empty());
+        assert!((margin - 0.0).abs() < QTY_EPS);
     }
 
     #[test]
@@ -898,9 +1120,121 @@ mod tests {
         )];
 
         // Act
-        let assets = build_leverage_assets(positions, &HashMap::new());
+        let (assets, margin) = build_leverage_assets(
+            positions,
+            &HashMap::new(),
+            &exchange_info(vec![]),
+        );
 
         // Assert
         assert!(assets.is_empty());
+        assert!((margin - 0.0).abs() < QTY_EPS);
+    }
+
+    fn account_with_usd(free: f64, locked: f64) -> AccountInformation {
+        AccountInformation {
+            maker_commission: None,
+            taker_commission: None,
+            can_trade: true,
+            can_withdraw: true,
+            can_deposit: true,
+            update_time: None,
+            balances: vec![crate::investment::Balance {
+                asset: "USD".into(),
+                free,
+                locked,
+                timestamp: None,
+            }],
+        }
+    }
+
+    #[test]
+    fn given_usd_wallet_when_nav_from_wallet_then_is_free_plus_locked_not_positions()
+     {
+        let (cash, reserved) = usd_wallet(&account_with_usd(100.0, 20.0));
+        let nav = nav_from_wallet(cash, reserved);
+        assert_eq!(cash, Some(100.0));
+        assert_eq!(reserved, Some(20.0));
+        assert_eq!(nav, Some(120.0));
+        let positions_value = 5000.0;
+        assert_ne!(nav, Some(cash.unwrap() + positions_value));
+    }
+
+    #[test]
+    fn given_no_usd_row_when_usd_wallet_then_fields_are_none() {
+        let account = AccountInformation {
+            maker_commission: None,
+            taker_commission: None,
+            can_trade: true,
+            can_withdraw: true,
+            can_deposit: true,
+            update_time: None,
+            balances: vec![],
+        };
+        let (cash, reserved) = usd_wallet(&account);
+        assert!(cash.is_none());
+        assert!(reserved.is_none());
+        assert!(nav_from_wallet(cash, reserved).is_none());
+    }
+
+    #[test]
+    fn given_index_cfd_when_classify_asset_then_uses_exchange_info() {
+        let info = exchange_info(vec![symbol_info_typed(
+            "US500", "US500", "USD", "INDEX", "LEVERAGE",
+        )]);
+        let (class, leverage) = classify_asset("US500", &info);
+        assert_eq!(class, AssetClass::Index);
+        assert!(leverage);
+    }
+
+    #[test]
+    fn given_missing_asset_type_when_classify_gold_then_falls_back_to_commodity()
+     {
+        let (class, leverage) = classify_asset("Gold", &exchange_info(vec![]));
+        assert_eq!(class, AssetClass::Commodity);
+        assert!(!leverage);
+    }
+
+    #[test]
+    fn given_gold_when_lookup_symbol_then_maps_to_gc_futures() {
+        assert_eq!(lookup_symbol("Gold"), "GC=F");
+        assert_eq!(lookup_symbol("TON/USD_LEVERAGE"), "TON-USD");
+    }
+
+    #[test]
+    fn given_ton_leverage_when_classify_then_crypto_and_levered() {
+        let (class, leverage) =
+            classify_asset("TON/USD_LEVERAGE", &exchange_info(vec![]));
+        assert_eq!(class, AssetClass::Crypto);
+        assert!(leverage);
+    }
+
+    #[test]
+    fn given_portfolio_when_serialized_then_has_snapshot_and_no_legacy_volume()
+    {
+        let p = Portfolio {
+            snapshot_at: Utc::now(),
+            currency: "USD".into(),
+            cash: Some(100.0),
+            reserved_cash: Some(20.0),
+            positions_value: 5000.0,
+            nav: Some(120.0),
+            unrealized_pnl: -10.0,
+            realized_pnl: None,
+            buying_power: Some(100.0),
+            margin_used: Some(50.0),
+            can_trade: true,
+            can_withdraw: true,
+            can_deposit: true,
+            historical_volume: 1.0,
+            total_fee_spending: 0.0,
+            total_withdrawal: 0.0,
+        };
+        let v = serde_json::to_value(&p).unwrap();
+        assert!(v.get("snapshot_at").is_some());
+        assert!(v.get("cash").is_some());
+        assert!(v.get("nav").is_some());
+        assert!(v.get("current_volume").is_none());
+        assert!(v.get("as_of").is_none());
     }
 }

@@ -7,8 +7,8 @@ mod recommendations;
 mod state;
 
 pub use analysis::{
-    AnalysisServices, AssetWithAnalysis, OwningAssets, fetch_owning_assets,
-    fetch_owning_assets_with_analysis,
+    AnalysisServices, AssetWithAnalysis, OwningAssets, PositionInclude,
+    PositionQuery, fetch_owning_assets, fetch_owning_assets_with_analysis,
 };
 pub use state::FinanceState;
 

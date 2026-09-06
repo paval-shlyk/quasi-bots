@@ -72,14 +72,13 @@ impl NewsProvider for RssNewsProvider {
                 continue;
             }
             let url = entry.links.first().map(|l| l.href.clone());
-            let summary = entry.summary.map(|s| s.content);
             let published_at = entry.published.or(entry.updated);
 
             items.push(AssetNewsItem {
                 title,
                 published_at,
                 url,
-                summary,
+                summary: None,
                 source: Some("google_news_rss".into()),
             });
         }

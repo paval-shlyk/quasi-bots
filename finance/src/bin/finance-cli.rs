@@ -122,7 +122,22 @@ async fn run_analyze(
 
     let mut services = AnalysisServices::new(targets, earnings, news);
     services.technicals = !no_technicals;
-    fetch_owning_assets_with_analysis(rc, &services).await
+    let mut include = vec![
+        finance::PositionInclude::Targets,
+        finance::PositionInclude::Earnings,
+        finance::PositionInclude::Trades,
+    ];
+    if !no_technicals {
+        include.push(finance::PositionInclude::Indicators);
+    }
+    if !no_news {
+        include.push(finance::PositionInclude::News);
+    }
+    let query = finance::PositionQuery {
+        include,
+        symbols: None,
+    };
+    fetch_owning_assets_with_analysis(rc, &services, &query).await
 }
 
 #[tokio::main]
@@ -305,7 +320,11 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
-            let v = finance::fetch_owning_assets(&rc).await?;
+            let v = finance::fetch_owning_assets(
+                &rc,
+                &finance::PositionQuery::default(),
+            )
+            .await?;
 
             println!("{}", serde_json::to_string_pretty(&v)?);
         }

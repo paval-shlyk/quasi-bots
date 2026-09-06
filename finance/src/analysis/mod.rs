@@ -46,53 +46,6 @@ impl AnalysisInclude {
     }
 }
 
-/// Opt-in extras for `trading_positions`. Empty = lean book (no lots / research).
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    Eq,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-    schemars::JsonSchema,
-)]
-#[serde(rename_all = "snake_case")]
-pub enum PositionsInclude {
-    Trades,
-    Indicators,
-    Earnings,
-    Targets,
-    News,
-}
-
-impl PositionsInclude {
-    pub fn is_trades(self) -> bool {
-        matches!(self, Self::Trades)
-    }
-
-    pub fn as_analysis(self) -> Option<AnalysisInclude> {
-        match self {
-            Self::Trades => None,
-            Self::Indicators => Some(AnalysisInclude::Indicators),
-            Self::Earnings => Some(AnalysisInclude::Earnings),
-            Self::Targets => Some(AnalysisInclude::Targets),
-            Self::News => Some(AnalysisInclude::News),
-        }
-    }
-}
-
-pub fn positions_want_trades(include: &[PositionsInclude]) -> bool {
-    include.iter().copied().any(PositionsInclude::is_trades)
-}
-
-pub fn analysis_includes_from_positions(
-    include: &[PositionsInclude],
-) -> Vec<AnalysisInclude> {
-    include.iter().filter_map(|i| i.as_analysis()).collect()
-}
-
 fn wants_block(include: &[AnalysisInclude], block: AnalysisInclude) -> bool {
     include.is_empty() || include.contains(&block)
 }
@@ -147,7 +100,7 @@ pub struct AssetAnalysis {
 )]
 pub struct OwningAssets {
     pub assets: Vec<AssetWithWeight>,
-    /// Present when `trading_positions` `include` requests research blocks.
+    /// Unused on lean `trading_positions` (digs go via `trading_analysis`).
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub analysis: Vec<SymbolAnalysis>,
 }
@@ -616,21 +569,6 @@ mod tests {
         let owning = OwningAssets::from_holdings(vec![asset], Some(100.0));
         let v = serde_json::to_value(&owning).unwrap();
         assert!(v["assets"][0].get("trades").is_none());
-    }
-
-    #[test]
-    fn given_positions_include_when_want_trades_then_only_trades_flag() {
-        assert!(!positions_want_trades(&[]));
-        assert!(positions_want_trades(&[PositionsInclude::Trades]));
-        assert!(!positions_want_trades(&[PositionsInclude::Indicators]));
-        assert_eq!(
-            analysis_includes_from_positions(&[
-                PositionsInclude::Trades,
-                PositionsInclude::Indicators,
-                PositionsInclude::News,
-            ]),
-            vec![AnalysisInclude::Indicators, AnalysisInclude::News]
-        );
     }
 
     #[test]

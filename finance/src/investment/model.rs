@@ -592,6 +592,8 @@ pub struct TradingPosition {
     #[serde(alias = "accountId", alias = "account_id")]
     pub account_id: String,
 
+    /// Broker per-lot margin for this position. Portfolio `margin_used` sums
+    /// these (scaled by remaining qty) across open longs; not wallet `locked`.
     pub margin: f64,
     pub fee: f64,
     #[serde(rename = "openQuantity")]

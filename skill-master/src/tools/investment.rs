@@ -73,7 +73,9 @@ impl NewsProvider for NewsBankProvider {
 
 #[tool_router(router = investment_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
-    #[tool(description = "Fetch trading portfolio summary")]
+    #[tool(
+        description = "Fetch trading portfolio wallet snapshot. cash = USD free; reserved_cash = USD locked (broker-reserved). nav = cash + reserved_cash (wallet Equity) — never cash + positions_value. positions_value is Σ open marks (CFD notionals may dwarf nav). margin_used = Σ Dzengi TradingPosition.margin for all open long lots (scaled by remaining qty), aggregated across every leveraged product — NOT total locked margin and often << reserved_cash; use reserved_cash for locked cash. buying_power = cash. realized_pnl is always null (P1, not wired). Legacy current_volume was dropped; use cash/reserved_cash/nav/historical_volume."
+    )]
     async fn trading_portfolio(
         &self,
     ) -> Result<Json<finance::Portfolio>, String> {
@@ -84,7 +86,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots); pass include_trades=true for lots. Digs use trading_analysis. Each asset: weight_book_pct = |MV|/positions_value×100 (Σ≈100%), weight_nav_pct = |MV|/NAV×100 (CFD may Σ>100%); weight_percentage is a deprecated compat alias (NAV when known, else book)."
+        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots); pass include_trades=true for lots. Digs use trading_analysis. Each asset: leverage=true for CFD/leveraged names (exchangeInfo or *_LEVERAGE). Per-lot broker margin is not on these rows — portfolio margin_used (trading_portfolio) sums TradingPosition.margin across open longs; reserved_cash is wallet locked cash (often larger). Weights: weight_book_pct = |MV|/positions_value×100 (Σ≈100%), weight_nav_pct = |MV|/NAV×100 (CFD may Σ>100%); weight_percentage is a deprecated compat alias (NAV when known, else book)."
     )]
     async fn trading_positions(
         &self,

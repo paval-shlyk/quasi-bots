@@ -228,7 +228,7 @@ pub struct OrderBook {
 }
 
 /// Symbol information from exchange info.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SymbolInfo {
     pub symbol: String,
     pub status: String,
@@ -236,7 +236,12 @@ pub struct SymbolInfo {
     pub base_asset: String,
     #[serde(rename = "quoteAsset")]
     pub quote_asset: String,
-    // Add filters and other fields as needed
+    /// Dzengi instrument class (`EQUITY`, `INDEX`, `COMMODITY`, …).
+    #[serde(rename = "assetType", default)]
+    pub asset_type: Option<String>,
+    /// `SPOT` or `LEVERAGE`.
+    #[serde(rename = "marketType", default)]
+    pub market_type: Option<String>,
 }
 
 /// Exchange information.
@@ -388,6 +393,10 @@ where
         Some(StringOrNumberOption::Number(n)) => Ok(Some(n.to_string())),
         Some(StringOrNumberOption::None) | None => Ok(None),
     }
+}
+
+fn default_position_currency() -> String {
+    "USD".to_string()
 }
 
 fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
@@ -576,7 +585,7 @@ pub struct Transaction {
 }
 
 /// Trading position details (rest endpoint might return different structure than WS Position).
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct TradingPosition {
     pub symbol: String,
     pub id: String,
@@ -599,6 +608,9 @@ pub struct TradingPosition {
 
     #[serde(rename = "upl")]
     pub profit_loss: f64,
+
+    #[serde(default = "default_position_currency")]
+    pub currency: String,
 
     #[serde(
         rename = "createdTimestamp",

@@ -1,11 +1,71 @@
 use finance::{
-    AnalysisServices,
-    analysis::{FinnhubProvider, RssNewsProvider, YahooPriceTargetProvider},
+    AnalysisInclude, AnalysisServices,
+    analysis::{
+        AssetNewsItem, FinnhubProvider, NewsProvider, YahooPriceTargetProvider,
+    },
     indicators::AnalysisConfig,
 };
-use rmcp::{handler::server::wrapper::Json, tool, tool_router};
+use rmcp::{
+    handler::server::wrapper::{Json, Parameters},
+    tool, tool_router,
+};
+use schemars::JsonSchema;
+use serde::Deserialize;
 
 use crate::mcp::server::SkillMasterMcpServer;
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+struct TradingPositionsArgs {
+    /// Optional symbol filter; omit = all open names.
+    #[serde(default)]
+    symbols: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingAnalysisArgs {
+    /// Symbols to research. Required; at least one.
+    symbols: Vec<String>,
+    /// Blocks to attach. Allowed: news, targets, earnings, indicators.
+    /// Empty / omitted means all four.
+    #[serde(default)]
+    include: Vec<AnalysisInclude>,
+}
+
+struct NewsBankProvider {
+    pool: sqlx::SqlitePool,
+    limit: usize,
+}
+
+impl NewsProvider for NewsBankProvider {
+    async fn recent(
+        &self,
+        symbol: &str,
+        name: Option<&str>,
+    ) -> anyhow::Result<Vec<AssetNewsItem>> {
+        let mut needles = vec![symbol.to_string()];
+        if let Some(n) = name
+            && !n.is_empty()
+        {
+            needles.push(n.to_string());
+        }
+        let rows = news::select_recent_for_instrument(
+            &self.pool,
+            &needles,
+            self.limit as i64,
+        )
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|h| AssetNewsItem {
+                title: h.title,
+                url: h.url,
+                published_at: Some(h.published_at),
+                summary: None,
+                source: h.source,
+            })
+            .collect())
+    }
+}
 
 #[tool_router(router = investment_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
@@ -19,24 +79,63 @@ impl SkillMasterMcpServer {
             .map_err(|e| e.to_string())
     }
 
-    #[tool(description = "Fetch opened trading positions")]
+    #[tool(
+        description = "Fetch opened trading positions (Dzengi book only: size, mark, P/L, lots)"
+    )]
     async fn trading_positions(
         &self,
+        Parameters(args): Parameters<TradingPositionsArgs>,
     ) -> Result<Json<finance::OwningAssets>, String> {
+        finance::fetch_owning_assets(
+            self.state.finance_state.api(),
+            args.symbols.as_deref(),
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "News, analyst targets, earnings, and technicals for named symbols"
+    )]
+    async fn trading_analysis(
+        &self,
+        Parameters(args): Parameters<TradingAnalysisArgs>,
+    ) -> Result<Json<finance::AssetAnalysis>, String> {
+        if args.symbols.is_empty() {
+            return Err("trading_analysis requires at least one symbol".into());
+        }
+
+        let include = if args.include.is_empty() {
+            AnalysisInclude::all()
+        } else {
+            args.include
+        };
+        let want_news = include.contains(&AnalysisInclude::News);
+        let want_targets = include.contains(&AnalysisInclude::Targets);
+        let want_earnings = include.contains(&AnalysisInclude::Earnings);
+        let want_indicators = include.contains(&AnalysisInclude::Indicators);
+
         let services = AnalysisServices {
-            news: RssNewsProvider::with_limit(5).into(),
-            targets: YahooPriceTargetProvider::new().into(),
-            earnings: FinnhubProvider::new(
-                &self.state.finance_state.config.finn_hub_api_key,
-            )
-            .into(),
-            technicals: true,
+            news: want_news.then(|| NewsBankProvider {
+                pool: self.state.news_state.pool.clone(),
+                limit: 3,
+            }),
+            targets: want_targets.then(YahooPriceTargetProvider::new),
+            earnings: want_earnings.then(|| {
+                FinnhubProvider::new(
+                    &self.state.finance_state.config.finn_hub_api_key,
+                )
+            }),
+            technicals: want_indicators,
             technicals_config: AnalysisConfig::default(),
         };
 
-        finance::fetch_owning_assets_with_analysis(
+        finance::fetch_asset_analysis(
             self.state.finance_state.api(),
             &services,
+            &args.symbols,
+            &include,
         )
         .await
         .map(Json)

@@ -46,6 +46,7 @@ pub struct AssetNewsItem {
     pub title: String,
     pub published_at: Option<chrono::DateTime<chrono::Utc>>,
     pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub summary: Option<String>,
     pub source: Option<String>,
 }

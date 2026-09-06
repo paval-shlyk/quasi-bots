@@ -85,9 +85,12 @@ enum Commands {
     OwningAssets {
         url: String,
     },
-    /// Holdings + technicals, price targets, earnings, and news
+    /// News / targets / earnings / technicals for named symbols
     Analyze {
         url: String,
+        /// Symbols to research
+        #[arg(long, required = true, num_args = 1..)]
+        symbols: Vec<String>,
         /// Skip Yahoo technicals
         #[arg(long)]
         no_technicals: bool,
@@ -102,16 +105,16 @@ enum Commands {
 
 async fn run_analyze(
     rc: &finance::investment::RestClient,
+    symbols: &[String],
     no_technicals: bool,
     no_news: bool,
     news_limit: usize,
-) -> anyhow::Result<finance::OwningAssets> {
+) -> anyhow::Result<finance::AssetAnalysis> {
     use finance::analysis::{
         FinnhubProvider, RssNewsProvider, YahooPriceTargetProvider,
     };
-    use finance::{AnalysisServices, fetch_owning_assets_with_analysis};
+    use finance::{AnalysisInclude, AnalysisServices, fetch_asset_analysis};
 
-    // Price targets: Yahoo (no key). Earnings: Finnhub when FINNHUB_API_KEY is set.
     let targets = Some(YahooPriceTargetProvider::new());
     let earnings = env::var("FINNHUB_API_KEY").ok().map(FinnhubProvider::new);
     if earnings.is_none() {
@@ -122,7 +125,14 @@ async fn run_analyze(
 
     let mut services = AnalysisServices::new(targets, earnings, news);
     services.technicals = !no_technicals;
-    fetch_owning_assets_with_analysis(rc, &services).await
+    let mut include = vec![AnalysisInclude::Targets, AnalysisInclude::Earnings];
+    if !no_technicals {
+        include.push(AnalysisInclude::Indicators);
+    }
+    if !no_news {
+        include.push(AnalysisInclude::News);
+    }
+    fetch_asset_analysis(rc, &services, symbols, &include).await
 }
 
 #[tokio::main]
@@ -305,12 +315,13 @@ async fn main() -> anyhow::Result<()> {
             let rc =
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
-            let v = finance::fetch_owning_assets(&rc).await?;
+            let v = finance::fetch_owning_assets(&rc, None).await?;
 
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
         Commands::Analyze {
             url,
+            symbols,
             no_technicals,
             no_news,
             news_limit,
@@ -322,7 +333,8 @@ async fn main() -> anyhow::Result<()> {
                 finance::investment::RestClient::new(url, api_key, api_secret);
 
             let v =
-                run_analyze(&rc, no_technicals, no_news, news_limit).await?;
+                run_analyze(&rc, &symbols, no_technicals, no_news, news_limit)
+                    .await?;
             println!("{}", serde_json::to_string_pretty(&v)?);
         }
     }

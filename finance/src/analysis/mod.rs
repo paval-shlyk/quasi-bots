@@ -57,7 +57,7 @@ fn require_symbols(symbols: &[String]) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Holding plus portfolio weight. Construct via [`OwningAssets::from_holdings`].
+/// Holding plus dual portfolio weights. Construct via [`OwningAssets::from_holdings`].
 #[derive(
     Debug, Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema,
 )]
@@ -65,7 +65,20 @@ pub struct AssetWithWeight {
     #[serde(flatten)]
     pub asset: Asset,
 
-    /// Percent of NAV including cash (`market_value / nav × 100`).
+    /// Book concentration: `|market_value| / positions_value × 100`.
+    /// `positions_value` is Σ `|market_value|` of the returned open lots.
+    /// Sums ≈ 100% (± rounding). Prefer this for concentration risk.
+    pub weight_book_pct: f64,
+
+    /// NAV exposure: `|market_value| / NAV × 100`.
+    /// NAV is wallet Equity (cash + reserved). CFD/margin notionals can make
+    /// Σ `weight_nav_pct` well above 100%. `None` when NAV is unknown.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weight_nav_pct: Option<f64>,
+
+    /// Deprecated compat alias of historical single-weight behavior:
+    /// equals `weight_nav_pct` when NAV is known, else `weight_book_pct`.
+    /// Prefer `weight_book_pct` / `weight_nav_pct`.
     pub weight_percentage: f64,
 }
 
@@ -106,26 +119,42 @@ pub struct OwningAssets {
 }
 
 impl OwningAssets {
-    /// Transform raw holdings into analysis rows with required portfolio weights.
+    /// Transform raw holdings into rows with book and NAV weights.
     ///
-    /// `nav` is the wallet Equity (cash + reserved). When absent, weights fall
-    /// back to share of position market value and will not sum to 100 if cash > 0.
+    /// - `weight_book_pct` = `|MV| / Σ|MV| × 100` (denominator: positions_value)
+    /// - `weight_nav_pct` = `|MV| / NAV × 100` when `nav` is present and > 0
+    /// - `weight_percentage` keeps prior semantics (NAV denom when known, else book)
+    ///
+    /// `nav` is wallet Equity (cash + reserved). CFD notionals may exceed NAV,
+    /// so book weights still sum ≈ 100% while NAV weights may not.
     pub fn from_holdings(holdings: Vec<Asset>, nav: Option<f64>) -> Self {
         let positions_value: f64 =
             holdings.iter().map(|a| a.market_value.abs()).sum();
-        let denom =
-            nav.filter(|n| *n > f64::EPSILON).unwrap_or(positions_value);
+        let nav_denom = nav.filter(|n| *n > f64::EPSILON);
 
         let assets = holdings
             .into_iter()
             .map(|asset| {
-                let weight_percentage = if denom > f64::EPSILON {
-                    asset.market_value.abs() / denom * 100.0
+                let mv = asset.market_value.abs();
+                let weight_book_pct = if positions_value > f64::EPSILON {
+                    mv / positions_value * 100.0
                 } else {
                     0.0
                 };
+                let weight_nav_pct = nav_denom.map(|denom| {
+                    if denom > f64::EPSILON {
+                        mv / denom * 100.0
+                    } else {
+                        0.0
+                    }
+                });
+                // Compat: historical field used NAV when present, else book.
+                let weight_percentage =
+                    weight_nav_pct.unwrap_or(weight_book_pct);
                 AssetWithWeight {
                     asset,
+                    weight_book_pct,
+                    weight_nav_pct,
                     weight_percentage,
                 }
             })
@@ -413,7 +442,7 @@ mod tests {
     #[test]
     fn given_holdings_when_from_holdings_then_preserves_metrics_and_sets_weights()
      {
-        // Arrange: market values 1000 and 500
+        // Arrange: market values 1000 and 500; no NAV → book-only fallback
         let holdings = vec![
             sample_asset(10.0, 1000.0, 0.0, 100.0),
             sample_asset(5.0, 500.0, 0.0, 100.0),
@@ -427,14 +456,21 @@ mod tests {
         assert!(
             (owning.assets[0].asset.unit_market_price - 100.0).abs() < 1e-9
         );
+        assert!((owning.assets[0].weight_book_pct - 200.0 / 3.0).abs() < 1e-6);
+        assert!((owning.assets[1].weight_book_pct - 100.0 / 3.0).abs() < 1e-6);
+        assert!(owning.assets[0].weight_nav_pct.is_none());
         assert!(
             (owning.assets[0].weight_percentage - 200.0 / 3.0).abs() < 1e-6
         );
         assert!(
             (owning.assets[1].weight_percentage - 100.0 / 3.0).abs() < 1e-6
         );
-        let sum: f64 = owning.assets.iter().map(|a| a.weight_percentage).sum();
-        assert!((sum - 100.0).abs() < 1e-6);
+        let sum_book: f64 =
+            owning.assets.iter().map(|a| a.weight_book_pct).sum();
+        assert!((sum_book - 100.0).abs() < 1e-6);
+        let sum_compat: f64 =
+            owning.assets.iter().map(|a| a.weight_percentage).sum();
+        assert!((sum_compat - 100.0).abs() < 1e-6);
     }
 
     #[test]
@@ -450,7 +486,42 @@ mod tests {
     fn given_cash_in_nav_when_from_holdings_then_named_weights_fall() {
         let holdings = vec![sample_asset(1.0, 80.0, 0.0, 80.0)];
         let owning = OwningAssets::from_holdings(holdings, Some(100.0));
+        assert!((owning.assets[0].weight_book_pct - 100.0).abs() < 1e-9);
+        assert!((owning.assets[0].weight_nav_pct.unwrap() - 80.0).abs() < 1e-9);
         assert!((owning.assets[0].weight_percentage - 80.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn given_cfd_notionals_above_nav_when_from_holdings_then_dual_weights() {
+        // positions_value 1500 > NAV 100 → book sums to 100, NAV exposures >> 100
+        let holdings = vec![
+            sample_asset(10.0, 1000.0, 0.0, 100.0),
+            sample_asset(5.0, 500.0, 0.0, 100.0),
+        ];
+        let owning = OwningAssets::from_holdings(holdings, Some(100.0));
+
+        assert!((owning.assets[0].weight_book_pct - 200.0 / 3.0).abs() < 1e-6);
+        assert!((owning.assets[1].weight_book_pct - 100.0 / 3.0).abs() < 1e-6);
+        let sum_book: f64 =
+            owning.assets.iter().map(|a| a.weight_book_pct).sum();
+        assert!((sum_book - 100.0).abs() < 1e-6);
+
+        assert!(
+            (owning.assets[0].weight_nav_pct.unwrap() - 1000.0).abs() < 1e-9
+        );
+        assert!(
+            (owning.assets[1].weight_nav_pct.unwrap() - 500.0).abs() < 1e-9
+        );
+        let sum_nav: f64 = owning
+            .assets
+            .iter()
+            .map(|a| a.weight_nav_pct.unwrap())
+            .sum();
+        assert!((sum_nav - 1500.0).abs() < 1e-9);
+
+        // Compat field tracks NAV exposure when NAV is known
+        assert!((owning.assets[0].weight_percentage - 1000.0).abs() < 1e-9);
+        assert!((owning.assets[1].weight_percentage - 500.0).abs() < 1e-9);
     }
 
     #[test]
@@ -462,6 +533,8 @@ mod tests {
         assert!(asset.get("symbol").is_some());
         assert!(asset.get("asset").is_none());
         assert!(asset.get("market_value").is_some());
+        assert!(asset.get("weight_book_pct").is_some());
+        assert!(asset.get("weight_nav_pct").is_some());
         assert!(asset.get("weight_percentage").is_some());
         assert!(asset.get("trades").is_some());
         assert!(asset.get("cost").is_none());
@@ -469,6 +542,16 @@ mod tests {
         assert!(asset.get("indicators").is_none());
         assert!(asset.get("targets").is_none());
         assert!(asset.get("earnings").is_none());
+    }
+
+    #[test]
+    fn given_no_nav_when_serialized_then_omits_weight_nav_pct() {
+        let holdings = vec![sample_asset(1.0, 80.0, 0.0, 80.0)];
+        let owning = OwningAssets::from_holdings(holdings, None);
+        let asset = &serde_json::to_value(&owning).unwrap()["assets"][0];
+        assert!(asset.get("weight_book_pct").is_some());
+        assert!(asset.get("weight_nav_pct").is_none());
+        assert!(asset.get("weight_percentage").is_some());
     }
 
     #[test]

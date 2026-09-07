@@ -5,7 +5,7 @@ use rmcp::model::{
 use rmcp::service::RunningService;
 use rmcp::transport::StreamableHttpClientTransport;
 use rmcp::transport::streamable_http_client::StreamableHttpClientTransportConfig;
-use rmcp::{RoleClient, ServiceExt};
+use rmcp::{ClientLifecycleMode, ClientServiceExt, RoleClient};
 
 use crate::config::ConnectOptions;
 use crate::model::{CallOutcome, ServerStatus, ToolView};
@@ -19,7 +19,11 @@ pub struct McpSession {
 }
 
 impl McpSession {
-    /// Connect to a Streamable HTTP MCP endpoint and complete initialize.
+    /// Connect to a Streamable HTTP MCP endpoint.
+    ///
+    /// Prefers modern `server/discover` + `2026-07-28`, falling back to legacy
+    /// `initialize` on `2025-11-25` when the peer does not speak the modern
+    /// revision (`ClientLifecycleMode::Auto`).
     ///
     /// Requires `opts.token` (Bearer access token without the `Bearer ` prefix).
     pub async fn connect(opts: ConnectOptions) -> Result<Self> {
@@ -38,7 +42,8 @@ impl McpSession {
         let mut config =
             StreamableHttpClientTransportConfig::with_uri(opts.url.as_str());
         config = config.auth_header(token);
-        // skill-master often runs with stateful_mode = false
+        // skill-master keeps legacy_session_mode for older peers; modern
+        // 2026-07-28 negotiation is always stateless — allow both.
         config.allow_stateless = true;
 
         let transport = StreamableHttpClientTransport::from_config(config);
@@ -47,28 +52,38 @@ impl McpSession {
             ClientCapabilities::default(),
             Implementation::new("mcp-client", env!("CARGO_PKG_VERSION")),
         )
+        // Hint for legacy initialize fallback path.
         .with_protocol_version(ProtocolVersion::V_2025_11_25);
 
-        let service = client_info.serve(transport).await.map_err(|e| {
-            tracing::error!(error = %e, url = %opts.url, "MCP initialize / transport failed");
-            Error::service(e)
-        })?;
+        let lifecycle = ClientLifecycleMode::Auto {
+            preferred_versions: vec![ProtocolVersion::V_2026_07_28],
+            legacy_version: Some(ProtocolVersion::V_2025_11_25),
+        };
 
-        let server = service.peer_info().map(ServerStatus::from).unwrap_or(
-            ServerStatus {
+        let service = client_info
+            .serve_with_lifecycle(transport, lifecycle)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, url = %opts.url, "MCP discover/initialize failed");
+                Error::service(e)
+            })?;
+
+        let server = service
+            .peer_info()
+            .map(|info| ServerStatus::from(info.as_ref()))
+            .unwrap_or(ServerStatus {
                 name: "unknown".into(),
                 version: "?".into(),
                 protocol_version: ProtocolVersion::V_2025_11_25.to_string(),
                 instructions: None,
                 tools_enabled: false,
-            },
-        );
+            });
 
         tracing::info!(
             server = %server.name,
             version = %server.version,
             protocol = %server.protocol_version,
-            "MCP session initialized"
+            "MCP session ready"
         );
 
         Ok(Self {

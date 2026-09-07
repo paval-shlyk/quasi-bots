@@ -13,6 +13,13 @@ use crate::AppState;
 
 use self::server::SkillMasterMcpServer;
 
+/// Mount Streamable HTTP MCP at `/mcp`.
+///
+/// Uses rmcp's default `legacy_session_mode = true` so clients on protocol
+/// versions before `2026-07-28` (initialize + `Mcp-Session-Id`) keep working.
+/// Peers that negotiate `2026-07-28` are still served **statelessly** by the
+/// transport (SEP-2567), regardless of that flag. See
+/// `docs/mcp-protocol.md`.
 pub fn mount(
     app_state: AppState,
     oauth_state: mcp_auth::oauth::SharedOAuthState,

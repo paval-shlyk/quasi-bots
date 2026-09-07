@@ -1,7 +1,7 @@
-use rmcp::model::{CallToolResult, Content, RawContent, ServerInfo, Tool};
+use rmcp::model::{CallToolResult, ContentBlock, ServerPeerInfo, Tool};
 use serde_json::Value;
 
-/// Snapshot of server identity after initialize.
+/// Snapshot of server identity after initialize / discover.
 #[derive(Debug, Clone)]
 pub struct ServerStatus {
     pub name: String,
@@ -11,11 +11,15 @@ pub struct ServerStatus {
     pub tools_enabled: bool,
 }
 
-impl From<&ServerInfo> for ServerStatus {
-    fn from(info: &ServerInfo) -> Self {
+impl From<&ServerPeerInfo> for ServerStatus {
+    fn from(info: &ServerPeerInfo) -> Self {
+        let (name, version) = match &info.server_info {
+            Some(impl_) => (impl_.name.clone(), impl_.version.clone()),
+            None => ("unknown".into(), "?".into()),
+        };
         Self {
-            name: info.server_info.name.clone(),
-            version: info.server_info.version.clone(),
+            name,
+            version,
             protocol_version: info.protocol_version.to_string(),
             instructions: info.instructions.clone(),
             tools_enabled: info.capabilities.tools.is_some(),
@@ -69,7 +73,7 @@ impl From<&CallToolResult> for CallOutcome {
 }
 
 fn format_call_content(
-    content: &[Content],
+    content: &[ContentBlock],
     structured: Option<&Value>,
 ) -> String {
     if let Some(sc) = structured {
@@ -78,8 +82,8 @@ fn format_call_content(
 
     let mut parts = Vec::new();
     for block in content {
-        match &block.raw {
-            RawContent::Text(t) => {
+        match block {
+            ContentBlock::Text(t) => {
                 // Prefer pretty-printed JSON when the tool returned JSON text.
                 if let Ok(v) = serde_json::from_str::<Value>(&t.text) {
                     parts.push(pretty_json(&v));
@@ -87,12 +91,15 @@ fn format_call_content(
                     parts.push(t.text.clone());
                 }
             }
-            RawContent::Image(_) => parts.push("[image content]".into()),
-            RawContent::Audio(_) => parts.push("[audio content]".into()),
-            RawContent::Resource(_) => parts.push("[embedded resource]".into()),
-            RawContent::ResourceLink(r) => {
+            ContentBlock::Image(_) => parts.push("[image content]".into()),
+            ContentBlock::Audio(_) => parts.push("[audio content]".into()),
+            ContentBlock::Resource(_) => {
+                parts.push("[embedded resource]".into())
+            }
+            ContentBlock::ResourceLink(r) => {
                 parts.push(format!("[resource link: {}]", r.uri));
             }
+            _ => parts.push("[content]".into()),
         }
     }
     if parts.is_empty() {

@@ -3,7 +3,7 @@ name = "mcp-client"
 version = "0.1.0"
 edition = "2024"
 license = "GPL-2.0-only"
-description = "MCP 2025-11-25 Streamable HTTP client with ratatui verification TUI"
+description = "MCP Streamable HTTP client (2025-11-25 legacy + 2026-07-28 modern) with ratatui verification TUI"
 
 [lib]
 path = "src/lib.rs"
@@ -32,7 +32,7 @@ thiserror = "2"
 oauth2 = "5"
 reqwest = { workspace = true }
 
-rmcp = { version = "1.7", features = [
+rmcp = { version = "3.2", features = [
 	"client",
 	"auth",
 	"reqwest",

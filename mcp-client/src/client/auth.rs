@@ -65,14 +65,16 @@ pub async fn login_oauth(opts: &ConnectOptions) -> Result<String> {
     let mut manager = AuthorizationManager::new(opts.url.as_str())
         .await
         .map_err(Error::oauth)?;
-    let metadata = manager.discover_metadata().await.map_err(|e| {
+    let resolution = manager.resolve_metadata().await.map_err(|e| {
         tracing::error!(error = %e, "OAuth discovery / AS metadata failed");
         Error::oauth(e)
     })?;
+    let metadata = resolution.metadata;
     tracing::info!(
         authorization_endpoint = %metadata.authorization_endpoint,
         token_endpoint = %metadata.token_endpoint,
         registration_endpoint = ?metadata.registration_endpoint,
+        source = ?resolution.source,
         "authorization server metadata"
     );
     manager.set_metadata(metadata.clone());

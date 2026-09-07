@@ -1,11 +1,11 @@
 # mcp-client
 
-MCP **2025-11-25** Streamable HTTP client with a **ratatui** TUI for verifying servers such as [skill-master](../skill-master/).
+MCP Streamable HTTP client (prefers **`2026-07-28`**, falls back to **`2025-11-25`** initialize) with a **ratatui** TUI for verifying servers such as [skill-master](../skill-master/).
 
 ## Features
 
 - Connect to Streamable HTTP MCP endpoints (e.g. `http://127.0.0.1:8080/mcp`)
-- Protocol version `2025-11-25`
+- Protocol: Auto lifecycle — prefer `2026-07-28` discover, legacy `2025-11-25` initialize fallback
 - List tools and call tools with JSON arguments
 - Auth:
   - **Bearer token** via `--token` / `MCP_TOKEN` (opaque access token from the AS)
@@ -71,4 +71,4 @@ RUST_LOG=debug,mcp_client=debug,rmcp=info \
 - OAuth discovery uses the MCP URL **origin** (scheme + host + port), not the `/mcp` path.
 - DCR registers `application_type: native` for loopback redirects (Zitadel).
 - Login prefers PRM `scopes_supported` over `--scope` (CLI scopes are merged in).
-- skill-master often runs Streamable HTTP in a stateless JSON mode; the client enables `allow_stateless`.
+- skill-master keeps legacy session mode for older peers; modern `2026-07-28` is always stateless. The client sets `allow_stateless`.

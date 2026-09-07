@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use rmcp::{
     ServerHandler,
     handler::server::router::tool::ToolRouter,
@@ -10,6 +12,15 @@ use crate::AppState;
 use super::schema::rewrite_tool_router_schemas;
 
 const MCP_SERVER_NAME: &str = "skill-master-mcp";
+const MCP_SERVER_TITLE: &str = "Skill Master";
+
+/// Initialize / legacy-session fallback revision.
+///
+/// rmcp 3.2 still treats `LATEST` as `2025-11-25`. Modern clients may negotiate
+/// `2026-07-28` via [`ServerHandler::supported_protocol_versions`]; those
+/// requests are served statelessly by Streamable HTTP even while legacy
+/// session mode remains enabled for older peers.
+const MCP_PROTOCOL_FALLBACK: ProtocolVersion = ProtocolVersion::LATEST;
 
 #[derive(Clone)]
 pub struct SkillMasterMcpServer {
@@ -58,14 +69,24 @@ impl ServerHandler for SkillMasterMcpServer {
                 .enable_tool_list_changed()
                 .build(),
         )
-        .with_server_info(Implementation::new(
-            MCP_SERVER_NAME,
-            crate::version::mcp_server_version(),
-        ))
-        .with_protocol_version(ProtocolVersion::V_2025_11_25)
+        .with_server_info(
+            Implementation::new(
+                MCP_SERVER_NAME,
+                crate::version::mcp_server_version(),
+            )
+            .with_title(MCP_SERVER_TITLE),
+        )
+        .with_protocol_version(MCP_PROTOCOL_FALLBACK)
         .with_instructions(
             "Skill-master MCP server. Call knowledge, quotes, news, and finance libraries directly.",
         )
+    }
+
+    fn supported_protocol_versions(&self) -> Cow<'static, [ProtocolVersion]> {
+        // Advertise every revision rmcp knows, including modern `2026-07-28`.
+        // Narrow later (phase 2/3) once live clients no longer need older
+        // initialize/session peers.
+        Cow::Borrowed(ProtocolVersion::KNOWN_VERSIONS)
     }
 }
 
@@ -137,5 +158,40 @@ mod tests {
             year.get("anyOf").is_some(),
             "expenses_list_entries.year should be anyOf; got {year}"
         );
+    }
+
+    #[test]
+    fn advertises_modern_and_legacy_protocol_versions() {
+        let versions = ProtocolVersion::KNOWN_VERSIONS;
+        assert!(
+            versions.contains(&ProtocolVersion::V_2025_11_25),
+            "legacy initialize fallback must remain advertised"
+        );
+        assert!(
+            versions.contains(&ProtocolVersion::V_2026_07_28),
+            "modern stateless revision must be advertised"
+        );
+        assert_eq!(MCP_PROTOCOL_FALLBACK, ProtocolVersion::V_2025_11_25);
+        assert_eq!(MCP_PROTOCOL_FALLBACK, ProtocolVersion::LATEST);
+    }
+
+    #[test]
+    fn get_info_uses_legacy_fallback_and_tools_capability() {
+        let info = ServerInfo::new(
+            ServerCapabilities::builder()
+                .enable_tools()
+                .enable_tool_list_changed()
+                .build(),
+        )
+        .with_server_info(
+            Implementation::new(MCP_SERVER_NAME, "0.0.0+test")
+                .with_title(MCP_SERVER_TITLE),
+        )
+        .with_protocol_version(MCP_PROTOCOL_FALLBACK);
+
+        assert_eq!(info.protocol_version, ProtocolVersion::V_2025_11_25);
+        assert!(info.capabilities.tools.is_some());
+        assert_eq!(info.server_info.name, MCP_SERVER_NAME);
+        assert_eq!(info.server_info.title.as_deref(), Some(MCP_SERVER_TITLE));
     }
 }

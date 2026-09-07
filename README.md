@@ -50,7 +50,7 @@ brew install protobuf fontconfig freetype
 
 ## skill-master (MCP server)
 
-The primary user-facing surface today is **skill-master** as an **MCP server** (Streamable HTTP, typically at `/mcp`). There is no public REST/HTTP feature API for clients; tools are invoked over MCP.
+The primary user-facing surface today is **skill-master** as an **MCP server** (Streamable HTTP, typically at `/mcp`). Protocol inventory and legacy vs modern (`2026-07-28`) notes: [skill-master/docs/mcp-protocol.md](skill-master/docs/mcp-protocol.md). There is no public REST/HTTP feature API for clients; tools are invoked over MCP.
 
 ### Tools
 

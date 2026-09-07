@@ -46,7 +46,7 @@ knowledge = { version = "0.1.0", path = "../knowledge" }
 telemetry = { version = "0.1.0", path = "../telemetry" }
 mcp-auth = { version = "0.1.0", path = "../mcp-auth" }
 
-rmcp = { version = "1.7", features = [
+rmcp = { version = "3.2", features = [
 	"server",
 	"macros",
 	"schemars",

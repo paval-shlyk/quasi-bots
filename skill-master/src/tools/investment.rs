@@ -35,6 +35,15 @@ struct TradingAnalysisArgs {
     include: Vec<AnalysisInclude>,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingQuotesArgs {
+    /// Broker / book symbols to mark (e.g. TSLA, Gold, US500). Required; 1..=30.
+    symbols: Vec<String>,
+    /// Reserved for custom windows; ignored in A1 (always skipped).
+    #[serde(default)]
+    include_klines: bool,
+}
+
 struct NewsBankProvider {
     pool: sqlx::SqlitePool,
     limit: usize,
@@ -147,5 +156,19 @@ impl SkillMasterMcpServer {
         .await
         .map(Json)
         .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "Fetch live marks and day moves for named symbols (Dzengi WS primary, REST ticker/24hr fallback). Soft per-symbol errors; no Yahoo, no news/RSI, no Telegram. Cap 30 symbols. include_klines is accepted but unused in A1."
+    )]
+    async fn trading_quotes(
+        &self,
+        Parameters(args): Parameters<TradingQuotesArgs>,
+    ) -> Result<Json<finance::QuotesResponse>, String> {
+        let _ = args.include_klines; // A1: skip klines unless trivial later
+        finance::fetch_quotes(self.state.finance_state.api(), &args.symbols)
+            .await
+            .map(Json)
+            .map_err(|e| e.to_string())
     }
 }

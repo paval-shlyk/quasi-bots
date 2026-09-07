@@ -138,4 +138,62 @@ mod tests {
             "expenses_list_entries.year should be anyOf; got {year}"
         );
     }
+
+    #[test]
+    fn trading_quotes_tool_registered_with_anyof_nullables() {
+        let router = SkillMasterMcpServer::tool_router_with_mcp_schemas();
+        let tools = router.list_all();
+        let quotes = tools
+            .iter()
+            .find(|t| t.name == "trading_quotes")
+            .expect("trading_quotes tool");
+
+        assert!(
+            quotes
+                .input_schema
+                .get("properties")
+                .and_then(|p| p.get("symbols"))
+                .is_some(),
+            "trading_quotes input must declare symbols"
+        );
+
+        let output = quotes
+            .output_schema
+            .as_ref()
+            .expect("trading_quotes outputSchema");
+        let output = Value::Object((**output).clone());
+        assert!(
+            !contains_nullable_type_array(&output),
+            "trading_quotes outputSchema has nullable type arrays: {output}"
+        );
+
+        let last = output
+            .pointer("/properties/quotes/items/properties/last")
+            .or_else(|| {
+                output
+                    .pointer("/properties/quotes/items/anyOf/0/properties/last")
+            })
+            .or_else(|| output.pointer("/$defs/Quote/properties/last"))
+            .or_else(|| output.pointer("/definitions/Quote/properties/last"))
+            .or_else(|| {
+                let pref = output
+                    .pointer("/properties/quotes/items/$ref")
+                    .and_then(|r| r.as_str())?;
+                let name = pref.rsplit('/').next()?;
+                output
+                    .pointer(&format!("/$defs/{name}/properties/last"))
+                    .or_else(|| {
+                        output.pointer(&format!(
+                            "/definitions/{name}/properties/last"
+                        ))
+                    })
+            })
+            .unwrap_or_else(|| {
+                panic!("could not locate quotes[].last in schema: {output}")
+            });
+        assert!(
+            last.get("anyOf").is_some(),
+            "quotes[].last should be anyOf; got {last}"
+        );
+    }
 }

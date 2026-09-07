@@ -1,3 +1,4 @@
+pub mod schema;
 pub mod server;
 
 use axum::{Router, middleware};

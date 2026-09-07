@@ -63,7 +63,8 @@ impl Quote {
 }
 
 fn positive_or_none(v: f64) -> Option<f64> {
-    if v.is_finite() { Some(v) } else { None }
+    // Dzengi often emits 0.0 for missing bid/ask/last; treat non-positive as null.
+    if v.is_finite() && v > 0.0 { Some(v) } else { None }
 }
 
 fn normalize_input_symbol(symbol: &str) -> String {

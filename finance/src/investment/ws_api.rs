@@ -316,4 +316,84 @@ impl Client {
         self.request_payload("/api/v1/myTrades", payload, &cid, 5)
             .await
     }
+
+    /// Fetch 24hr ticker for a trade pair over the websocket.
+    pub async fn ws_ticker(&mut self, symbol: &str) -> anyhow::Result<Ticker> {
+        let cid = format!("ticker-{}-{}", symbol, now_ms());
+        self.ws_ticker_at("/api/v1/ticker/24hr", symbol, &cid).await
+    }
+
+    /// Fetch 24hr ticker at an explicit destination path (e.g. `/api/v2/ticker/24hr`).
+    pub async fn ws_ticker_at(
+        &mut self,
+        destination: &str,
+        symbol: &str,
+        correlation_id: &str,
+    ) -> anyhow::Result<Ticker> {
+        let payload = serde_json::json!({"symbol": symbol});
+        self.request_payload(destination, payload, correlation_id, 8)
+            .await
+    }
+}
+
+/// Derive the Dzengi websocket connect URL from a REST `base_url`.
+///
+/// `https://api-adapter.dzengi.com/api/v2` → `wss://api-adapter.dzengi.com/connect`
+pub fn ws_connect_url(rest_base_url: &str) -> String {
+    let trimmed = rest_base_url.trim().trim_end_matches('/');
+    let with_scheme = if let Some(rest) = trimmed.strip_prefix("https://") {
+        format!("wss://{rest}")
+    } else if let Some(rest) = trimmed.strip_prefix("http://") {
+        format!("ws://{rest}")
+    } else if trimmed.starts_with("wss://") || trimmed.starts_with("ws://") {
+        trimmed.to_string()
+    } else {
+        format!("wss://{trimmed}")
+    };
+
+    if let Some(idx) = with_scheme.find("/api/") {
+        format!("{}/connect", &with_scheme[..idx])
+    } else if with_scheme.ends_with("/connect") {
+        with_scheme
+    } else {
+        format!("{}/connect", with_scheme.trim_end_matches('/'))
+    }
+}
+
+/// API path prefix (`/api/v1` or `/api/v2`) taken from the REST base URL.
+pub fn ws_api_prefix(rest_base_url: &str) -> &'static str {
+    if rest_base_url.contains("/api/v2") {
+        "/api/v2"
+    } else {
+        "/api/v1"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn given_rest_v2_base_when_ws_connect_url_then_strips_api_and_uses_wss() {
+        let url = ws_connect_url("https://api-adapter.dzengi.com/api/v2");
+        assert_eq!(url, "wss://api-adapter.dzengi.com/connect");
+    }
+
+    #[test]
+    fn given_demo_rest_when_ws_connect_url_then_keeps_demo_host() {
+        let url = ws_connect_url("https://demo-api-adapter.dzengi.com/api/v1/");
+        assert_eq!(url, "wss://demo-api-adapter.dzengi.com/connect");
+    }
+
+    #[test]
+    fn given_rest_v2_when_ws_api_prefix_then_v2() {
+        assert_eq!(
+            ws_api_prefix("https://api-adapter.dzengi.com/api/v2"),
+            "/api/v2"
+        );
+        assert_eq!(
+            ws_api_prefix("https://api-adapter.dzengi.com/api/v1"),
+            "/api/v1"
+        );
+    }
 }

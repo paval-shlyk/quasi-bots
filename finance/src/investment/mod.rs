@@ -1,5 +1,7 @@
 mod config;
+pub mod debug;
 pub mod model;
+pub mod quotes;
 pub mod rest_api;
 mod routes;
 pub mod ws_api;
@@ -9,10 +11,17 @@ use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use config::DzengiConfig;
+pub use debug::{
+    finance_debug_enabled, redact_secrets, rest_ticker_sample,
+    ws_ticker_frame_redacted, ws_topics,
+};
 pub use model::*;
+pub use quotes::{
+    MAX_QUOTE_SYMBOLS, Quote, QuotesResponse, fetch_quotes, resolve_quote_pair,
+};
 pub use rest_api::RestClient;
 pub use routes::*;
-pub use ws_api::Client;
+pub use ws_api::{Client, ws_api_prefix, ws_connect_url};
 
 type HmacSha256 = Hmac<Sha256>;
 

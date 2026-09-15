@@ -1,10 +1,16 @@
 //! Portfolio holdings analysis: targets, earnings, news, technicals.
 
+mod earnings_calendar;
 mod finnhub;
 mod news_rss;
 mod providers;
 mod yahoo_targets;
 
+pub use earnings_calendar::{
+    DEFAULT_HORIZON_DAYS, DEFAULT_INCLUDE_PAST_DAYS, EarningsCalendarEvent,
+    EarningsCalendarQuery, EarningsCalendarResponse, fetch_earnings_calendar,
+    finnhub_earnings_symbol,
+};
 pub use finnhub::FinnhubProvider;
 pub use news_rss::RssNewsProvider;
 pub use providers::{

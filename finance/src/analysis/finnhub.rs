@@ -108,6 +108,10 @@ struct FinnhubEarningsRow {
     #[serde(rename = "epsActual")]
     eps_actual: Option<f64>,
     symbol: Option<String>,
+    /// Fiscal quarter (1..=4) when present.
+    quarter: Option<u32>,
+    /// Fiscal year when present.
+    year: Option<i32>,
 }
 
 impl PriceTargetProvider for FinnhubProvider {
@@ -262,15 +266,30 @@ impl EarningsCalendarProvider for FinnhubProvider {
         let last = dated.iter().rev().find(|(dt, _)| *dt <= now);
         let next = dated.iter().find(|(dt, _)| *dt > now);
 
+        let period = next
+            .and_then(|(_, r)| period_label(r.year, r.quarter))
+            .or_else(|| {
+                last.and_then(|(_, r)| period_label(r.year, r.quarter))
+            });
+
         Ok(EarningsInfo {
             next_report_at: next.map(|(dt, _)| *dt),
             last_report_at: last.map(|(dt, _)| *dt),
+            period,
             eps_estimate: next
                 .and_then(|(_, r)| r.eps_estimate)
                 .or_else(|| last.and_then(|(_, r)| r.eps_estimate)),
             eps_actual: last.and_then(|(_, r)| r.eps_actual),
             source: "finnhub".into(),
         })
+    }
+}
+
+fn period_label(year: Option<i32>, quarter: Option<u32>) -> Option<String> {
+    match (year, quarter) {
+        (Some(y), Some(q)) if (1..=4).contains(&q) => Some(format!("{y}-Q{q}")),
+        (Some(y), None) => Some(y.to_string()),
+        _ => None,
     }
 }
 

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use finance::{
-    AnalysisInclude, AnalysisServices, UpsertWatch, WatchChannel, WatchCompare,
-    WatchRule,
+    AnalysisInclude, AnalysisServices, EarningsCalendarQuery, UpsertWatch,
+    WatchChannel, WatchCompare, WatchRule,
     analysis::{
         AssetNewsItem, FinnhubProvider, NewsProvider, YahooPriceTargetProvider,
     },
@@ -44,6 +44,20 @@ struct TradingQuotesArgs {
     /// Reserved for custom windows; ignored in A1 (always skipped).
     #[serde(default)]
     include_klines: bool,
+}
+
+#[derive(Debug, Default, Deserialize, JsonSchema)]
+struct TradingEarningsCalendarArgs {
+    /// Optional symbol filter; omit / empty = all **equity** names in the open book
+    /// (skips Gold / US500 / TON unless listed here).
+    #[serde(default)]
+    symbols: Option<Vec<String>>,
+    /// Upcoming report window in days. Default 14.
+    #[serde(default)]
+    horizon_days: Option<i64>,
+    /// Recently reported lookback in days. Default 1.
+    #[serde(default)]
+    include_past_days: Option<i64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -248,6 +262,35 @@ impl SkillMasterMcpServer {
             .await
             .map(Json)
             .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "Company earnings / quarterly report publish dates for held equities (Paval “revenue” = report dates, not P&L). Default = open equity book; optional symbols filter. Finnhub via same symbol map as trading_analysis (Gold/US500/TON reject as non-equity). Soft per-symbol errors; no Telegram."
+    )]
+    async fn trading_earnings_calendar(
+        &self,
+        Parameters(args): Parameters<TradingEarningsCalendarArgs>,
+    ) -> Result<Json<finance::EarningsCalendarResponse>, String> {
+        let query = EarningsCalendarQuery {
+            symbols: args.symbols,
+            horizon_days: args
+                .horizon_days
+                .unwrap_or(finance::DEFAULT_HORIZON_DAYS),
+            include_past_days: args
+                .include_past_days
+                .unwrap_or(finance::DEFAULT_INCLUDE_PAST_DAYS),
+        };
+        let provider = FinnhubProvider::new(
+            &self.state.finance_state.config.finn_hub_api_key,
+        );
+        finance::fetch_earnings_calendar(
+            self.state.finance_state.api(),
+            &provider,
+            &query,
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
     }
 
     #[tool(

@@ -29,42 +29,47 @@ pub enum AssetClass {
 
 /// Wallet + book snapshot for MCP `trading_portfolio`.
 ///
-/// Cash fields come from the Dzengi USD balance row. Position notionals and
-/// per-lot broker margin come from `/tradingPositions` and are **not** folded
-/// into `nav`. Prefer `reserved_cash` for total locked wallet cash; do **not**
-/// treat `margin_used` as total locked margin (it can be much smaller).
+/// Prefer headline `equity` (wallet equity) over exposure. Invariant:
+/// `equity = cash_available + cash_locked` (same as legacy
+/// `nav = cash + reserved_cash`). Never `cash + gross_exposure`.
 ///
-/// Legacy `current_volume` was removed on purpose (use `cash` / `reserved_cash`
-/// / `nav` / `historical_volume` instead).
+/// `margin_used` is only the Σ of per-lot broker margins — often ≪
+/// `cash_locked`; not “total capital in play.”
+///
+/// Legacy `current_volume` was removed on purpose (use cash / locked /
+/// equity / `historical_volume` instead).
 #[derive(Clone, serde::Serialize, schemars::JsonSchema)]
 pub struct Portfolio {
     pub snapshot_at: DateTime<Utc>,
     pub currency: String,
-    /// USD wallet `free` (available). `None` if no USD balance row.
+    /// Preferred: USD free cash. Same value as `cash`.
+    pub cash_available: Option<f64>,
+    /// Compat alias of `cash_available`. Prefer `cash_available`.
     pub cash: Option<f64>,
-    /// USD wallet `locked` (broker-reserved cash). With `cash`, this is the
-    /// Equity side of the wallet: `nav = cash + reserved_cash`. Independent of
-    /// `margin_used` and of CFD notionals in `positions_value`.
+    /// Preferred: broker-locked cash. Same value as `reserved_cash`.
+    pub cash_locked: Option<f64>,
+    /// Compat alias of `cash_locked`. Prefer `cash_locked`.
     pub reserved_cash: Option<f64>,
-    /// Σ open holding `market_value` (spot marks + leverage `cost` marks).
-    /// CFD notionals can dwarf `nav`; not added into `nav`.
+    /// Preferred: Σ `|market_value|` of open holdings. Same as `positions_value`.
+    /// Can dwarf equity; never folded into equity.
+    pub gross_exposure: f64,
+    /// Compat alias of `gross_exposure`. Prefer `gross_exposure`.
     pub positions_value: f64,
-    /// Wallet Equity: `cash + reserved_cash` when both known. Never
-    /// `cash + positions_value`.
+    /// Preferred headline: wallet equity = `cash_available + cash_locked`.
+    /// Same value as `nav`. Never `cash + gross_exposure`.
+    pub equity: Option<f64>,
+    /// Deprecated alias of `equity`. Prefer `equity`.
     pub nav: Option<f64>,
     /// Σ open holding unrealized P/L.
     pub unrealized_pnl: f64,
     /// Always `null` today (P1): not yet wired from ledger / closed-position
     /// history. Do not infer realized P/L from other fields.
     pub realized_pnl: Option<f64>,
-    /// Same as `cash` (USD free). Not a margin-adjusted figure.
+    /// Same as `cash_available` (USD free). Not a margin-adjusted figure.
     pub buying_power: Option<f64>,
-    /// Σ Dzengi `TradingPosition.margin` for **all** open long lots, scaled by
-    /// remaining qty (`(open-close)/open`). Aggregated across every leveraged
-    /// product — not a single-name copy. Distinct from `reserved_cash` (wallet
-    /// `locked`); live books often show `margin_used` << `reserved_cash`. Use
-    /// `reserved_cash` for total locked cash; use this only as the sum of
-    /// broker per-position margin fields. Shorts are skipped.
+    /// Σ per-lot broker margins for open longs (scaled by remaining qty).
+    /// Often ≪ `cash_locked`; not total locked cash and not “capital in play.”
+    /// Prefer `cash_locked` for locked wallet cash. Shorts are skipped.
     pub margin_used: Option<f64>,
 
     pub can_trade: bool,
@@ -87,6 +92,39 @@ pub struct AssetEntryTrade {
     pub amount: f64,
 }
 
+/// How the position is margined in the book (finance-mapped; broker-agnostic).
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    Eq,
+    serde::Serialize,
+    serde::Deserialize,
+    schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum MarginMode {
+    /// Spot / fully collateralized — no leverage product.
+    Collateral,
+    /// Leveraged / CFD-style product.
+    Leveraged,
+}
+
+impl MarginMode {
+    pub fn is_leveraged(self) -> bool {
+        matches!(self, Self::Leveraged)
+    }
+
+    pub fn from_leveraged(leveraged: bool) -> Self {
+        if leveraged {
+            Self::Leveraged
+        } else {
+            Self::Collateral
+        }
+    }
+}
+
 #[derive(
     Clone, serde::Serialize, serde::Deserialize, schemars::JsonSchema, Debug,
 )]
@@ -94,8 +132,11 @@ pub struct Asset {
     pub name: Option<String>,
     pub symbol: String,
     pub asset_class: AssetClass,
-    /// True when `/exchangeInfo` marks the name as leveraged/CFD (not spot).
-    /// Portfolio `margin_used` is the Σ of broker per-lot `margin` for open
+    /// Preferred: `collateral` or `leveraged` (mapped in finance from venue
+    /// exchange info / symbol conventions).
+    pub margin_mode: MarginMode,
+    /// Compat: `true` when `margin_mode == leveraged`. Prefer `margin_mode`.
+    /// Portfolio `margin_used` is the Σ of broker per-lot margins for open
     /// longs; individual lot margin is not exposed on this asset row.
     pub leverage: bool,
 
@@ -228,9 +269,13 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
     Ok(Portfolio {
         snapshot_at: snapshot.snapshot_at,
         currency: "USD".into(),
+        cash_available: cash,
         cash,
+        cash_locked: reserved_cash,
         reserved_cash,
+        gross_exposure: positions_value,
         positions_value,
+        equity: nav,
         nav,
         unrealized_pnl,
         realized_pnl: None,
@@ -473,19 +518,20 @@ fn find_symbol_info<'a>(
 pub fn classify_asset(
     symbol: &str,
     exchange_info: &ExchangeInfo,
-) -> (AssetClass, bool) {
+) -> (AssetClass, MarginMode) {
     let info = find_symbol_info(exchange_info, symbol);
-    let leverage = info
+    let leveraged = info
         .and_then(|s| s.market_type.as_deref())
         .is_some_and(|t| t.eq_ignore_ascii_case("LEVERAGE"))
         || symbol.contains("_LEVERAGE");
+    let margin_mode = MarginMode::from_leveraged(leveraged);
 
     let class = info
         .and_then(|s| s.asset_type.as_deref())
         .and_then(asset_class_from_dzengi)
         .unwrap_or_else(|| asset_class_fallback(symbol));
 
-    (class, leverage)
+    (class, margin_mode)
 }
 
 fn resolve_asset_name(
@@ -579,13 +625,14 @@ async fn spot_asset_from_balance(
     } else {
         0.0
     };
-    let (asset_class, leverage) = classify_asset(&symbol, exchange_info);
+    let (asset_class, margin_mode) = classify_asset(&symbol, exchange_info);
 
     Ok(Some(Asset {
         name: resolve_asset_name(name_by_symbol, &symbol),
         symbol,
         asset_class,
-        leverage,
+        margin_mode,
+        leverage: margin_mode.is_leveraged(),
         amount,
         average_entry_price,
         cost_basis: entry_cost,
@@ -623,7 +670,7 @@ fn build_leverage_assets(
 
         let symbol = normalize_symbol(&position.symbol);
         let name = resolve_asset_name(name_by_symbol, &symbol);
-        let (asset_class, leverage) = classify_asset(&symbol, exchange_info);
+        let (asset_class, margin_mode) = classify_asset(&symbol, exchange_info);
         let currency = if position.currency.is_empty() {
             "USD".to_string()
         } else {
@@ -668,7 +715,8 @@ fn build_leverage_assets(
                 symbol,
                 name,
                 asset_class,
-                leverage,
+                margin_mode,
+                leverage: margin_mode.is_leveraged(),
                 amount: remaining_qty,
                 average_entry_price: 0.0,
                 cost_basis: 0.0,
@@ -1239,17 +1287,20 @@ mod tests {
         let info = exchange_info(vec![symbol_info_typed(
             "US500", "US500", "USD", "INDEX", "LEVERAGE",
         )]);
-        let (class, leverage) = classify_asset("US500", &info);
+        let (class, margin_mode) = classify_asset("US500", &info);
         assert_eq!(class, AssetClass::Index);
-        assert!(leverage);
+        assert_eq!(margin_mode, MarginMode::Leveraged);
+        assert!(margin_mode.is_leveraged());
     }
 
     #[test]
     fn given_missing_asset_type_when_classify_gold_then_falls_back_to_commodity()
      {
-        let (class, leverage) = classify_asset("Gold", &exchange_info(vec![]));
+        let (class, margin_mode) =
+            classify_asset("Gold", &exchange_info(vec![]));
         assert_eq!(class, AssetClass::Commodity);
-        assert!(!leverage);
+        assert_eq!(margin_mode, MarginMode::Collateral);
+        assert!(!margin_mode.is_leveraged());
     }
 
     #[test]
@@ -1277,10 +1328,11 @@ mod tests {
 
     #[test]
     fn given_ton_leverage_when_classify_then_crypto_and_levered() {
-        let (class, leverage) =
+        let (class, margin_mode) =
             classify_asset("TON/USD_LEVERAGE", &exchange_info(vec![]));
         assert_eq!(class, AssetClass::Crypto);
-        assert!(leverage);
+        assert_eq!(margin_mode, MarginMode::Leveraged);
+        assert!(margin_mode.is_leveraged());
     }
 
     #[test]
@@ -1332,9 +1384,13 @@ mod tests {
         let p = Portfolio {
             snapshot_at: Utc::now(),
             currency: "USD".into(),
+            cash_available: Some(100.0),
             cash: Some(100.0),
+            cash_locked: Some(20.0),
             reserved_cash: Some(20.0),
+            gross_exposure: 5000.0,
             positions_value: 5000.0,
+            equity: Some(120.0),
             nav: Some(120.0),
             unrealized_pnl: -10.0,
             realized_pnl: None,
@@ -1353,11 +1409,66 @@ mod tests {
         assert!(v.get("nav").is_some());
         assert!(v.get("reserved_cash").is_some());
         assert!(v.get("margin_used").is_some());
+        // Preferred aliases present and equal to legacy names
+        assert_eq!(v.get("equity"), v.get("nav"));
+        assert_eq!(v.get("cash_available"), v.get("cash"));
+        assert_eq!(v.get("cash_locked"), v.get("reserved_cash"));
+        assert_eq!(v.get("gross_exposure"), v.get("positions_value"));
+        // Invariant: equity = cash_available + cash_locked (never + gross_exposure)
+        let equity = v["equity"].as_f64().unwrap();
+        let cash_available = v["cash_available"].as_f64().unwrap();
+        let cash_locked = v["cash_locked"].as_f64().unwrap();
+        let gross_exposure = v["gross_exposure"].as_f64().unwrap();
+        assert!((equity - (cash_available + cash_locked)).abs() < 1e-9);
+        assert_ne!(equity, cash_available + gross_exposure);
         // realized_pnl present but null until ledger wiring (P1)
         assert!(v.get("realized_pnl").is_some());
         assert!(v.get("realized_pnl").unwrap().is_null());
         // current_volume intentionally dropped in trading snapshot (#5 / #8)
         assert!(v.get("current_volume").is_none());
         assert!(v.get("as_of").is_none());
+    }
+
+    #[test]
+    fn given_asset_when_serialized_then_has_margin_mode_and_leverage_compat() {
+        let leveraged = Asset {
+            name: Some("Index".into()),
+            symbol: "US500".into(),
+            asset_class: AssetClass::Index,
+            margin_mode: MarginMode::Leveraged,
+            leverage: true,
+            amount: 1.0,
+            average_entry_price: 100.0,
+            cost_basis: 100.0,
+            unit_market_price: 110.0,
+            market_value: 110.0,
+            unrealized_pnl: 10.0,
+            unrealized_pnl_pct: 10.0,
+            currency: "USD".into(),
+            trades: vec![],
+        };
+        let v = serde_json::to_value(&leveraged).unwrap();
+        assert_eq!(v["margin_mode"], "leveraged");
+        assert_eq!(v["leverage"], true);
+
+        let spot = Asset {
+            name: None,
+            symbol: "BTC".into(),
+            asset_class: AssetClass::Crypto,
+            margin_mode: MarginMode::Collateral,
+            leverage: false,
+            amount: 1.0,
+            average_entry_price: 1.0,
+            cost_basis: 1.0,
+            unit_market_price: 1.0,
+            market_value: 1.0,
+            unrealized_pnl: 0.0,
+            unrealized_pnl_pct: 0.0,
+            currency: "USD".into(),
+            trades: vec![],
+        };
+        let v = serde_json::to_value(&spot).unwrap();
+        assert_eq!(v["margin_mode"], "collateral");
+        assert_eq!(v["leverage"], false);
     }
 }

@@ -65,14 +65,15 @@ pub struct AssetWithWeight {
     #[serde(flatten)]
     pub asset: Asset,
 
-    /// Book concentration: `|market_value| / positions_value × 100`.
-    /// `positions_value` is Σ `|market_value|` of the returned open lots.
+    /// Book concentration: `|market_value| / gross_exposure × 100`
+    /// (`gross_exposure` / legacy `positions_value` = Σ `|market_value|`).
     /// Sums ≈ 100% (± rounding). Prefer this for concentration risk.
     pub weight_book_pct: f64,
 
-    /// NAV exposure: `|market_value| / NAV × 100`.
-    /// NAV is wallet Equity (cash + reserved). CFD/margin notionals can make
-    /// Σ `weight_nav_pct` well above 100%. `None` when NAV is unknown.
+    /// Equity exposure: `|market_value| / equity × 100`
+    /// (`equity` / legacy `nav` = cash_available + cash_locked). Leveraged
+    /// notionals can make Σ `weight_nav_pct` well above 100%. `None` when
+    /// equity is unknown.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub weight_nav_pct: Option<f64>,
 
@@ -121,12 +122,12 @@ pub struct OwningAssets {
 impl OwningAssets {
     /// Transform raw holdings into rows with book and NAV weights.
     ///
-    /// - `weight_book_pct` = `|MV| / Σ|MV| × 100` (denominator: positions_value)
-    /// - `weight_nav_pct` = `|MV| / NAV × 100` when `nav` is present and > 0
-    /// - `weight_percentage` keeps prior semantics (NAV denom when known, else book)
+    /// - `weight_book_pct` = `|MV| / Σ|MV| × 100` (denominator: gross_exposure)
+    /// - `weight_nav_pct` = `|MV| / equity × 100` when equity/`nav` is present and > 0
+    /// - `weight_percentage` keeps prior semantics (equity denom when known, else book)
     ///
-    /// `nav` is wallet Equity (cash + reserved). CFD notionals may exceed NAV,
-    /// so book weights still sum ≈ 100% while NAV weights may not.
+    /// Equity is wallet cash_available + cash_locked. Leveraged notionals may
+    /// exceed equity, so book weights still sum ≈ 100% while equity weights may not.
     pub fn from_holdings(holdings: Vec<Asset>, nav: Option<f64>) -> Self {
         let positions_value: f64 =
             holdings.iter().map(|a| a.market_value.abs()).sum();
@@ -399,7 +400,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::investment::AssetEntryTrade;
+    use crate::investment::{AssetEntryTrade, MarginMode};
 
     /// `market_value` is live market value of the position (not entry basis).
     fn sample_asset(
@@ -423,6 +424,7 @@ mod tests {
             name: Some("Test Co".into()),
             symbol: "TEST".into(),
             asset_class: AssetClass::Equity,
+            margin_mode: MarginMode::Collateral,
             leverage: false,
             amount,
             average_entry_price: entry,

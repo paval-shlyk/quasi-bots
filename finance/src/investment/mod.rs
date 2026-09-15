@@ -4,6 +4,7 @@ pub mod model;
 pub mod quotes;
 pub mod rest_api;
 mod routes;
+pub mod watches;
 pub mod ws_api;
 
 use hmac::{Hmac, Mac};
@@ -21,6 +22,14 @@ pub use quotes::{
 };
 pub use rest_api::RestClient;
 pub use routes::*;
+pub use watches::{
+    AlertEvent, AlertList, AlertOutboxRow, DEFAULT_COOLDOWN_SECS, EvalSnapshot,
+    FireObservation, SymbolObservation, UpsertWatch, Watch, WatchChannel,
+    WatchCompare, WatchList, WatchRule, ack_alerts, delete_watch,
+    evaluate_enabled_watches, evaluate_watch, insert_alert, list_alerts,
+    list_enabled_watches, list_watches, set_watch_enabled, try_fire_watch,
+    upsert_watch,
+};
 pub use ws_api::{Client, ws_api_prefix, ws_connect_url};
 
 type HmacSha256 = Hmac<Sha256>;

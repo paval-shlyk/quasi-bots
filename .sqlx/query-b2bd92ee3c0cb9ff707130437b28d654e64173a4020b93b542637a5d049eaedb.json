@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO alert_outbox (\n            event_id, watch_id, channel, payload, created_at,\n            delivered_telegram_at, acked_mcp_at\n        ) VALUES (?, ?, ?, ?, ?, NULL, NULL)\n        RETURNING\n            id AS \"id!\",\n            event_id AS \"event_id!\",\n            watch_id AS \"watch_id!\",\n            channel AS \"channel!\",\n            payload AS \"payload!\",\n            created_at AS \"created_at!\",\n            delivered_telegram_at,\n            acked_mcp_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "event_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "watch_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "channel!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "payload!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "delivered_telegram_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "acked_mcp_at",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "b2bd92ee3c0cb9ff707130437b28d654e64173a4020b93b542637a5d049eaedb"
+}

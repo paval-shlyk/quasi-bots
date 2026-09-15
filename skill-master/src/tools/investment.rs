@@ -1,5 +1,7 @@
+use chrono::{DateTime, Utc};
 use finance::{
-    AnalysisInclude, AnalysisServices,
+    AnalysisInclude, AnalysisServices, UpsertWatch, WatchChannel, WatchCompare,
+    WatchRule,
     analysis::{
         AssetNewsItem, FinnhubProvider, NewsProvider, YahooPriceTargetProvider,
     },
@@ -44,6 +46,73 @@ struct TradingQuotesArgs {
     include_klines: bool,
 }
 
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingWatchesUpsertArgs {
+    /// Existing watch id to update; omit to create.
+    #[serde(default)]
+    id: Option<i64>,
+    /// Required for symbol rules; must be null for portfolio rules.
+    #[serde(default)]
+    symbol: Option<String>,
+    /// day_change_pct | mark_vs_entry_pct | nav_day_change_pct | cash_below | weight_book_pct_above
+    rule: WatchRule,
+    threshold: f64,
+    /// lte | gte | abs_gte
+    compare: WatchCompare,
+    /// telegram | mcp | both — delivery target; no tokens exposed here.
+    channel: WatchChannel,
+    /// Default 3600 when omitted.
+    #[serde(default)]
+    cooldown_secs: Option<i64>,
+    /// Default true when omitted on create.
+    #[serde(default)]
+    enabled: Option<bool>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingWatchIdArgs {
+    id: i64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingWatchesEnableArgs {
+    id: i64,
+    enabled: bool,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingAlertsListArgs {
+    /// RFC3339 lower bound on `created_at`; omit = no lower bound.
+    #[serde(default)]
+    since: Option<String>,
+    /// Max rows (1..=200). Default 50.
+    #[serde(default)]
+    limit: Option<i64>,
+    /// When true, only unacked rows with channel mcp|both.
+    #[serde(default)]
+    pending_mcp_only: bool,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+struct TradingAlertsAckArgs {
+    /// Outbox `event_id` values to mark seen by the agent.
+    event_ids: Vec<String>,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+#[serde(crate = "serde")]
+struct DeleteWatchResult {
+    deleted: bool,
+}
+
+#[derive(Debug, Serialize, schemars::JsonSchema)]
+#[serde(crate = "serde")]
+struct AckAlertsResult {
+    acked: u64,
+}
+
+use serde::Serialize;
+
 struct NewsBankProvider {
     pool: sqlx::SqlitePool,
     limit: usize,
@@ -77,6 +146,15 @@ impl NewsProvider for NewsBankProvider {
                 source: h.source,
             })
             .collect())
+    }
+}
+
+fn parse_since(raw: Option<String>) -> Result<Option<DateTime<Utc>>, String> {
+    match raw {
+        None => Ok(None),
+        Some(s) => DateTime::parse_from_rfc3339(&s)
+            .map(|dt| Some(dt.with_timezone(&Utc)))
+            .map_err(|e| format!("invalid since RFC3339: {e}")),
     }
 }
 
@@ -170,5 +248,106 @@ impl SkillMasterMcpServer {
             .await
             .map(Json)
             .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "List durable trading watch rules (enabled and disabled). No Telegram tokens."
+    )]
+    async fn trading_watches_list(
+        &self,
+    ) -> Result<Json<finance::WatchList>, String> {
+        finance::list_watches(self.state.finance_state.pool())
+            .await
+            .map(Json)
+            .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "Create or update one trading watch. Symbol required for day_change_pct / mark_vs_entry_pct / weight_book_pct_above; must be null for nav_day_change_pct / cash_below. Channel selects telegram|mcp|both — tokens stay in Vault, never in MCP."
+    )]
+    async fn trading_watches_upsert(
+        &self,
+        Parameters(args): Parameters<TradingWatchesUpsertArgs>,
+    ) -> Result<Json<finance::Watch>, String> {
+        finance::upsert_watch(
+            self.state.finance_state.pool(),
+            UpsertWatch {
+                id: args.id,
+                symbol: args.symbol,
+                rule: args.rule,
+                threshold: args.threshold,
+                compare: args.compare,
+                channel: args.channel,
+                cooldown_secs: args.cooldown_secs,
+                enabled: args.enabled,
+            },
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
+    }
+
+    #[tool(description = "Delete a trading watch by id.")]
+    async fn trading_watches_delete(
+        &self,
+        Parameters(args): Parameters<TradingWatchIdArgs>,
+    ) -> Result<Json<DeleteWatchResult>, String> {
+        let deleted =
+            finance::delete_watch(self.state.finance_state.pool(), args.id)
+                .await
+                .map_err(|e| e.to_string())?;
+        Ok(Json(DeleteWatchResult { deleted }))
+    }
+
+    #[tool(
+        description = "Enable or disable a trading watch. Disabled watches never fire."
+    )]
+    async fn trading_watches_enable(
+        &self,
+        Parameters(args): Parameters<TradingWatchesEnableArgs>,
+    ) -> Result<Json<finance::Watch>, String> {
+        finance::set_watch_enabled(
+            self.state.finance_state.pool(),
+            args.id,
+            args.enabled,
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "List recent alert outbox events (watch.fired). Optional since (RFC3339), limit, pending_mcp_only. No Telegram tokens."
+    )]
+    async fn trading_alerts_list(
+        &self,
+        Parameters(args): Parameters<TradingAlertsListArgs>,
+    ) -> Result<Json<finance::AlertList>, String> {
+        let since = parse_since(args.since)?;
+        finance::list_alerts(
+            self.state.finance_state.pool(),
+            since,
+            args.limit,
+            args.pending_mcp_only,
+        )
+        .await
+        .map(Json)
+        .map_err(|e| e.to_string())
+    }
+
+    #[tool(
+        description = "Ack alert outbox events by event_id (marks acked_mcp_at). Telegram delivery acks separately."
+    )]
+    async fn trading_alerts_ack(
+        &self,
+        Parameters(args): Parameters<TradingAlertsAckArgs>,
+    ) -> Result<Json<AckAlertsResult>, String> {
+        let acked = finance::ack_alerts(
+            self.state.finance_state.pool(),
+            &args.event_ids,
+        )
+        .await
+        .map_err(|e| e.to_string())?;
+        Ok(Json(AckAlertsResult { acked }))
     }
 }

@@ -1,7 +1,8 @@
-//! Watch store (A2) + alert outbox / evaluate hooks (A3 skeleton).
+//! Watch store (A2) + alert outbox / evaluate hooks (A3).
 //!
-//! Full Dzengi WS evaluator loop and Telegram delivery are follow-ups;
-//! this module owns CRUD, schema, condition checks, and outbox insert.
+//! The Dzengi WS evaluator loop lives in [`crate::investment::alert_evaluator`].
+//! Telegram delivery is Wave A4 (not here). This module owns CRUD, schema,
+//! condition checks, and outbox insert.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,9 @@ use std::collections::HashMap;
 
 /// Default cooldown when upsert omits `cooldown_secs`.
 pub const DEFAULT_COOLDOWN_SECS: i64 = 3600;
+
+/// Soft cap for `trading_alerts_ack` batch size (same spirit as list limit).
+pub const MAX_ACK_EVENT_IDS: usize = 200;
 
 /// Watch rule kinds (P1 Wave A).
 #[derive(
@@ -494,7 +498,7 @@ pub async fn set_watch_enabled(
 }
 
 // ---------------------------------------------------------------------------
-// Outbox + evaluate hooks (A3 skeleton; no WS worker / Telegram here)
+// Outbox + evaluate hooks (WS worker: alert_evaluator; Telegram: A4)
 // ---------------------------------------------------------------------------
 
 /// Versioned alert event payload stored in `alert_outbox.payload`.
@@ -856,6 +860,12 @@ pub async fn ack_alerts(
     if event_ids.is_empty() {
         return Ok(0);
     }
+    if event_ids.len() > MAX_ACK_EVENT_IDS {
+        anyhow::bail!(
+            "event_ids accepts at most {MAX_ACK_EVENT_IDS} ids (got {})",
+            event_ids.len()
+        );
+    }
     let now = Utc::now().to_rfc3339();
     let mut affected = 0_u64;
     for event_id in event_ids {
@@ -1123,5 +1133,18 @@ mod tests {
 
         assert!(delete_watch(&pool, created.id).await.unwrap());
         assert!(list_watches(&pool).await.unwrap().watches.is_empty());
+    }
+
+    #[tokio::test]
+    async fn ack_rejects_oversized_event_id_batch() {
+        let pool = setup_pool().await;
+        let ids: Vec<String> = (0..=MAX_ACK_EVENT_IDS)
+            .map(|i| format!("evt_{i}"))
+            .collect();
+        let err = ack_alerts(&pool, &ids).await.unwrap_err();
+        assert!(
+            err.to_string().contains("at most"),
+            "unexpected error: {err}"
+        );
     }
 }

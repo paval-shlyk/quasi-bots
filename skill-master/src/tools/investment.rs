@@ -95,7 +95,7 @@ struct TradingAlertsListArgs {
 
 #[derive(Debug, Deserialize, JsonSchema)]
 struct TradingAlertsAckArgs {
-    /// Outbox `event_id` values to mark seen by the agent.
+    /// Outbox `event_id` values to mark seen by the agent (max 200).
     event_ids: Vec<String>,
 }
 
@@ -336,12 +336,19 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Ack alert outbox events by event_id (marks acked_mcp_at). Telegram delivery acks separately."
+        description = "Ack alert outbox events by event_id (marks acked_mcp_at; max 200 ids). Telegram delivery acks separately."
     )]
     async fn trading_alerts_ack(
         &self,
         Parameters(args): Parameters<TradingAlertsAckArgs>,
     ) -> Result<Json<AckAlertsResult>, String> {
+        if args.event_ids.len() > finance::MAX_ACK_EVENT_IDS {
+            return Err(format!(
+                "event_ids accepts at most {} ids (got {})",
+                finance::MAX_ACK_EVENT_IDS,
+                args.event_ids.len()
+            ));
+        }
         let acked = finance::ack_alerts(
             self.state.finance_state.pool(),
             &args.event_ids,

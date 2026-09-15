@@ -86,31 +86,32 @@ pub async fn app_state(config: Config) -> AppState {
 
     tokio::task::spawn(crate::quotes::sync_task::task(state.clone()));
 
-    // P1 A3: Dzengi WS alert evaluator (outbox only; Telegram is A4).
-    // Gate: TRADING_ALERT_EVALUATOR=1|true|yes
-    if finance::alert_evaluator_enabled() {
+    // P1 A3/A4/A4.5: mounted [finance.alerts] / [finance.telegram] with
+    // optional TRADING_* / TELEGRAM_* env overrides. Tokens never logged.
+    let alerts_file = &state.config.finance.alerts;
+    let telegram_resolved = state.config.finance.telegram.resolve();
+
+    if alerts_file.resolve_enabled() {
         let pool = state.finance_state.pool().clone();
         let api = state.finance_state.api().clone();
-        let cfg = finance::AlertEvaluatorConfig::from_env();
-        tracing::info!(
-            "spawning trading alert evaluator (feature env enabled)"
-        );
+        let cfg =
+            finance::AlertEvaluatorConfig::from_alerts_config(alerts_file);
+        tracing::info!("spawning trading alert evaluator (config/env enabled)");
         tokio::task::spawn(finance::run_alert_evaluator(pool, api, cfg));
     } else {
         tracing::debug!(
-            "trading alert evaluator idle (set TRADING_ALERT_EVALUATOR=1 to enable)"
+            "trading alert evaluator idle (finance.alerts.evaluator_enabled or TRADING_ALERT_EVALUATOR=1)"
         );
     }
 
-    // P1 A4: Telegram outbox consumer (short movers only; no MCP notify test).
-    // Gate: TRADING_TELEGRAM_DELIVERY=1|true|yes
-    // Secrets: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID from Vault/k8s env only.
-    if finance::telegram_delivery_enabled() {
-        match finance::TelegramDeliveryConfig::from_env() {
+    // A4: outbox consumer. Single bot_token shared with commands when both on.
+    if telegram_resolved.delivery_enabled {
+        match finance::TelegramDeliveryConfig::from_resolved(&telegram_resolved)
+        {
             Some(cfg) => {
                 let pool = state.finance_state.pool().clone();
                 tracing::info!(
-                    "spawning trading telegram outbox consumer (feature env enabled; token redacted)"
+                    "spawning trading telegram outbox consumer (config/env enabled; token redacted)"
                 );
                 tokio::task::spawn(finance::run_telegram_outbox_consumer(
                     pool, cfg,
@@ -118,13 +119,39 @@ pub async fn app_state(config: Config) -> AppState {
             }
             None => {
                 tracing::warn!(
-                    "TRADING_TELEGRAM_DELIVERY enabled but TELEGRAM_BOT_TOKEN and/or TELEGRAM_CHAT_ID missing/empty; consumer not started"
+                    "telegram delivery enabled but bot_token/chat_id missing/empty; consumer not started"
                 );
             }
         }
     } else {
         tracing::debug!(
-            "trading telegram delivery idle (set TRADING_TELEGRAM_DELIVERY=1 to enable)"
+            "trading telegram delivery idle (finance.telegram.delivery_enabled or TRADING_TELEGRAM_DELIVERY=1)"
+        );
+    }
+
+    // A4.5: inbound commands — sole getUpdates poller for this bot_token.
+    if telegram_resolved.commands_enabled {
+        match finance::TelegramCommandsConfig::from_resolved(&telegram_resolved)
+        {
+            Some(cfg) => {
+                let pool = state.finance_state.pool().clone();
+                let api = state.finance_state.api().clone();
+                tracing::info!(
+                    "spawning trading telegram commands worker (sole getUpdates; token redacted; no MCP)"
+                );
+                tokio::task::spawn(finance::run_telegram_commands_worker(
+                    pool, api, cfg,
+                ));
+            }
+            None => {
+                tracing::warn!(
+                    "telegram commands enabled but bot_token/chat_id missing/empty; worker not started"
+                );
+            }
+        }
+    } else {
+        tracing::debug!(
+            "trading telegram commands idle (finance.telegram.commands_enabled or TRADING_TELEGRAM_COMMANDS=1)"
         );
     }
 

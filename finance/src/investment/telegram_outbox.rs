@@ -4,10 +4,13 @@
 //! sends a short movers-style message via Telegram Bot API, then marks
 //! `delivered_telegram_at`. On failure retries with backoff.
 //!
-//! **Secrets:** `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` from env/Vault only.
+//! **Secrets:** mounted `[finance.telegram]` and/or `TELEGRAM_*` env (Vault).
 //! Never log the bot token, never put it in MCP tool responses, never embed
 //! it in error strings that reach logs (Telegram URLs contain the token —
 //! construct them privately and log only status codes / event ids).
+//!
+//! Single bot with inbound commands (`telegram_commands`): this process must
+//! be the sole `getUpdates` consumer for `bot_token`.
 //!
 //! **Not in scope:** `trading_notify_test` MCP tool (skipped for P1); sendMessage
 //! inside quote/watch MCP tools.
@@ -16,6 +19,7 @@ use chrono::{DateTime, FixedOffset, Utc};
 use std::time::Duration;
 use tokio::time::MissedTickBehavior;
 
+use crate::investment::config::{ResolvedTelegram, env_flag_or};
 use crate::investment::watches::{
     AlertEvent, AlertOutboxRow, WatchCompare, WatchRule,
     list_pending_telegram_alerts, mark_telegram_delivered,
@@ -30,20 +34,10 @@ pub const DEFAULT_FAILURE_BACKOFF_SECS: u64 = 5;
 /// Max backoff after consecutive send failures (seconds).
 pub const MAX_FAILURE_BACKOFF_SECS: u64 = 300;
 
-/// Env gate: `TRADING_TELEGRAM_DELIVERY=1|true|yes` starts the worker.
+/// Legacy env-only gate (prefer mounted `telegram.delivery_enabled` +
+/// [`TelegramConfig::resolve`](crate::investment::TelegramConfig::resolve)).
 pub fn telegram_delivery_enabled() -> bool {
-    parse_enabled_flag(
-        std::env::var("TRADING_TELEGRAM_DELIVERY").ok().as_deref(),
-    )
-}
-
-fn parse_enabled_flag(raw: Option<&str>) -> bool {
-    raw.map(|v| {
-        v == "1"
-            || v.eq_ignore_ascii_case("true")
-            || v.eq_ignore_ascii_case("yes")
-    })
-    .unwrap_or(false)
+    env_flag_or("TRADING_TELEGRAM_DELIVERY", false)
 }
 
 /// Credentials + poll knobs. Token/chat id never appear in [`Debug`].
@@ -102,6 +96,20 @@ impl TelegramDeliveryConfig {
             cfg.batch_limit = n.min(100);
         }
         Some(cfg)
+    }
+
+    /// Build from resolved mounted config (+ env). Uses **delivery** bot token.
+    pub fn from_resolved(resolved: &ResolvedTelegram) -> Option<Self> {
+        if !resolved.credentials_ok() {
+            return None;
+        }
+        Some(Self {
+            bot_token: resolved.bot_token().to_string(),
+            chat_id: resolved.primary_chat_id().to_string(),
+            poll_interval: resolved.poll_interval,
+            batch_limit: resolved.batch_limit,
+            http_timeout: resolved.http_timeout,
+        })
     }
 }
 
@@ -196,10 +204,12 @@ pub fn format_telegram_message(event: &AlertEvent) -> String {
 
     let ts_line = format_msk_ts(event.ts);
 
-    match detail_line {
+    let body = match detail_line {
         Some(d) => format!("{headline}\n{d}\n{ts_line}"),
         None => format!("{headline}\n{ts_line}"),
-    }
+    };
+    // Prefix so shared-chat / single-bot traffic is recognizable vs other bots.
+    format!("[trading]\n{body}")
 }
 
 fn format_msk_ts(ts: DateTime<Utc>) -> String {
@@ -208,24 +218,43 @@ fn format_msk_ts(ts: DateTime<Utc>) -> String {
 }
 
 /// Build Bot API URL privately. Caller must **never** log this string.
-fn send_message_url(bot_token: &str) -> String {
+pub(crate) fn send_message_url(bot_token: &str) -> String {
     format!("https://api.telegram.org/bot{bot_token}/sendMessage")
 }
 
-/// POST `sendMessage`. On error, returns a message that does **not** include
-/// the bot token or full request URL.
+/// POST `sendMessage` to the configured delivery chat.
 pub async fn send_telegram_text(
     cfg: &TelegramDeliveryConfig,
     text: &str,
 ) -> anyhow::Result<()> {
-    let client = reqwest::Client::builder()
-        .timeout(cfg.http_timeout)
-        .build()?;
+    send_telegram_chat_text(cfg, &cfg.chat_id, text).await
+}
+
+/// POST `sendMessage` to an explicit chat id (allowlisted inbound replies).
+/// On error, returns a message that does **not** include the bot token or URL.
+pub async fn send_telegram_chat_text(
+    cfg: &TelegramDeliveryConfig,
+    chat_id: &str,
+    text: &str,
+) -> anyhow::Result<()> {
+    send_telegram_bot_text(&cfg.bot_token, chat_id, text, cfg.http_timeout)
+        .await
+}
+
+/// Low-level `sendMessage` with an explicit bot token (commands may use a
+/// dedicated token). Never log `bot_token` or the request URL.
+pub async fn send_telegram_bot_text(
+    bot_token: &str,
+    chat_id: &str,
+    text: &str,
+    http_timeout: Duration,
+) -> anyhow::Result<()> {
+    let client = reqwest::Client::builder().timeout(http_timeout).build()?;
 
     // URL contains the token — keep it in a local only; never put in tracing.
-    let url = send_message_url(&cfg.bot_token);
+    let url = send_message_url(bot_token);
     let body = serde_json::json!({
-        "chat_id": cfg.chat_id,
+        "chat_id": chat_id,
         "text": text,
         "disable_web_page_preview": true,
     });
@@ -234,7 +263,7 @@ pub async fn send_telegram_text(
         // reqwest errors can embed the URL (and thus the token). Sanitize.
         anyhow::anyhow!(
             "telegram sendMessage transport error (url redacted): {}",
-            sanitize_telegram_error(&e.to_string(), &cfg.bot_token)
+            sanitize_telegram_error(&e.to_string(), bot_token)
         )
     })?;
 
@@ -245,7 +274,7 @@ pub async fn send_telegram_text(
             "telegram sendMessage HTTP {} (body redacted/truncated): {}",
             status.as_u16(),
             truncate_for_log(
-                &sanitize_telegram_error(&resp_body, &cfg.bot_token),
+                &sanitize_telegram_error(&resp_body, bot_token),
                 200
             )
         );
@@ -261,14 +290,14 @@ pub async fn send_telegram_text(
             .unwrap_or("ok=false");
         anyhow::bail!(
             "telegram sendMessage rejected: {}",
-            sanitize_telegram_error(desc, &cfg.bot_token)
+            sanitize_telegram_error(desc, bot_token)
         );
     }
 
     Ok(())
 }
 
-fn sanitize_telegram_error(raw: &str, bot_token: &str) -> String {
+pub(crate) fn sanitize_telegram_error(raw: &str, bot_token: &str) -> String {
     let mut out = raw.replace(bot_token, "[redacted]");
     // Also scrub URL-shaped bot paths if token somehow differed.
     if let Some(idx) = out.find("api.telegram.org/bot") {
@@ -288,7 +317,7 @@ fn sanitize_telegram_error(raw: &str, bot_token: &str) -> String {
     out
 }
 
-fn truncate_for_log(s: &str, max: usize) -> String {
+pub(crate) fn truncate_for_log(s: &str, max: usize) -> String {
     if s.chars().count() <= max {
         s.to_string()
     } else {
@@ -400,6 +429,7 @@ pub async fn drain_once(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::investment::config::parse_enabled_flag;
     use crate::investment::watches::{
         EvalSnapshot, SymbolObservation, UpsertWatch, WatchChannel,
         WatchCompare, WatchRule, list_pending_telegram_alerts,
@@ -462,6 +492,7 @@ mod tests {
             ts,
         };
         let text = format_telegram_message(&event);
+        assert!(text.starts_with("[trading]\n"), "got: {text}");
         assert!(text.contains("⚠ TSLA day -6.2% (≤ -5%)"), "got: {text}");
         assert!(text.contains("mark 352.68"), "got: {text}");
         assert!(text.contains("nav 5878"), "got: {text}");
@@ -488,7 +519,8 @@ mod tests {
             ts: Utc::now(),
         };
         let text = format_telegram_message(&event);
-        assert!(text.starts_with("⚠ cash "), "got: {text}");
+        assert!(text.starts_with("[trading]\n"), "got: {text}");
+        assert!(text.contains("⚠ cash "), "got: {text}");
         assert!(text.contains("nav 5000"), "got: {text}");
     }
 

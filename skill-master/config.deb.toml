@@ -9,6 +9,22 @@ rss_source = "https://finance.yahoo.com/news/rssindex"
 dzengi_config = { base_url = "https://api-adapter.dzengi.com/api/v2", api_key = "", api_secret = "" } # REPlACE_WITH_YOUR_API_KEYS
 finn_hub_api_key = ""
 
+# Git template: disabled + empty secrets. Real values only on pod mount.
+# Optional env overrides: TRADING_ALERT_*, TRADING_TELEGRAM_*, TELEGRAM_*.
+[finance.alerts]
+evaluator_enabled = false
+eval_interval_secs = 60
+rest_reconcile_secs = 600
+
+# Single bot for outbound alerts + inbound commands. This skill-master
+# instance must be the sole getUpdates consumer for bot_token.
+[finance.telegram]
+delivery_enabled = false
+commands_enabled = false
+bot_token = ""
+chat_id = ""
+poll_secs = 30
+batch_limit = 20
 
 [news]
 refresh_timeout = "2h"

@@ -290,6 +290,37 @@ pub async fn fetch_portfolio(api: &RestClient) -> anyhow::Result<Portfolio> {
     })
 }
 
+/// Lean wallet + book headline for Telegram `/status` (no ledger walk).
+#[derive(Debug, Clone)]
+pub struct PortfolioHeadline {
+    pub cash_available: Option<f64>,
+    pub cash_locked: Option<f64>,
+    pub equity: Option<f64>,
+    pub gross_exposure: f64,
+    pub unrealized_pnl: f64,
+}
+
+/// Snapshot equity / cash / exposure / uPnL without deposit-ledger history.
+pub async fn fetch_portfolio_headline(
+    api: &RestClient,
+) -> anyhow::Result<PortfolioHeadline> {
+    let snapshot = load_dzengi_snapshot(api).await?;
+    let holdings = assemble_holdings(api, &snapshot).await?;
+    let (cash, reserved_cash) = usd_wallet(&snapshot.account);
+    let equity = nav_from_wallet(cash, reserved_cash);
+    let gross_exposure: f64 =
+        holdings.assets.iter().map(|a| a.market_value).sum();
+    let unrealized_pnl: f64 =
+        holdings.assets.iter().map(|a| a.unrealized_pnl).sum();
+    Ok(PortfolioHeadline {
+        cash_available: cash,
+        cash_locked: reserved_cash,
+        equity,
+        gross_exposure,
+        unrealized_pnl,
+    })
+}
+
 const QTY_EPS: f64 = 1e-12;
 
 pub async fn estimate_price_in_usd(

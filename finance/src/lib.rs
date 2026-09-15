@@ -21,6 +21,14 @@ pub struct Config {
 
     pub dzengi_config: investment::DzengiConfig,
     pub finn_hub_api_key: String,
+
+    /// `[finance.alerts]` — optional; defaults off / 60s / 600s.
+    #[serde(default)]
+    pub alerts: investment::AlertsConfig,
+
+    /// `[finance.telegram]` — optional; empty tokens in git template.
+    #[serde(default)]
+    pub telegram: investment::TelegramConfig,
 }
 
 pub async fn connect(

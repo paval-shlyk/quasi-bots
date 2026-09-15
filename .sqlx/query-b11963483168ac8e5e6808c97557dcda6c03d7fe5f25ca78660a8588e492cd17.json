@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            id AS \"id!\",\n            symbol,\n            rule AS \"rule!\",\n            threshold AS \"threshold!\",\n            compare AS \"compare!\",\n            channel AS \"channel!\",\n            cooldown_secs AS \"cooldown_secs!\",\n            enabled AS \"enabled!\",\n            last_fired_at,\n            created_at AS \"created_at!\"\n        FROM trading_watches\n        ORDER BY id DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "symbol",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "rule!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "threshold!",
+        "ordinal": 3,
+        "type_info": "Float"
+      },
+      {
+        "name": "compare!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "channel!",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "cooldown_secs!",
+        "ordinal": 6,
+        "type_info": "Integer"
+      },
+      {
+        "name": "enabled!",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_fired_at",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "b11963483168ac8e5e6808c97557dcda6c03d7fe5f25ca78660a8588e492cd17"
+}

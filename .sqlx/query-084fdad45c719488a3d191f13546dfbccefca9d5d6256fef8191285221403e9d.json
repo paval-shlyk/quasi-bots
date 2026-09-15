@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            UPDATE alert_outbox\n            SET acked_mcp_at = ?\n            WHERE event_id = ?\n              AND acked_mcp_at IS NULL\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "084fdad45c719488a3d191f13546dfbccefca9d5d6256fef8191285221403e9d"
+}

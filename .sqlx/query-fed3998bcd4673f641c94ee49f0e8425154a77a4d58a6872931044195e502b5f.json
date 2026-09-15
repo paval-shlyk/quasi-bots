@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            id AS \"id!\",\n            event_id AS \"event_id!\",\n            watch_id AS \"watch_id!\",\n            channel AS \"channel!\",\n            payload AS \"payload!\",\n            created_at AS \"created_at!\",\n            delivered_telegram_at,\n            acked_mcp_at\n        FROM alert_outbox\n        WHERE (?1 IS NULL OR created_at >= ?1)\n          AND (\n            ?2 = 0\n            OR (\n                acked_mcp_at IS NULL\n                AND channel IN ('mcp', 'both')\n            )\n          )\n        ORDER BY id DESC\n        LIMIT ?3\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "event_id!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "watch_id!",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "channel!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "payload!",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "created_at!",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "delivered_telegram_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "acked_mcp_at",
+        "ordinal": 7,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "fed3998bcd4673f641c94ee49f0e8425154a77a4d58a6872931044195e502b5f"
+}

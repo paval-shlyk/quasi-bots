@@ -196,4 +196,80 @@ mod tests {
             "quotes[].last should be anyOf; got {last}"
         );
     }
+
+    #[test]
+    fn trading_watches_tools_registered_with_anyof_nullables() {
+        let router = SkillMasterMcpServer::tool_router_with_mcp_schemas();
+        let tools = router.list_all();
+        for name in [
+            "trading_watches_list",
+            "trading_watches_upsert",
+            "trading_watches_delete",
+            "trading_watches_enable",
+            "trading_alerts_list",
+            "trading_alerts_ack",
+        ] {
+            assert!(
+                tools.iter().any(|t| t.name == name),
+                "missing MCP tool {name}"
+            );
+        }
+
+        let upsert = tools
+            .iter()
+            .find(|t| t.name == "trading_watches_upsert")
+            .expect("trading_watches_upsert");
+        let symbol = upsert
+            .input_schema
+            .get("properties")
+            .and_then(|p| p.get("symbol"))
+            .expect("symbol property");
+        assert!(
+            symbol.get("anyOf").is_some(),
+            "trading_watches_upsert.symbol should be anyOf; got {symbol}"
+        );
+        assert!(
+            symbol.get("type").is_none(),
+            "trading_watches_upsert.symbol must not use a type array"
+        );
+
+        let list = tools
+            .iter()
+            .find(|t| t.name == "trading_watches_list")
+            .expect("trading_watches_list");
+        let output = list
+            .output_schema
+            .as_ref()
+            .expect("trading_watches_list outputSchema");
+        let output = Value::Object((**output).clone());
+        assert!(
+            !contains_nullable_type_array(&output),
+            "trading_watches_list outputSchema has nullable type arrays: {output}"
+        );
+
+        // Watch.symbol / last_fired_at are nullable on the list response.
+        let watch_symbol = output
+            .pointer("/properties/watches/items/properties/symbol")
+            .or_else(|| output.pointer("/$defs/Watch/properties/symbol"))
+            .or_else(|| output.pointer("/definitions/Watch/properties/symbol"))
+            .or_else(|| {
+                let pref = output
+                    .pointer("/properties/watches/items/$ref")
+                    .and_then(|r| r.as_str())?;
+                let name = pref.rsplit('/').next()?;
+                output
+                    .pointer(&format!("/$defs/{name}/properties/symbol"))
+                    .or_else(|| {
+                        output.pointer(&format!(
+                            "/definitions/{name}/properties/symbol"
+                        ))
+                    })
+            });
+        if let Some(symbol) = watch_symbol {
+            assert!(
+                symbol.get("anyOf").is_some(),
+                "Watch.symbol should be anyOf; got {symbol}"
+            );
+        }
+    }
 }

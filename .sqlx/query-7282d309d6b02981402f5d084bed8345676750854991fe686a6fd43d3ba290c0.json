@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE trading_watches\n        SET last_fired_at = ?\n        WHERE id = ?\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "7282d309d6b02981402f5d084bed8345676750854991fe686a6fd43d3ba290c0"
+}

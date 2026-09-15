@@ -5,6 +5,12 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
 
+/// Default TCP/TLS connect budget for Dzengi WS (quotes / probes).
+pub const WS_CONNECT_TIMEOUT: Duration = Duration::from_secs(2);
+
+/// Default per-request wait for WS request/response correlation.
+pub const WS_REQUEST_TIMEOUT_SECS: u64 = 2;
+
 /// Client connects to dzengi.com websocket, authenticates and produces parsed events.
 pub struct Client {
     // Receiver for parsed events
@@ -23,7 +29,17 @@ impl Client {
         api_key: &str,
         api_secret: &str,
     ) -> anyhow::Result<Client> {
-        let (ws_stream, _resp) = tokio_tungstenite::connect_async(url).await?;
+        let (ws_stream, _resp) = tokio::time::timeout(
+            WS_CONNECT_TIMEOUT,
+            tokio_tungstenite::connect_async(url),
+        )
+        .await
+        .map_err(|_| {
+            anyhow::anyhow!(
+                "websocket connect timed out after {}ms",
+                WS_CONNECT_TIMEOUT.as_millis()
+            )
+        })??;
         let (mut write, mut read) = ws_stream.split();
 
         // channels for external use
@@ -331,8 +347,13 @@ impl Client {
         correlation_id: &str,
     ) -> anyhow::Result<Ticker> {
         let payload = serde_json::json!({"symbol": symbol});
-        self.request_payload(destination, payload, correlation_id, 8)
-            .await
+        self.request_payload(
+            destination,
+            payload,
+            correlation_id,
+            WS_REQUEST_TIMEOUT_SECS,
+        )
+        .await
     }
 }
 
@@ -395,5 +416,13 @@ mod tests {
             ws_api_prefix("https://api-adapter.dzengi.com/api/v1"),
             "/api/v1"
         );
+    }
+
+    #[test]
+    fn ws_timeouts_are_short_for_mcp_headroom() {
+        const {
+            assert!(WS_CONNECT_TIMEOUT.as_secs() <= 3);
+            assert!(WS_REQUEST_TIMEOUT_SECS <= 3);
+        };
     }
 }

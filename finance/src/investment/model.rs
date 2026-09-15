@@ -1,74 +1,110 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+/// 24hr ticker. Day-change / OHLC extras are soft; marks use bid/last/ask.
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Ticker {
     pub symbol: String,
+    /// Absent on some Dzengi index/commodity payloads — never hard-fail.
     #[serde(
+        default,
         rename = "priceChange",
-        deserialize_with = "deserialize_string_to_f64"
+        deserialize_with = "deserialize_opt_string_to_f64"
     )]
-    pub price_change: f64,
+    pub price_change: Option<f64>,
     #[serde(
+        default,
         rename = "priceChangePercent",
-        deserialize_with = "deserialize_string_to_f64"
+        deserialize_with = "deserialize_opt_string_to_f64"
     )]
-    pub price_change_percent: f64,
+    pub price_change_percent: Option<f64>,
     #[serde(
+        default,
         rename = "weightedAvgPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub weighted_avg_price: f64,
     #[serde(
+        default,
         rename = "prevClosePrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub prev_close_price: f64,
+    /// Mark path (hard preference order via [`Ticker::mark_price`]).
     #[serde(
+        default,
         rename = "lastPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub last_price: f64,
     #[serde(
+        default,
         rename = "lastQty",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub last_qty: f64,
     #[serde(
+        default,
         rename = "bidPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub bid_price: f64,
     #[serde(
+        default,
         rename = "askPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub ask_price: f64,
     #[serde(
+        default,
         rename = "openPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub open_price: f64,
     #[serde(
+        default,
         rename = "highPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub high_price: f64,
     #[serde(
+        default,
         rename = "lowPrice",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub low_price: f64,
-    #[serde(deserialize_with = "deserialize_string_to_f64")]
+    #[serde(default, deserialize_with = "deserialize_string_to_f64")]
     pub volume: f64,
     #[serde(
+        default,
         rename = "quoteVolume",
         deserialize_with = "deserialize_string_to_f64"
     )]
     pub quote_volume: f64,
-    #[serde(rename = "openTime", with = "chrono::serde::ts_milliseconds")]
+    #[serde(
+        default = "epoch_datetime",
+        rename = "openTime",
+        with = "chrono::serde::ts_milliseconds"
+    )]
     pub open_time: chrono::DateTime<chrono::Utc>,
-    #[serde(rename = "closeTime", with = "chrono::serde::ts_milliseconds")]
+    #[serde(
+        default = "epoch_datetime",
+        rename = "closeTime",
+        with = "chrono::serde::ts_milliseconds"
+    )]
     pub close_time: chrono::DateTime<chrono::Utc>,
+}
+
+impl Ticker {
+    /// Prefer positive bid, then last, then ask — for portfolio / quote marks.
+    pub fn mark_price(&self) -> Option<f64> {
+        [self.bid_price, self.last_price, self.ask_price]
+            .into_iter()
+            .find(|&v| v.is_finite() && v > 0.0)
+    }
+}
+
+fn epoch_datetime() -> chrono::DateTime<chrono::Utc> {
+    chrono::DateTime::from_timestamp_millis(0).unwrap()
 }
 
 /// Authentication request payload for WebSocket.
@@ -403,18 +439,34 @@ fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
+    Ok(deserialize_opt_string_to_f64(deserializer)?.unwrap_or(0.0))
+}
+
+/// String / number / null → `Option<f64>` (null and empty → None).
+fn deserialize_opt_string_to_f64<'de, D>(
+    deserializer: D,
+) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
     #[derive(Deserialize)]
     #[serde(untagged)]
-    enum StringOrNumber {
+    enum StringOrNumberOrNull {
         String(String),
         Number(f64),
+        Null,
     }
 
-    match StringOrNumber::deserialize(deserializer)? {
-        StringOrNumber::String(s) => {
-            s.parse::<f64>().map_err(serde::de::Error::custom)
+    match Option::<StringOrNumberOrNull>::deserialize(deserializer)? {
+        None | Some(StringOrNumberOrNull::Null) => Ok(None),
+        Some(StringOrNumberOrNull::String(s)) => {
+            let t = s.trim();
+            if t.is_empty() {
+                return Ok(None);
+            }
+            t.parse::<f64>().map(Some).map_err(serde::de::Error::custom)
         }
-        StringOrNumber::Number(n) => Ok(n),
+        Some(StringOrNumberOrNull::Number(n)) => Ok(Some(n)),
     }
 }
 
@@ -669,4 +721,62 @@ pub struct TradingPositionHistory {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TradingPositionHistoryResponse {
     pub history: Vec<TradingPositionHistory>,
+}
+
+#[cfg(test)]
+mod ticker_tests {
+    use super::*;
+
+    #[test]
+    fn given_partial_ticker_without_price_change_when_deserialize_then_ok() {
+        let json = r#"{
+            "symbol": "US500",
+            "lastPrice": "5521.5",
+            "bidPrice": "5521.0",
+            "askPrice": "5522.0"
+        }"#;
+        let t: Ticker = serde_json::from_str(json).expect("partial ticker");
+        assert_eq!(t.symbol, "US500");
+        assert!(t.price_change.is_none());
+        assert!(t.price_change_percent.is_none());
+        assert_eq!(t.last_price, 5521.5);
+        assert_eq!(t.bid_price, 5521.0);
+        assert_eq!(t.ask_price, 5522.0);
+        assert_eq!(t.mark_price(), Some(5521.0));
+    }
+
+    #[test]
+    fn given_bid_zero_when_mark_price_then_uses_last() {
+        let t: Ticker = serde_json::from_str(
+            r#"{"symbol":"Gold","lastPrice":"2650.1","bidPrice":"0","askPrice":"0"}"#,
+        )
+        .unwrap();
+        assert_eq!(t.mark_price(), Some(2650.1));
+    }
+
+    #[test]
+    fn given_full_ticker_when_deserialize_then_keeps_day_change() {
+        let json = r#"{
+            "symbol": "TSLA/USD_LEVERAGE",
+            "priceChange": "12.68",
+            "priceChangePercent": "3.73",
+            "weightedAvgPrice": "345",
+            "prevClosePrice": "340",
+            "lastPrice": "352.68",
+            "lastQty": "1",
+            "bidPrice": "352.5",
+            "askPrice": "352.8",
+            "openPrice": "340",
+            "highPrice": "355",
+            "lowPrice": "338",
+            "volume": "1000",
+            "quoteVolume": "350000",
+            "openTime": 0,
+            "closeTime": 0
+        }"#;
+        let t: Ticker = serde_json::from_str(json).unwrap();
+        assert_eq!(t.price_change, Some(12.68));
+        assert_eq!(t.price_change_percent, Some(3.73));
+        assert_eq!(t.mark_price(), Some(352.5));
+    }
 }

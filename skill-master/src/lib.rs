@@ -102,5 +102,31 @@ pub async fn app_state(config: Config) -> AppState {
         );
     }
 
+    // P1 A4: Telegram outbox consumer (short movers only; no MCP notify test).
+    // Gate: TRADING_TELEGRAM_DELIVERY=1|true|yes
+    // Secrets: TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID from Vault/k8s env only.
+    if finance::telegram_delivery_enabled() {
+        match finance::TelegramDeliveryConfig::from_env() {
+            Some(cfg) => {
+                let pool = state.finance_state.pool().clone();
+                tracing::info!(
+                    "spawning trading telegram outbox consumer (feature env enabled; token redacted)"
+                );
+                tokio::task::spawn(finance::run_telegram_outbox_consumer(
+                    pool, cfg,
+                ));
+            }
+            None => {
+                tracing::warn!(
+                    "TRADING_TELEGRAM_DELIVERY enabled but TELEGRAM_BOT_TOKEN and/or TELEGRAM_CHAT_ID missing/empty; consumer not started"
+                );
+            }
+        }
+    } else {
+        tracing::debug!(
+            "trading telegram delivery idle (set TRADING_TELEGRAM_DELIVERY=1 to enable)"
+        );
+    }
+
     state
 }

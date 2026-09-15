@@ -5,6 +5,7 @@ pub mod model;
 pub mod quotes;
 pub mod rest_api;
 mod routes;
+pub mod telegram_outbox;
 pub mod watches;
 pub mod ws_api;
 
@@ -27,13 +28,19 @@ pub use quotes::{
 };
 pub use rest_api::RestClient;
 pub use routes::*;
+pub use telegram_outbox::{
+    DEFAULT_POLL_INTERVAL_SECS as TELEGRAM_DEFAULT_POLL_SECS,
+    TelegramDeliveryConfig, format_telegram_message,
+    run_telegram_outbox_consumer, telegram_delivery_enabled,
+};
 pub use watches::{
     AlertEvent, AlertList, AlertOutboxRow, DEFAULT_COOLDOWN_SECS, EvalSnapshot,
-    FireObservation, MAX_ACK_EVENT_IDS, SymbolObservation, UpsertWatch, Watch,
-    WatchChannel, WatchCompare, WatchList, WatchRule, ack_alerts, delete_watch,
-    evaluate_enabled_watches, evaluate_watch, insert_alert, list_alerts,
-    list_enabled_watches, list_watches, set_watch_enabled, try_fire_watch,
-    upsert_watch,
+    FireObservation, MAX_ACK_EVENT_IDS, MAX_TELEGRAM_DRAIN, SymbolObservation,
+    UpsertWatch, Watch, WatchChannel, WatchCompare, WatchList, WatchRule,
+    ack_alerts, delete_watch, evaluate_enabled_watches, evaluate_watch,
+    insert_alert, list_alerts, list_enabled_watches,
+    list_pending_telegram_alerts, list_watches, mark_telegram_delivered,
+    set_watch_enabled, try_fire_watch, upsert_watch,
 };
 pub use ws_api::{Client, ws_api_prefix, ws_connect_url};
 

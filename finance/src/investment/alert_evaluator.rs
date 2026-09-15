@@ -32,15 +32,9 @@ pub const DEFAULT_REST_RECONCILE_SECS: u64 = 600;
 /// Soft cap on symbols refreshed per eval cycle (same spirit as quotes).
 pub const MAX_EVAL_SYMBOLS: usize = 30;
 
-/// Env gate: `TRADING_ALERT_EVALUATOR=1|true|yes` starts the worker from skill-master.
+/// Legacy env-only gate (prefer mounted `alerts.evaluator_enabled` + resolve).
 pub fn alert_evaluator_enabled() -> bool {
-    std::env::var("TRADING_ALERT_EVALUATOR")
-        .map(|v| {
-            v == "1"
-                || v.eq_ignore_ascii_case("true")
-                || v.eq_ignore_ascii_case("yes")
-        })
-        .unwrap_or(false)
+    crate::investment::config::env_flag_or("TRADING_ALERT_EVALUATOR", false)
 }
 
 #[derive(Debug, Clone)]
@@ -59,21 +53,20 @@ impl Default for AlertEvaluatorConfig {
 }
 
 impl AlertEvaluatorConfig {
+    /// Env-only cadence (legacy). Prefer [`Self::from_alerts_config`].
     pub fn from_env() -> Self {
-        let mut cfg = Self::default();
-        if let Ok(v) = std::env::var("TRADING_ALERT_EVAL_INTERVAL_SECS")
-            && let Ok(secs) = v.parse::<u64>()
-            && secs > 0
-        {
-            cfg.eval_interval = Duration::from_secs(secs);
+        Self::from_alerts_config(&crate::investment::AlertsConfig::default())
+    }
+
+    /// Mounted `[finance.alerts]` with optional `TRADING_ALERT_*` env overrides.
+    pub fn from_alerts_config(
+        alerts: &crate::investment::AlertsConfig,
+    ) -> Self {
+        let (eval_interval, rest_reconcile) = alerts.resolve_intervals();
+        Self {
+            eval_interval,
+            rest_reconcile,
         }
-        if let Ok(v) = std::env::var("TRADING_ALERT_REST_RECONCILE_SECS")
-            && let Ok(secs) = v.parse::<u64>()
-            && secs > 0
-        {
-            cfg.rest_reconcile = Duration::from_secs(secs.min(3600));
-        }
-        cfg
     }
 }
 

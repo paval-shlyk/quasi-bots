@@ -1,8 +1,9 @@
 //! Watch store (A2) + alert outbox / evaluate hooks (A3).
 //!
 //! The Dzengi WS evaluator loop lives in [`crate::investment::alert_evaluator`].
-//! Telegram delivery is Wave A4 (not here). This module owns CRUD, schema,
-//! condition checks, and outbox insert.
+//! Telegram delivery lives in [`crate::investment::telegram_outbox`] (A4);
+//! this module still owns CRUD, schema, condition checks, outbox insert, and
+//! the pending-telegram list / mark helpers the consumer uses.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -884,6 +885,78 @@ pub async fn ack_alerts(
         affected += res.rows_affected();
     }
     Ok(affected)
+}
+
+/// Soft cap for Telegram drain batch (same spirit as list limit).
+pub const MAX_TELEGRAM_DRAIN: i64 = 100;
+
+/// Undelivered outbox rows for Telegram (`channel` in `telegram` | `both`).
+///
+/// Ordered oldest-first so delivery is FIFO. Does **not** include `mcp`-only.
+pub async fn list_pending_telegram_alerts(
+    pool: &sqlx::SqlitePool,
+    limit: Option<i64>,
+) -> anyhow::Result<Vec<AlertOutboxRow>> {
+    let limit = limit.unwrap_or(20).clamp(1, MAX_TELEGRAM_DRAIN);
+    let rows = sqlx::query!(
+        r#"
+        SELECT
+            id AS "id!",
+            event_id AS "event_id!",
+            watch_id AS "watch_id!",
+            channel AS "channel!",
+            payload AS "payload!",
+            created_at AS "created_at!",
+            delivered_telegram_at,
+            acked_mcp_at
+        FROM alert_outbox
+        WHERE delivered_telegram_at IS NULL
+          AND channel IN ('telegram', 'both')
+        ORDER BY id ASC
+        LIMIT ?
+        "#,
+        limit
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let mut alerts = Vec::with_capacity(rows.len());
+    for r in rows {
+        alerts.push(outbox_row_from_parts(
+            r.id,
+            r.event_id,
+            r.watch_id,
+            r.channel,
+            r.payload,
+            r.created_at,
+            r.delivered_telegram_at,
+            r.acked_mcp_at,
+        )?);
+    }
+    Ok(alerts)
+}
+
+/// Idempotent mark: sets `delivered_telegram_at` only when still null.
+///
+/// Returns `true` if this call performed the update.
+pub async fn mark_telegram_delivered(
+    pool: &sqlx::SqlitePool,
+    event_id: &str,
+) -> anyhow::Result<bool> {
+    let now = Utc::now().to_rfc3339();
+    let res = sqlx::query!(
+        r#"
+        UPDATE alert_outbox
+        SET delivered_telegram_at = ?
+        WHERE event_id = ?
+          AND delivered_telegram_at IS NULL
+        "#,
+        now,
+        event_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(res.rows_affected() > 0)
 }
 
 #[cfg(test)]

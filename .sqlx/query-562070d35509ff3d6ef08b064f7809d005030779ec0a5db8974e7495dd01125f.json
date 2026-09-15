@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        UPDATE alert_outbox\n        SET delivered_telegram_at = ?\n        WHERE event_id = ?\n          AND delivered_telegram_at IS NULL\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "562070d35509ff3d6ef08b064f7809d005030779ec0a5db8974e7495dd01125f"
+}

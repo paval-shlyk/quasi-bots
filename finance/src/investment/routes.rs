@@ -267,11 +267,14 @@ pub async fn estimate_price_in_usd(
     tracing::info!("found trading pair {} for symbol {}", trade_symbol, symbol);
 
     let ticker = api.ticker(&trade_symbol).await?;
+    let mark = ticker.mark_price().ok_or_else(|| {
+        anyhow::anyhow!("ticker for {trade_symbol} has no bid/last/ask mark")
+    })?;
 
     if asset_is_base {
-        Ok(amount * ticker.bid_price)
+        Ok(amount * mark)
     } else {
-        Ok(amount / ticker.bid_price)
+        Ok(amount / mark)
     }
 }
 
@@ -543,15 +546,30 @@ async fn spot_asset_from_balance(
     let entry_cost: f64 = trades.iter().map(|t| t.entry_price * t.amount).sum();
     let average_entry_price = entry_cost / explained;
 
-    let ticker = api.ticker(&trade_symbol).await.map_err(|e| {
-        anyhow::anyhow!("ticker failed for {trade_symbol}: {e}")
-    })?;
+    // Soft-omit on ticker transport/deserialize failure so one partial symbol
+    // cannot fail the whole `trading_portfolio` snapshot (#21).
+    let ticker = match api.ticker(&trade_symbol).await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::warn!(
+                trade_symbol = %trade_symbol,
+                error = %e,
+                "ticker failed; omitting spot asset from portfolio"
+            );
+            return Ok(None);
+        }
+    };
+    let Some(raw_mark) = ticker.mark_price() else {
+        tracing::warn!(
+            trade_symbol = %trade_symbol,
+            "ticker has no positive bid/last/ask; omitting spot asset"
+        );
+        return Ok(None);
+    };
     let unit_market_price = if asset_is_base {
-        ticker.bid_price
+        raw_mark
     } else {
-        assert!(ticker.bid_price > 0.0);
-
-        1.0 / ticker.bid_price
+        1.0 / raw_mark
     };
 
     let market_value = amount * unit_market_price;

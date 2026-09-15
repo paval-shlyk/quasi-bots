@@ -1,6 +1,7 @@
-//! Live marks / day moves for named symbols (Dzengi WS primary, REST fallback).
+//! Live marks / day moves for named symbols (REST-primary, optional short-budget WS).
 
 use chrono::{DateTime, Utc};
+use std::time::{Duration, Instant};
 
 use crate::investment::model::{ExchangeInfo, Ticker};
 use crate::investment::rest_api::RestClient;
@@ -9,6 +10,12 @@ use crate::investment::ws_api::{self, Client as WsClient};
 
 /// Soft cap to protect broker rate limits (design A1).
 pub const MAX_QUOTE_SYMBOLS: usize = 30;
+
+/// Re-export WS budgets used by quotes (issue #22).
+pub use ws_api::{WS_CONNECT_TIMEOUT, WS_REQUEST_TIMEOUT_SECS};
+
+/// Overall `fetch_quotes` wall clock — must stay under MCP tool timeout (~30–60s).
+pub const FETCH_QUOTES_DEADLINE: Duration = Duration::from_secs(20);
 
 /// One symbol quote row. Soft-fail via `error`; other fields may be null.
 #[derive(
@@ -42,8 +49,9 @@ impl Quote {
             bid: positive_or_none(ticker.bid_price),
             ask: positive_or_none(ticker.ask_price),
             prev_close: positive_or_none(ticker.prev_close_price),
-            change: Some(ticker.price_change),
-            change_pct: Some(ticker.price_change_percent),
+            // Do not invent day moves when Dzengi omitted the fields.
+            change: ticker.price_change,
+            change_pct: ticker.price_change_percent,
             error: None,
         }
     }
@@ -99,17 +107,48 @@ pub fn resolve_quote_pair(info: &ExchangeInfo, symbol: &str) -> Option<String> {
         .map(|(pair, _)| pair)
 }
 
+/// `QUOTES_TRANSPORT=ws` opts into short-budget WS-primary; default is REST (#22 A1).
+fn quotes_prefer_ws() -> bool {
+    std::env::var("QUOTES_TRANSPORT")
+        .map(|v| v.eq_ignore_ascii_case("ws"))
+        .unwrap_or(false)
+}
+
 async fn try_ws_client(api: &RestClient) -> Option<WsClient> {
     if api.api_key.is_empty() || api.api_secret.is_empty() {
         tracing::debug!("skipping WS quotes: empty API credentials");
         return None;
     }
     let url = ws_api::ws_connect_url(&api.base_url);
-    match WsClient::connect(&url, &api.api_key, &api.api_secret).await {
-        Ok(c) => Some(c),
-        Err(e) => {
+    let started = Instant::now();
+    match tokio::time::timeout(
+        WS_CONNECT_TIMEOUT,
+        WsClient::connect(&url, &api.api_key, &api.api_secret),
+    )
+    .await
+    {
+        Ok(Ok(c)) => {
+            tracing::info!(
+                ws_connect_ms = started.elapsed().as_millis() as u64,
+                %url,
+                "Dzengi WS connect ok"
+            );
+            Some(c)
+        }
+        Ok(Err(e)) => {
             tracing::warn!(
-                "Dzengi WS connect failed ({url}): {e}; REST fallback"
+                ws_connect_ms = started.elapsed().as_millis() as u64,
+                %url,
+                "Dzengi WS connect failed: {e}; REST fallback"
+            );
+            None
+        }
+        Err(_) => {
+            tracing::warn!(
+                ws_connect_ms = started.elapsed().as_millis() as u64,
+                %url,
+                "Dzengi WS connect timed out after {}ms; REST fallback",
+                WS_CONNECT_TIMEOUT.as_millis()
             );
             None
         }
@@ -124,7 +163,30 @@ async fn ticker_via_ws(
     let destination = format!("{api_prefix}/ticker/24hr");
     let cid =
         format!("ticker-{}-{}", trade_symbol, crate::investment::now_ms());
-    ws.ws_ticker_at(&destination, trade_symbol, &cid).await
+    let started = Instant::now();
+    let result = ws.ws_ticker_at(&destination, trade_symbol, &cid).await;
+    tracing::debug!(
+        ws_ticker_ms = started.elapsed().as_millis() as u64,
+        symbol = %trade_symbol,
+        ok = result.is_ok(),
+        "WS ticker attempt"
+    );
+    result
+}
+
+async fn ticker_via_rest(
+    api: &RestClient,
+    trade_symbol: &str,
+) -> anyhow::Result<Ticker> {
+    let started = Instant::now();
+    let result = api.ticker(trade_symbol).await;
+    tracing::info!(
+        rest_ticker_ms = started.elapsed().as_millis() as u64,
+        symbol = %trade_symbol,
+        ok = result.is_ok(),
+        "REST ticker"
+    );
+    result
 }
 
 async fn fetch_one_ticker(
@@ -132,8 +194,9 @@ async fn fetch_one_ticker(
     ws: &mut Option<WsClient>,
     api_prefix: &str,
     trade_symbol: &str,
+    prefer_ws: bool,
 ) -> anyhow::Result<Ticker> {
-    if let Some(client) = ws.as_mut() {
+    if prefer_ws && let Some(client) = ws.as_mut() {
         match ticker_via_ws(client, api_prefix, trade_symbol).await {
             Ok(t) => return Ok(t),
             Err(e) => {
@@ -146,13 +209,14 @@ async fn fetch_one_ticker(
             }
         }
     }
-    api.ticker(trade_symbol).await
+    ticker_via_rest(api, trade_symbol).await
 }
 
-/// Fetch marks / day moves for `symbols` (Dzengi WS primary, REST fallback).
+/// Fetch marks / day moves for `symbols` (REST-primary by default; WS optional).
 ///
 /// Hard-fails only on empty / oversized input or exchangeInfo load failure.
 /// Per-symbol mapping / ticker failures become soft `error` rows.
+/// Wall-clock capped by [`FETCH_QUOTES_DEADLINE`] so the MCP tool never -32001s.
 pub async fn fetch_quotes(
     api: &RestClient,
     symbols: &[String],
@@ -167,13 +231,43 @@ pub async fn fetch_quotes(
         );
     }
 
+    let deadline = Instant::now() + FETCH_QUOTES_DEADLINE;
+    fetch_quotes_within(api, symbols, deadline).await
+}
+
+async fn fetch_quotes_within(
+    api: &RestClient,
+    symbols: &[String],
+    deadline: Instant,
+) -> anyhow::Result<QuotesResponse> {
     let server_ts = api.time().await?;
     let exchange_info = api.exchange_info(server_ts).await?;
     let api_prefix = ws_api::ws_api_prefix(&api.base_url);
-    let mut ws = try_ws_client(api).await;
+    let prefer_ws = quotes_prefer_ws();
+    let mut ws = if prefer_ws && Instant::now() < deadline {
+        try_ws_client(api).await
+    } else {
+        None
+    };
 
     let mut quotes = Vec::with_capacity(symbols.len());
     for raw in symbols {
+        if Instant::now() >= deadline {
+            let symbol = normalize_input_symbol(raw);
+            quotes.push(Quote::err(
+                if symbol.is_empty() {
+                    raw.clone()
+                } else {
+                    symbol
+                },
+                format!(
+                    "trading_quotes deadline ({}ms) exceeded; try fewer symbols",
+                    FETCH_QUOTES_DEADLINE.as_millis()
+                ),
+            ));
+            continue;
+        }
+
         let symbol = normalize_input_symbol(raw);
         if symbol.is_empty() {
             quotes.push(Quote::err(raw.clone(), "empty symbol"));
@@ -189,7 +283,15 @@ pub async fn fetch_quotes(
             continue;
         };
 
-        match fetch_one_ticker(api, &mut ws, api_prefix, &trade_symbol).await {
+        match fetch_one_ticker(
+            api,
+            &mut ws,
+            api_prefix,
+            &trade_symbol,
+            prefer_ws,
+        )
+        .await
+        {
             Ok(ticker) => quotes.push(Quote::ok(symbol, &ticker)),
             Err(e) => quotes.push(Quote::err(
                 symbol,
@@ -231,8 +333,8 @@ mod tests {
     fn sample_ticker(symbol: &str) -> Ticker {
         Ticker {
             symbol: symbol.into(),
-            price_change: 12.68,
-            price_change_percent: 3.73,
+            price_change: Some(12.68),
+            price_change_percent: Some(3.73),
             weighted_avg_price: 345.0,
             prev_close_price: 340.0,
             last_price: 352.68,
@@ -315,6 +417,17 @@ mod tests {
     }
 
     #[test]
+    fn given_partial_ticker_when_quote_ok_then_null_day_change() {
+        let mut t = sample_ticker("US500");
+        t.price_change = None;
+        t.price_change_percent = None;
+        let q = Quote::ok("US500".into(), &t);
+        assert_eq!(q.last, Some(352.68));
+        assert!(q.change.is_none());
+        assert!(q.change_pct.is_none());
+    }
+
+    #[test]
     fn given_error_when_quote_err_then_nulls_marks() {
         let q = Quote::err("NOPE".into(), "no trading pair found");
         assert_eq!(q.symbol, "NOPE");
@@ -346,6 +459,16 @@ mod tests {
         );
     }
 
+    #[test]
+    fn timeout_constants_leave_mcp_headroom() {
+        const {
+            assert!(WS_CONNECT_TIMEOUT.as_secs() <= 3);
+            assert!(WS_REQUEST_TIMEOUT_SECS <= 3);
+            assert!(FETCH_QUOTES_DEADLINE.as_secs() <= 25);
+        };
+        assert!(FETCH_QUOTES_DEADLINE > WS_CONNECT_TIMEOUT);
+    }
+
     #[tokio::test]
     async fn given_empty_symbols_when_fetch_quotes_then_errors() {
         let api = RestClient::new("http://127.0.0.1:9", "", "");
@@ -365,6 +488,21 @@ mod tests {
         assert!(
             err.to_string().contains("at most"),
             "unexpected error: {err}"
+        );
+    }
+
+    #[tokio::test]
+    async fn given_ws_connect_hang_when_try_ws_client_then_none_fast() {
+        // Unroutable blackhole: connect must not hang past WS_CONNECT_TIMEOUT.
+        let api =
+            RestClient::new("https://240.0.0.1:9/api/v2", "key", "secret");
+        let started = Instant::now();
+        let client = try_ws_client(&api).await;
+        let elapsed = started.elapsed();
+        assert!(client.is_none());
+        assert!(
+            elapsed < WS_CONNECT_TIMEOUT + Duration::from_secs(2),
+            "WS connect budget exceeded: {elapsed:?}"
         );
     }
 }

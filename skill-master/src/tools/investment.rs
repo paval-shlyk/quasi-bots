@@ -161,7 +161,7 @@ fn parse_since(raw: Option<String>) -> Result<Option<DateTime<Utc>>, String> {
 #[tool_router(router = investment_tool_router, vis = "pub")]
 impl SkillMasterMcpServer {
     #[tool(
-        description = "Fetch trading portfolio wallet snapshot. cash = USD free; reserved_cash = USD locked (broker-reserved). nav = cash + reserved_cash (wallet Equity) — never cash + positions_value. positions_value is Σ open marks (CFD notionals may dwarf nav). margin_used = Σ Dzengi TradingPosition.margin for all open long lots (scaled by remaining qty), aggregated across every leveraged product — NOT total locked margin and often << reserved_cash; use reserved_cash for locked cash. buying_power = cash. realized_pnl is always null (P1, not wired). Legacy current_volume was dropped; use cash/reserved_cash/nav/historical_volume."
+        description = "Fetch trading portfolio wallet snapshot. Prefer equity (wallet equity = cash_available + cash_locked; same as legacy nav = cash + reserved_cash) — never cash + gross_exposure. cash_available/cash = free USD; cash_locked/reserved_cash = broker-locked USD. gross_exposure/positions_value = Σ open marks (may dwarf equity). margin_used = Σ per-lot broker margins only (often ≪ cash_locked; not total capital in play). buying_power ≈ cash_available. realized_pnl always null (P1). Legacy current_volume was dropped."
     )]
     async fn trading_portfolio(
         &self,
@@ -173,7 +173,7 @@ impl SkillMasterMcpServer {
     }
 
     #[tool(
-        description = "Fetch opened trading positions (Dzengi book: size, mark, P/L). Lean by default (no lots); pass include_trades=true for lots. Digs use trading_analysis. Each asset: leverage=true for CFD/leveraged names (exchangeInfo or *_LEVERAGE). Per-lot broker margin is not on these rows — portfolio margin_used (trading_portfolio) sums TradingPosition.margin across open longs; reserved_cash is wallet locked cash (often larger). Weights: weight_book_pct = |MV|/positions_value×100 (Σ≈100%), weight_nav_pct = |MV|/NAV×100 (CFD may Σ>100%); weight_percentage is a deprecated compat alias (NAV when known, else book)."
+        description = "Fetch opened trading positions (size, mark, P/L). Lean by default (no lots); pass include_trades=true for lots. Digs use trading_analysis. Prefer margin_mode collateral|leveraged (mapped in finance); leverage bool is a thin compat alias. Per-lot broker margin is not on these rows — see trading_portfolio.margin_used (Σ open longs) vs cash_locked (wallet locked, often larger). Weights: weight_book_pct = |MV|/gross_exposure×100 (Σ≈100%), weight_nav_pct = |MV|/equity×100 (leveraged books may Σ>100%); weight_percentage is a deprecated compat alias (equity when known, else book)."
     )]
     async fn trading_positions(
         &self,

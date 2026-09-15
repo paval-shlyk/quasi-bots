@@ -16,12 +16,20 @@ pub use config::*;
 pub use state::*;
 
 pub async fn connect_db(db_file: &str) -> sqlx::SqlitePool {
+    use sqlx::sqlite::SqliteConnectOptions;
+    use std::str::FromStr;
+
     let db_url = format!("sqlite://{}?mode=rwc", db_file);
 
     tracing::info!("Connecting to database at {}", db_file);
 
+    let options = SqliteConnectOptions::from_str(&db_url)
+        .expect("Invalid sqlite database URL")
+        .create_if_missing(true)
+        .foreign_keys(true);
+
     sqlx::sqlite::SqlitePoolOptions::new()
-        .connect(&db_url)
+        .connect_with(options)
         .await
         .expect("Failed to connect to database")
 }
@@ -77,6 +85,22 @@ pub async fn app_state(config: Config) -> AppState {
     };
 
     tokio::task::spawn(crate::quotes::sync_task::task(state.clone()));
+
+    // P1 A3: Dzengi WS alert evaluator (outbox only; Telegram is A4).
+    // Gate: TRADING_ALERT_EVALUATOR=1|true|yes
+    if finance::alert_evaluator_enabled() {
+        let pool = state.finance_state.pool().clone();
+        let api = state.finance_state.api().clone();
+        let cfg = finance::AlertEvaluatorConfig::from_env();
+        tracing::info!(
+            "spawning trading alert evaluator (feature env enabled)"
+        );
+        tokio::task::spawn(finance::run_alert_evaluator(pool, api, cfg));
+    } else {
+        tracing::debug!(
+            "trading alert evaluator idle (set TRADING_ALERT_EVALUATOR=1 to enable)"
+        );
+    }
 
     state
 }

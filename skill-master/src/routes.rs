@@ -43,8 +43,10 @@ pub async fn create_routes(
         .merge(mcp_router)
 }
 
-async fn health_check() -> impl IntoResponse {
-    Json(crate::version::health_info())
+async fn health_check(State(state): State<AppState>) -> impl IntoResponse {
+    Json(crate::version::health_info(
+        state.alert_evaluator_status.dig(),
+    ))
 }
 
 async fn get_metrics(State(state): State<AppState>) -> impl IntoResponse {

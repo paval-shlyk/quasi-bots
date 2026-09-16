@@ -1,5 +1,6 @@
 //! Build-time version identity for MCP `initialize` and unauthenticated `/health`.
 
+use finance::AlertEvaluatorDig;
 use serde::Serialize;
 
 /// Cargo package SemVer from `skill-master/Cargo.toml`.
@@ -35,19 +36,23 @@ pub struct HealthInfo {
     pub git_sha: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image_tag: Option<&'static str>,
+    /// Structural alert-evaluator dig (no magnitudes/secrets).
+    pub alert_evaluator: AlertEvaluatorDig,
 }
 
-pub fn health_info() -> HealthInfo {
+pub fn health_info(alert_evaluator: AlertEvaluatorDig) -> HealthInfo {
     HealthInfo {
         version: mcp_server_version(),
         git_sha: GIT_SHA,
         image_tag: image_tag(),
+        alert_evaluator,
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use finance::AlertEvaluatorStatus;
 
     #[test]
     fn mcp_server_version_uses_semver_build_metadata() {
@@ -68,18 +73,32 @@ mod tests {
     }
 
     #[test]
-    fn health_info_includes_version_and_git_sha() {
-        let info = health_info();
+    fn health_info_includes_version_git_sha_and_evaluator_dig() {
+        let status = AlertEvaluatorStatus::new();
+        let info = health_info(status.dig());
         assert_eq!(info.version, mcp_server_version());
         assert_eq!(info.git_sha, GIT_SHA);
+        assert!(!info.alert_evaluator.running);
         let json = serde_json::to_value(&info).unwrap();
         assert_eq!(json["version"], info.version);
         assert_eq!(json["git_sha"], GIT_SHA);
+        assert_eq!(json["alert_evaluator"]["running"], false);
         if image_tag().is_none() {
             assert!(json.get("image_tag").is_none());
         } else {
             assert_eq!(json["image_tag"], image_tag().unwrap());
         }
+    }
+
+    #[test]
+    fn health_info_evaluator_dig_no_cash_magnitude() {
+        let status = AlertEvaluatorStatus::new();
+        status.set_running(true);
+        status.record_tick(Some(99_999.5), 3, 0, chrono::Utc::now());
+        let json = serde_json::to_string(&health_info(status.dig())).unwrap();
+        assert!(json.contains("\"Some\""));
+        assert!(!json.contains("99999"));
+        assert!(json.contains("\"enabled_watches\":3"));
     }
 
     #[test]

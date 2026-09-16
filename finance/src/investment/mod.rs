@@ -15,8 +15,9 @@ use sha2::Sha256;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub use alert_evaluator::{
-    AlertEvaluatorConfig, DEFAULT_EVAL_INTERVAL_SECS,
-    DEFAULT_REST_RECONCILE_SECS, alert_evaluator_enabled, run_alert_evaluator,
+    AlertEvaluatorConfig, AlertEvaluatorDig, AlertEvaluatorStatus,
+    DEFAULT_EVAL_INTERVAL_SECS, DEFAULT_REST_RECONCILE_SECS,
+    alert_evaluator_enabled, run_alert_evaluator,
 };
 pub use config::{
     AlertsConfig, DzengiConfig, ResolvedTelegram, TelegramConfig, env_flag_or,

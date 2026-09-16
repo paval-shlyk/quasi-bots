@@ -12,5 +12,9 @@ pub struct AppState {
     pub finance_state: finance::FinanceState,
     pub news_state: news::NewsState,
 
+    /// Structural dig for `GET /health` (alert evaluator). Always present;
+    /// `running=false` when evaluator was not spawned.
+    pub alert_evaluator_status: finance::AlertEvaluatorStatus,
+
     pub metrics_handle: telemetry::PrometheusHandle,
 }

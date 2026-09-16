@@ -96,7 +96,9 @@ pub async fn app_state(config: Config) -> AppState {
         let api = state.finance_state.api().clone();
         let cfg =
             finance::AlertEvaluatorConfig::from_alerts_config(alerts_file);
-        tracing::info!("spawning trading alert evaluator (config/env enabled)");
+        tracing::info!(
+            "spawning trading alert evaluator (config/env enabled; sqlite pool = finance_state shared with trading_watches MCP tools)"
+        );
         tokio::task::spawn(finance::run_alert_evaluator(pool, api, cfg));
     } else {
         tracing::debug!(

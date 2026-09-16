@@ -8,7 +8,9 @@
 //! **Not in scope:** Telegram / `sendMessage` (Wave A4).
 
 use chrono::{DateTime, Utc};
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::MissedTickBehavior;
 
@@ -31,6 +33,97 @@ pub const DEFAULT_EVAL_INTERVAL_SECS: u64 = 60;
 pub const DEFAULT_REST_RECONCILE_SECS: u64 = 600;
 /// Soft cap on symbols refreshed per eval cycle (same spirit as quotes).
 pub const MAX_EVAL_SYMBOLS: usize = 30;
+
+/// Structural dig snapshot for unauthenticated `GET /health` (no magnitudes/secrets).
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct AlertEvaluatorDig {
+    /// True when the evaluator task was spawned / is running.
+    pub running: bool,
+    /// Cash presence only: `"Some"` | `"None"` after at least one tick; `null` if never ticked.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cash: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled_watches: Option<usize>,
+    /// ISO-8601 UTC of last successful eval tick.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_tick_at: Option<DateTime<Utc>>,
+    /// Seconds since `last_tick_at` (computed at read time).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_tick_age_secs: Option<u64>,
+    /// Structural count of watches that fired on the last tick.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_fired_count: Option<usize>,
+}
+
+#[derive(Debug, Default)]
+struct AlertEvaluatorInner {
+    running: bool,
+    /// `Some(true)` = cash Some, `Some(false)` = cash None, `None` = never observed.
+    cash_present: Option<bool>,
+    enabled_watches: Option<usize>,
+    last_tick_at: Option<DateTime<Utc>>,
+    last_fired_count: Option<usize>,
+}
+
+/// Shared handle updated each eval tick; read by `/health`.
+#[derive(Clone, Default)]
+pub struct AlertEvaluatorStatus(Arc<Mutex<AlertEvaluatorInner>>);
+
+impl AlertEvaluatorStatus {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Mark evaluator as spawned/running (call before or when task starts).
+    pub fn set_running(&self, running: bool) {
+        if let Ok(mut g) = self.0.lock() {
+            g.running = running;
+        }
+    }
+
+    /// Record structural fields from a completed eval tick (no magnitudes).
+    pub fn record_tick(
+        &self,
+        cash: Option<f64>,
+        enabled_watches: usize,
+        fired_count: usize,
+        at: DateTime<Utc>,
+    ) {
+        if let Ok(mut g) = self.0.lock() {
+            g.running = true;
+            g.cash_present = Some(cash.is_some());
+            g.enabled_watches = Some(enabled_watches);
+            g.last_tick_at = Some(at);
+            g.last_fired_count = Some(fired_count);
+        }
+    }
+
+    /// Snapshot for `/health`. Ages are computed at read time.
+    pub fn dig(&self) -> AlertEvaluatorDig {
+        let Ok(g) = self.0.lock() else {
+            return AlertEvaluatorDig {
+                running: false,
+                cash: None,
+                enabled_watches: None,
+                last_tick_at: None,
+                last_tick_age_secs: None,
+                last_fired_count: None,
+            };
+        };
+        let last_tick_age_secs = g.last_tick_at.map(|t| {
+            let age = (Utc::now() - t).num_seconds();
+            if age < 0 { 0 } else { age as u64 }
+        });
+        AlertEvaluatorDig {
+            running: g.running,
+            cash: g.cash_present.map(|p| if p { "Some" } else { "None" }),
+            enabled_watches: g.enabled_watches,
+            last_tick_at: g.last_tick_at,
+            last_tick_age_secs,
+            last_fired_count: g.last_fired_count,
+        }
+    }
+}
 
 /// Legacy env-only gate (prefer mounted `alerts.evaluator_enabled` + resolve).
 pub fn alert_evaluator_enabled() -> bool {
@@ -85,7 +178,9 @@ pub async fn run_alert_evaluator(
     pool: sqlx::SqlitePool,
     api: RestClient,
     config: AlertEvaluatorConfig,
+    status: AlertEvaluatorStatus,
 ) {
+    status.set_running(true);
     tracing::info!(
         eval_interval_secs = config.eval_interval.as_secs(),
         rest_reconcile_secs = config.rest_reconcile.as_secs(),
@@ -94,7 +189,7 @@ pub async fn run_alert_evaluator(
 
     let mut backoff = Duration::from_secs(2);
     loop {
-        match run_session(&pool, &api, &config).await {
+        match run_session(&pool, &api, &config, &status).await {
             Ok(()) => {
                 tracing::warn!(
                     "alert evaluator session ended cleanly; reconnecting"
@@ -118,6 +213,7 @@ async fn run_session(
     pool: &sqlx::SqlitePool,
     api: &RestClient,
     config: &AlertEvaluatorConfig,
+    status: &AlertEvaluatorStatus,
 ) -> anyhow::Result<()> {
     let mut ws = try_ws_client(api).await;
     if let Some(ref client) = ws {
@@ -157,6 +253,7 @@ async fn run_session(
                     &mut ws,
                     &mut book,
                     force_book,
+                    status,
                 )
                 .await
                 {
@@ -196,6 +293,7 @@ async fn run_session(
                             &mut ws,
                             &mut book,
                             force_book,
+                            status,
                         )
                         .await
                         {
@@ -269,10 +367,14 @@ async fn eval_once(
     ws: &mut Option<WsClient>,
     book: &mut Option<BookCache>,
     force_book: bool,
+    status: &AlertEvaluatorStatus,
 ) -> anyhow::Result<()> {
     let watches = list_enabled_watches(pool).await?;
     if watches.is_empty() {
         tracing::trace!("alert evaluator: no enabled watches");
+        // Still publish dig so /health shows ticks with enabled_watches=0.
+        let cash = book.as_ref().and_then(|b| b.cash);
+        status.record_tick(cash, 0, 0, Utc::now());
         return Ok(());
     }
 
@@ -318,6 +420,8 @@ async fn eval_once(
     }
 
     let fired = evaluate_enabled_watches(pool, &snap).await?;
+    let tick_at = Utc::now();
+    status.record_tick(snap.cash, watches.len(), fired.len(), tick_at);
     tracing::info!(
         cash = cash_presence_label(snap.cash),
         enabled_watches = watches.len(),
@@ -653,6 +757,42 @@ mod tests {
     fn cash_presence_label_is_structural_only() {
         assert_eq!(cash_presence_label(None), "None");
         assert_eq!(cash_presence_label(Some(42.0)), "Some");
+    }
+
+    #[test]
+    fn status_dig_defaults_not_running() {
+        let s = AlertEvaluatorStatus::new();
+        let dig = s.dig();
+        assert!(!dig.running);
+        assert!(dig.cash.is_none());
+        assert!(dig.enabled_watches.is_none());
+        assert!(dig.last_tick_at.is_none());
+        assert!(dig.last_tick_age_secs.is_none());
+        assert!(dig.last_fired_count.is_none());
+        let json = serde_json::to_value(&dig).unwrap();
+        assert_eq!(json["running"], false);
+        assert!(json.get("cash").is_none());
+    }
+
+    #[test]
+    fn status_dig_records_structural_tick_no_magnitudes() {
+        let s = AlertEvaluatorStatus::new();
+        s.set_running(true);
+        let at = Utc::now();
+        s.record_tick(Some(12_345.67), 2, 1, at);
+        let dig = s.dig();
+        assert!(dig.running);
+        assert_eq!(dig.cash, Some("Some"));
+        assert_eq!(dig.enabled_watches, Some(2));
+        assert_eq!(dig.last_fired_count, Some(1));
+        assert_eq!(dig.last_tick_at, Some(at));
+        assert!(dig.last_tick_age_secs.is_some());
+        let json = serde_json::to_string(&dig).unwrap();
+        assert!(!json.contains("12345"));
+        assert!(!json.contains("12_345"));
+        assert!(json.contains("\"Some\""));
+        s.record_tick(None, 0, 0, Utc::now());
+        assert_eq!(s.dig().cash, Some("None"));
     }
 
     #[test]

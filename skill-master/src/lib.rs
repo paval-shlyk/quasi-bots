@@ -74,6 +74,8 @@ pub async fn app_state(config: Config) -> AppState {
 
     telemetry::spawn_system_monitor(15);
 
+    let alert_evaluator_status = finance::AlertEvaluatorStatus::new();
+
     let state = AppState {
         config: Arc::new(config),
         pool,
@@ -81,6 +83,7 @@ pub async fn app_state(config: Config) -> AppState {
         knowledge_state,
         finance_state,
         news_state,
+        alert_evaluator_status,
         metrics_handle,
     };
 
@@ -96,11 +99,15 @@ pub async fn app_state(config: Config) -> AppState {
         let api = state.finance_state.api().clone();
         let cfg =
             finance::AlertEvaluatorConfig::from_alerts_config(alerts_file);
+        let status = state.alert_evaluator_status.clone();
         tracing::info!(
             "spawning trading alert evaluator (config/env enabled; sqlite pool = finance_state shared with trading_watches MCP tools)"
         );
-        tokio::task::spawn(finance::run_alert_evaluator(pool, api, cfg));
+        tokio::task::spawn(finance::run_alert_evaluator(
+            pool, api, cfg, status,
+        ));
     } else {
+        // Explicit: /health.alert_evaluator.running stays false.
         tracing::debug!(
             "trading alert evaluator idle (finance.alerts.evaluator_enabled or TRADING_ALERT_EVALUATOR=1)"
         );

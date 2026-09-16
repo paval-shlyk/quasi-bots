@@ -89,7 +89,7 @@ pub async fn run_alert_evaluator(
     tracing::info!(
         eval_interval_secs = config.eval_interval.as_secs(),
         rest_reconcile_secs = config.rest_reconcile.as_secs(),
-        "trading alert evaluator starting (WS marks + REST reconcile; no Telegram)"
+        "trading alert evaluator starting (WS marks + REST reconcile; no Telegram; sqlite pool shared with MCP trading_watches)"
     );
 
     let mut backoff = Duration::from_secs(2);
@@ -282,6 +282,8 @@ async fn eval_once(
             Ok(cache) => {
                 tracing::debug!(
                     symbols = cache.symbols.len(),
+                    cash = cash_presence_label(cache.cash),
+                    nav = cash_presence_label(cache.nav),
                     "alert evaluator REST book reconcile ok"
                 );
                 *book = Some(cache);
@@ -303,7 +305,25 @@ async fn eval_once(
     };
 
     let snap = build_eval_snapshot(book.as_ref(), &quotes, Utc::now());
+
+    // Structural only — never log cash/NAV magnitudes.
+    let cash_below_enabled = watches
+        .iter()
+        .any(|w| matches!(w.rule, WatchRule::CashBelow));
+    if cash_below_enabled && snap.cash.is_none() {
+        tracing::info!(
+            enabled_watches = watches.len(),
+            "CashBelow skipped this tick: snap.cash is None"
+        );
+    }
+
     let fired = evaluate_enabled_watches(pool, &snap).await?;
+    tracing::info!(
+        cash = cash_presence_label(snap.cash),
+        enabled_watches = watches.len(),
+        fired = fired.len(),
+        "alert evaluator tick"
+    );
     if !fired.is_empty() {
         tracing::info!(
             count = fired.len(),
@@ -340,13 +360,15 @@ fn symbols_needing_quotes(watches: &[Watch]) -> Vec<String> {
     out
 }
 
-async fn load_book_cache(api: &RestClient) -> anyhow::Result<BookCache> {
-    let snapshot = load_dzengi_snapshot(api).await?;
-    let holdings = assemble_holdings(api, &snapshot).await?;
-    let (cash, reserved) = usd_wallet(&snapshot.account);
-    let nav = nav_from_wallet(cash, reserved);
-    let owning = OwningAssets::from_holdings(holdings.assets, nav);
+/// Presence label for logs — never emit cash/NAV magnitudes.
+fn cash_presence_label(v: Option<f64>) -> &'static str {
+    if v.is_some() { "Some" } else { "None" }
+}
 
+/// Map holdings → eval observations. Empty when assemble fails (soft path).
+fn symbols_from_owning(
+    owning: OwningAssets,
+) -> HashMap<String, SymbolObservation> {
     let mut symbols = HashMap::new();
     for row in owning.assets {
         symbols.insert(
@@ -359,6 +381,36 @@ async fn load_book_cache(api: &RestClient) -> anyhow::Result<BookCache> {
             },
         );
     }
+    symbols
+}
+
+/// REST book + wallet for CashBelow / NavDayChangePct / weight / mark-vs-entry.
+///
+/// **Cash/NAV do not require full holdings success.** `usd_wallet` is taken
+/// from the account snapshot first; if `assemble_holdings` fails (ticker /
+/// myTrades / pair soft-hard paths), we still return a BookCache with
+/// `cash`/`nav` set and an empty symbol map so portfolio cash rules can fire.
+async fn load_book_cache(api: &RestClient) -> anyhow::Result<BookCache> {
+    let snapshot = load_dzengi_snapshot(api).await?;
+    // Wallet first — CashBelow / wallet NAV must not depend on holdings.
+    let (cash, reserved) = usd_wallet(&snapshot.account);
+    let nav = nav_from_wallet(cash, reserved);
+
+    let symbols = match assemble_holdings(api, &snapshot).await {
+        Ok(holdings) => {
+            let owning = OwningAssets::from_holdings(holdings.assets, nav);
+            symbols_from_owning(owning)
+        }
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                cash = cash_presence_label(cash),
+                nav = cash_presence_label(nav),
+                "assemble_holdings failed; soft-continuing with wallet cash/nav only"
+            );
+            HashMap::new()
+        }
+    };
 
     Ok(BookCache {
         cash,
@@ -594,6 +646,68 @@ mod tests {
         assert!(
             (300..=900).contains(&cfg.rest_reconcile.as_secs()),
             "REST reconcile should be 5–15m by default"
+        );
+    }
+
+    #[test]
+    fn cash_presence_label_is_structural_only() {
+        assert_eq!(cash_presence_label(None), "None");
+        assert_eq!(cash_presence_label(Some(42.0)), "Some");
+    }
+
+    #[test]
+    fn soft_book_with_wallet_only_exposes_cash_for_cash_below() {
+        // Holdings assemble failed → empty symbols, but wallet cash/nav present.
+        let book = BookCache {
+            cash: Some(1500.0),
+            nav: Some(1500.0),
+            symbols: HashMap::new(),
+            loaded_at: Instant::now(),
+        };
+        let snap = build_eval_snapshot(Some(&book), &[], Utc::now());
+        assert_eq!(snap.cash, Some(1500.0));
+        assert_eq!(snap.nav, Some(1500.0));
+        assert!(snap.symbols.is_empty());
+
+        let watch = Watch {
+            id: 1,
+            symbol: None,
+            rule: WatchRule::CashBelow,
+            threshold: 999_999_999.0,
+            compare: WatchCompare::Lte,
+            channel: WatchChannel::Both,
+            cooldown_secs: 60,
+            enabled: true,
+            last_fired_at: None,
+            created_at: Utc::now(),
+        };
+        let fire = crate::investment::watches::evaluate_watch(&watch, &snap);
+        assert!(fire.is_some(), "CashBelow must fire when snap.cash is Some");
+    }
+
+    #[test]
+    fn cash_below_skips_when_cash_none_even_with_book() {
+        let book = BookCache {
+            cash: None,
+            nav: None,
+            symbols: HashMap::new(),
+            loaded_at: Instant::now(),
+        };
+        let snap = build_eval_snapshot(Some(&book), &[], Utc::now());
+        let watch = Watch {
+            id: 1,
+            symbol: None,
+            rule: WatchRule::CashBelow,
+            threshold: 999_999_999.0,
+            compare: WatchCompare::Lte,
+            channel: WatchChannel::Both,
+            cooldown_secs: 60,
+            enabled: true,
+            last_fired_at: None,
+            created_at: Utc::now(),
+        };
+        assert!(
+            crate::investment::watches::evaluate_watch(&watch, &snap).is_none()
         );
     }
 }

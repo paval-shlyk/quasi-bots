@@ -41,6 +41,7 @@ impl EarningsCalendarProvider for MockEarningsCalendarProvider {
         Ok(EarningsInfo {
             next_report_at: Some(now + Duration::days(30)),
             last_report_at: Some(now - Duration::days(60)),
+            period: Some("2026-Q3".into()),
             eps_estimate: Some(1.25),
             eps_actual: Some(1.20),
             source: "mock".into(),

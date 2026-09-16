@@ -34,6 +34,8 @@ pub struct PriceTargets {
 pub struct EarningsInfo {
     pub next_report_at: Option<chrono::DateTime<chrono::Utc>>,
     pub last_report_at: Option<chrono::DateTime<chrono::Utc>>,
+    /// Fiscal period label when known (e.g. `"2026-Q3"` from Finnhub year/quarter).
+    pub period: Option<String>,
     pub eps_estimate: Option<f64>,
     pub eps_actual: Option<f64>,
     pub source: String,

@@ -272,4 +272,69 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn trading_earnings_calendar_tool_registered_with_anyof_nullables() {
+        let router = SkillMasterMcpServer::tool_router_with_mcp_schemas();
+        let tools = router.list_all();
+        let cal = tools
+            .iter()
+            .find(|t| t.name == "trading_earnings_calendar")
+            .expect("trading_earnings_calendar tool");
+
+        let symbols = cal
+            .input_schema
+            .get("properties")
+            .and_then(|p| p.get("symbols"))
+            .expect("symbols property");
+        assert!(
+            symbols.get("anyOf").is_some(),
+            "trading_earnings_calendar.symbols should be anyOf; got {symbols}"
+        );
+
+        let output = cal
+            .output_schema
+            .as_ref()
+            .expect("trading_earnings_calendar outputSchema");
+        let output = Value::Object((**output).clone());
+        assert!(
+            !contains_nullable_type_array(&output),
+            "trading_earnings_calendar outputSchema has nullable type arrays: {output}"
+        );
+
+        let next = output
+            .pointer("/properties/events/items/properties/next_report_at")
+            .or_else(|| {
+                output.pointer("/$defs/EarningsCalendarEvent/properties/next_report_at")
+            })
+            .or_else(|| {
+                output.pointer(
+                    "/definitions/EarningsCalendarEvent/properties/next_report_at",
+                )
+            })
+            .or_else(|| {
+                let pref = output
+                    .pointer("/properties/events/items/$ref")
+                    .and_then(|r| r.as_str())?;
+                let name = pref.rsplit('/').next()?;
+                output
+                    .pointer(&format!(
+                        "/$defs/{name}/properties/next_report_at"
+                    ))
+                    .or_else(|| {
+                        output.pointer(&format!(
+                            "/definitions/{name}/properties/next_report_at"
+                        ))
+                    })
+            })
+            .unwrap_or_else(|| {
+                panic!(
+                    "could not locate events[].next_report_at in schema: {output}"
+                )
+            });
+        assert!(
+            next.get("anyOf").is_some(),
+            "events[].next_report_at should be anyOf; got {next}"
+        );
+    }
 }

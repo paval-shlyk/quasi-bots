@@ -16,19 +16,27 @@ pub use config::*;
 pub use state::*;
 
 pub async fn connect_db(db_file: &str) -> sqlx::SqlitePool {
-    use sqlx::sqlite::SqliteConnectOptions;
+    use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode};
     use std::str::FromStr;
+    use std::time::Duration;
 
     let db_url = format!("sqlite://{}?mode=rwc", db_file);
 
     tracing::info!("Connecting to database at {}", db_file);
 
+    // Shared sqlite: MCP watches + telegram outbox + alert evaluator.
+    // Explicit WAL + busy_timeout reduce `database is locked` / pool acquire
+    // errors that surface as alert_evaluator.last_error="db".
     let options = SqliteConnectOptions::from_str(&db_url)
         .expect("Invalid sqlite database URL")
         .create_if_missing(true)
-        .foreign_keys(true);
+        .foreign_keys(true)
+        .journal_mode(SqliteJournalMode::Wal)
+        .busy_timeout(Duration::from_secs(5));
 
     sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(10))
         .connect_with(options)
         .await
         .expect("Failed to connect to database")

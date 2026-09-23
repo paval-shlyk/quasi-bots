@@ -9,6 +9,11 @@
 //! REST calls reuse quotes-style short timeouts so a hung broker never blocks
 //! `/health` dig updates. CashBelow is REST-first (first tick does not await WS).
 //!
+//! **Sustained ticks (#37):** after the first REST tick, WS connect runs in a
+//! background task — never inline on the evaluator task — so blocking DNS/TCP
+//! inside `connect_async` cannot freeze `last_tick_at`. WS book events only
+//! mark dirty; the REST interval owns `record_tick`.
+//!
 //! **Not in scope:** Telegram / `sendMessage` (Wave A4).
 
 use chrono::{DateTime, Utc};
@@ -275,20 +280,15 @@ async fn run_session(
         book_dirty = false;
     }
 
-    // Hard-budgeted WS connect for subsequent marks (optional).
-    ws = try_ws_client(api).await;
-    let mut rest_only = ws.is_none();
-    if let Some(ref client) = ws {
-        if let Err(e) = client.subscribe_portfolio() {
-            tracing::warn!("subscribe_portfolio failed: {e}");
-        } else {
-            tracing::info!("Dzengi WS portfolio subscribe ok");
-        }
-    } else {
-        tracing::warn!(
-            "Dzengi WS unavailable; alert evaluator running REST-only this session"
-        );
-    }
+    // Sustained-tick invariant (issue #37 / tip f9ef898d dig):
+    // Never await WS connect on the evaluator task between record_tick and the
+    // next select poll. `tokio::time::timeout` cannot fire while the worker is
+    // stuck in blocking DNS/TCP inside connect_async — that froze last_tick_at
+    // after the first success on mcp-dev. Enter REST cadence immediately;
+    // connect in a background task and only adopt the socket when ready.
+    // Kick one background attempt without delaying the interval loop.
+    let mut ws_connect: Option<tokio::task::JoinHandle<Option<WsClient>>> =
+        Some(spawn_try_ws_client(api));
 
     let mut eval_tick = tokio::time::interval(config.eval_interval);
     eval_tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
@@ -297,6 +297,9 @@ async fn run_session(
 
     loop {
         tokio::select! {
+            // Prefer cadence over WS chatter so marks never starve REST ticks.
+            biased;
+
             _ = eval_tick.tick() => {
                 let force_book = book_dirty
                     || book.is_none()
@@ -316,27 +319,56 @@ async fn run_session(
                     last_reconcile = Instant::now();
                     book_dirty = false;
                 }
-                if ws.is_none() {
-                    if rest_only {
-                        // Stay on cadence; retry short-budget WS each cycle.
-                        ws = try_ws_client(api).await;
-                        if let Some(ref client) = ws {
-                            rest_only = false;
-                            if let Err(e) = client.subscribe_portfolio() {
-                                tracing::warn!("subscribe_portfolio failed: {e}");
+                // refresh_quotes may clear ws on ticker failure — stay REST-live.
+                if ws.is_none() && ws_connect.is_none() {
+                    ws_connect = Some(spawn_try_ws_client(api));
+                }
+            }
+
+            join = async {
+                ws_connect
+                    .as_mut()
+                    .expect("branch disabled when ws_connect is None")
+                    .await
+            }, if ws_connect.is_some() => {
+                ws_connect = None;
+                match join {
+                    Ok(Some(client)) => {
+                        if let Err(e) = client.subscribe_portfolio() {
+                            tracing::warn!("subscribe_portfolio failed: {e}");
+                            // Keep REST cadence; retry connect next tick.
+                            if ws_connect.is_none() {
+                                ws_connect = Some(spawn_try_ws_client(api));
                             }
+                        } else {
+                            tracing::info!("Dzengi WS portfolio subscribe ok");
+                            ws = Some(client);
                         }
-                    } else {
-                        // Had WS and lost it — reconnect session.
-                        return Ok(());
+                    }
+                    Ok(None) => {
+                        tracing::warn!(
+                            "Dzengi WS unavailable; alert evaluator staying REST-only (retry each eval tick)"
+                        );
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            error = %e,
+                            "alert evaluator background WS connect join failed"
+                        );
                     }
                 }
             }
+
             evt = recv_ws_event(&mut ws) => {
                 match evt {
                     None => {
-                        tracing::warn!("Dzengi WS event stream closed");
-                        return Ok(());
+                        tracing::warn!(
+                            "Dzengi WS event stream closed; continuing REST-only (no session tear-down)"
+                        );
+                        ws = None;
+                        if ws_connect.is_none() {
+                            ws_connect = Some(spawn_try_ws_client(api));
+                        }
                     }
                     Some(PortfolioEvent::Auth(a)) => {
                         tracing::debug!(
@@ -347,28 +379,10 @@ async fn run_session(
                     }
                     Some(PortfolioEvent::Snapshot(_))
                     | Some(PortfolioEvent::PositionUpdate(_)) => {
+                        // Coalesce: do not eval inline. A hung/slow eval on the
+                        // WS arm previously could delay cadence; REST interval
+                        // owns record_tick (wallet-only CashBelow stays safe).
                         book_dirty = true;
-                        let force_book = last_reconcile.elapsed()
-                            >= config.rest_reconcile
-                            || book.is_none();
-                        if let Err(e) = eval_once(
-                            pool,
-                            api,
-                            &mut ws,
-                            &mut book,
-                            force_book,
-                            status,
-                        )
-                        .await
-                        {
-                            tracing::warn!(
-                                error = %e,
-                                "alert eval after WS book event failed"
-                            );
-                        } else if force_book {
-                            last_reconcile = Instant::now();
-                            book_dirty = false;
-                        }
                     }
                     Some(PortfolioEvent::Raw(_)) => {}
                 }
@@ -382,6 +396,14 @@ async fn recv_ws_event(ws: &mut Option<WsClient>) -> Option<PortfolioEvent> {
         Some(client) => client.rx.recv().await,
         None => std::future::pending().await,
     }
+}
+
+/// Spawn WS connect off the evaluator task so blocking DNS/TCP cannot stall ticks.
+fn spawn_try_ws_client(
+    api: &RestClient,
+) -> tokio::task::JoinHandle<Option<WsClient>> {
+    let api = api.clone();
+    tokio::spawn(async move { try_ws_client(&api).await })
 }
 
 async fn try_ws_client(api: &RestClient) -> Option<WsClient> {
@@ -1174,6 +1196,29 @@ mod tests {
         s.record_tick(None, 1, 0, Utc::now());
         assert!(s.dig().last_error.is_none());
         assert_eq!(s.dig().cash, Some("None"));
+    }
+
+    #[test]
+    fn dig_enabled_watches_is_last_tick_snapshot_not_live_list() {
+        // Health dig does not query sqlite; it echoes the last record_tick.
+        // mcp-dev tip f9ef898d: enabled_watches=1 while MCP list [] after stall.
+        let s = AlertEvaluatorStatus::new();
+        s.set_running(true);
+        s.record_tick(Some(1.0), 1, 1, Utc::now());
+        assert_eq!(s.dig().enabled_watches, Some(1));
+        // Without another tick the dig stays stale even if DB watches are gone.
+        // Sustained REST cadence must record_tick(..., 0, ...) when list is empty.
+        assert_eq!(s.dig().enabled_watches, Some(1));
+        s.record_tick(Some(1.0), 0, 0, Utc::now());
+        assert_eq!(s.dig().enabled_watches, Some(0));
+    }
+
+    #[tokio::test]
+    async fn spawn_try_ws_client_is_send_background_connect() {
+        // Regression lock for #37: connect must not run on the evaluator task.
+        let api = RestClient::new("https://example.invalid", "k", "s");
+        let handle = spawn_try_ws_client(&api);
+        handle.abort();
     }
 
     #[test]

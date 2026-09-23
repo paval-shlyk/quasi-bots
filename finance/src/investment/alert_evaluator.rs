@@ -5,25 +5,30 @@
 //! the book via REST. Evaluates enabled watches and inserts `watch.fired` v1
 //! events into `alert_outbox` (cooldown respected).
 //!
+//! **Budgets:** each eval tick has a hard wall-clock deadline; WS connect and
+//! REST calls reuse quotes-style short timeouts so a hung broker never blocks
+//! `/health` dig updates. CashBelow is REST-first (first tick does not await WS).
+//!
 //! **Not in scope:** Telegram / `sendMessage` (Wave A4).
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tokio::time::MissedTickBehavior;
 
 use crate::analysis::OwningAssets;
 use crate::investment::model::PortfolioEvent;
-use crate::investment::quotes::{Quote, resolve_quote_pair};
+use crate::investment::quotes::{FETCH_QUOTES_DEADLINE, Quote, resolve_quote_pair};
 use crate::investment::rest_api::RestClient;
 use crate::investment::routes::{
-    assemble_holdings, load_dzengi_snapshot, nav_from_wallet, usd_wallet,
+    assemble_holdings, DzengiSnapshot, nav_from_wallet, usd_wallet,
 };
 use crate::investment::watches::{
-    EvalSnapshot, SymbolObservation, Watch, WatchRule,
-    evaluate_enabled_watches, list_enabled_watches,
+    EvalSnapshot, SymbolObservation, Watch, WatchRule, evaluate_enabled_watches,
+    list_enabled_watches,
 };
 use crate::investment::ws_api::{self, Client as WsClient, WS_CONNECT_TIMEOUT};
 
@@ -33,6 +38,13 @@ pub const DEFAULT_EVAL_INTERVAL_SECS: u64 = 60;
 pub const DEFAULT_REST_RECONCILE_SECS: u64 = 600;
 /// Soft cap on symbols refreshed per eval cycle (same spirit as quotes).
 pub const MAX_EVAL_SYMBOLS: usize = 30;
+
+/// Overall `eval_once` wall clock (aligned with quotes MCP headroom).
+pub const EVAL_ONCE_DEADLINE: Duration = FETCH_QUOTES_DEADLINE;
+/// Per REST call budget inside the evaluator (connect-class, short).
+pub const REST_CALL_TIMEOUT: Duration = Duration::from_secs(5);
+/// First tick delay — do not wait a full eval interval before CashBelow can fire.
+pub const FIRST_EVAL_DELAY: Duration = Duration::from_secs(1);
 
 /// Structural dig snapshot for unauthenticated `GET /health` (no magnitudes/secrets).
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
@@ -44,15 +56,18 @@ pub struct AlertEvaluatorDig {
     pub cash: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub enabled_watches: Option<usize>,
-    /// ISO-8601 UTC of last successful eval tick.
+    /// ISO-8601 UTC of last eval attempt (success or failed/deadline tick).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_tick_at: Option<DateTime<Utc>>,
     /// Seconds since `last_tick_at` (computed at read time).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_tick_age_secs: Option<u64>,
-    /// Structural count of watches that fired on the last tick.
+    /// Structural count of watches that fired on the last *successful* tick.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_fired_count: Option<usize>,
+    /// Structural error kind from last failed/deadline tick (`timeout`/`rest`/`ws`/`db`/`eval`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_error: Option<&'static str>,
 }
 
 #[derive(Debug, Default)]
@@ -63,6 +78,7 @@ struct AlertEvaluatorInner {
     enabled_watches: Option<usize>,
     last_tick_at: Option<DateTime<Utc>>,
     last_fired_count: Option<usize>,
+    last_error: Option<&'static str>,
 }
 
 /// Shared handle updated each eval tick; read by `/health`.
@@ -95,6 +111,28 @@ impl AlertEvaluatorStatus {
             g.enabled_watches = Some(enabled_watches);
             g.last_tick_at = Some(at);
             g.last_fired_count = Some(fired_count);
+            g.last_error = None;
+        }
+    }
+
+    /// Publish dig after a failed / deadline tick (structural only; no magnitudes).
+    pub fn record_failed_tick(
+        &self,
+        cash: Option<Option<f64>>,
+        enabled_watches: Option<usize>,
+        error_kind: &'static str,
+        at: DateTime<Utc>,
+    ) {
+        if let Ok(mut g) = self.0.lock() {
+            g.running = true;
+            if let Some(c) = cash {
+                g.cash_present = Some(c.is_some());
+            }
+            if let Some(n) = enabled_watches {
+                g.enabled_watches = Some(n);
+            }
+            g.last_tick_at = Some(at);
+            g.last_error = Some(error_kind);
         }
     }
 
@@ -108,11 +146,16 @@ impl AlertEvaluatorStatus {
                 last_tick_at: None,
                 last_tick_age_secs: None,
                 last_fired_count: None,
+                last_error: None,
             };
         };
         let last_tick_age_secs = g.last_tick_at.map(|t| {
             let age = (Utc::now() - t).num_seconds();
-            if age < 0 { 0 } else { age as u64 }
+            if age < 0 {
+                0
+            } else {
+                age as u64
+            }
         });
         AlertEvaluatorDig {
             running: g.running,
@@ -121,6 +164,7 @@ impl AlertEvaluatorStatus {
             last_tick_at: g.last_tick_at,
             last_tick_age_secs,
             last_fired_count: g.last_fired_count,
+            last_error: g.last_error,
         }
     }
 }
@@ -191,9 +235,7 @@ pub async fn run_alert_evaluator(
     loop {
         match run_session(&pool, &api, &config, &status).await {
             Ok(()) => {
-                tracing::warn!(
-                    "alert evaluator session ended cleanly; reconnecting"
-                );
+                tracing::warn!("alert evaluator session ended cleanly; reconnecting");
                 backoff = Duration::from_secs(2);
             }
             Err(e) => {
@@ -215,7 +257,26 @@ async fn run_session(
     config: &AlertEvaluatorConfig,
     status: &AlertEvaluatorStatus,
 ) -> anyhow::Result<()> {
-    let mut ws = try_ws_client(api).await;
+    let mut book: Option<BookCache> = None;
+    // Force REST reconcile on first tick.
+    let mut last_reconcile = Instant::now()
+        .checked_sub(config.rest_reconcile)
+        .unwrap_or_else(Instant::now);
+    let mut book_dirty = true;
+
+    // REST-first: first CashBelow tick must not block on WS connect.
+    let mut ws: Option<WsClient> = None;
+    tokio::time::sleep(FIRST_EVAL_DELAY).await;
+    if let Err(e) = eval_once(pool, api, &mut ws, &mut book, true, status).await {
+        tracing::warn!(error = %e, "alert eval first tick failed");
+    } else {
+        last_reconcile = Instant::now();
+        book_dirty = false;
+    }
+
+    // Hard-budgeted WS connect for subsequent marks (optional).
+    ws = try_ws_client(api).await;
+    let mut rest_only = ws.is_none();
     if let Some(ref client) = ws {
         if let Err(e) = client.subscribe_portfolio() {
             tracing::warn!("subscribe_portfolio failed: {e}");
@@ -228,17 +289,9 @@ async fn run_session(
         );
     }
 
-    let mut book: Option<BookCache> = None;
-    // Force REST reconcile on first tick.
-    let mut last_reconcile = Instant::now()
-        .checked_sub(config.rest_reconcile)
-        .unwrap_or_else(Instant::now);
-    let mut book_dirty = true;
-
     let mut eval_tick = tokio::time::interval(config.eval_interval);
     eval_tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
-    // Skip the immediate first tick so we can optionally wait for auth/events;
-    // still evaluate promptly via the first interval after connect.
+    // Skip immediate interval fire — we already ran the first REST-first tick.
     eval_tick.tick().await;
 
     loop {
@@ -263,8 +316,19 @@ async fn run_session(
                     book_dirty = false;
                 }
                 if ws.is_none() {
-                    // Prefer reconnecting rather than staying REST-only forever.
-                    return Ok(());
+                    if rest_only {
+                        // Stay on cadence; retry short-budget WS each cycle.
+                        ws = try_ws_client(api).await;
+                        if let Some(ref client) = ws {
+                            rest_only = false;
+                            if let Err(e) = client.subscribe_portfolio() {
+                                tracing::warn!("subscribe_portfolio failed: {e}");
+                            }
+                        }
+                    } else {
+                        // Had WS and lost it — reconnect session.
+                        return Ok(());
+                    }
                 }
             }
             evt = recv_ws_event(&mut ws) => {
@@ -282,7 +346,6 @@ async fn run_session(
                     }
                     Some(PortfolioEvent::Snapshot(_))
                     | Some(PortfolioEvent::PositionUpdate(_)) => {
-                        // Book may have moved; mark dirty and evaluate soon.
                         book_dirty = true;
                         let force_book = last_reconcile.elapsed()
                             >= config.rest_reconcile
@@ -361,6 +424,13 @@ async fn try_ws_client(api: &RestClient) -> Option<WsClient> {
     }
 }
 
+/// Partial dig progress published even when `eval_once` hits the deadline mid-await.
+#[derive(Debug, Default)]
+struct TickProgress {
+    cash: Option<Option<f64>>,
+    enabled_watches: Option<usize>,
+}
+
 async fn eval_once(
     pool: &sqlx::SqlitePool,
     api: &RestClient,
@@ -369,25 +439,91 @@ async fn eval_once(
     force_book: bool,
     status: &AlertEvaluatorStatus,
 ) -> anyhow::Result<()> {
+    let progress = Arc::new(Mutex::new(TickProgress {
+        cash: book.as_ref().map(|b| b.cash),
+        enabled_watches: None,
+    }));
+    let progress_for_body = progress.clone();
+
+    let outcome = tokio::time::timeout(
+        EVAL_ONCE_DEADLINE,
+        eval_once_inner(pool, api, ws, book, force_book, progress_for_body),
+    )
+    .await;
+
+    match outcome {
+        Ok(Ok(fired)) => {
+            let g = progress.lock().ok();
+            let cash_val: Option<f64> = match &g {
+                Some(p) => match p.cash {
+                    Some(c) => c,
+                    None => book.as_ref().and_then(|b| b.cash),
+                },
+                None => book.as_ref().and_then(|b| b.cash),
+            };
+            let watches_n = g.as_ref().and_then(|p| p.enabled_watches).unwrap_or(0);
+            status.record_tick(cash_val, watches_n, fired, Utc::now());
+            Ok(())
+        }
+        Ok(Err(e)) => {
+            let g = progress.lock().ok();
+            let cash = g.as_ref().and_then(|p| p.cash);
+            let watches_n = g.as_ref().and_then(|p| p.enabled_watches);
+            let kind = classify_eval_error(&e);
+            status.record_failed_tick(cash, watches_n, kind, Utc::now());
+            Err(e)
+        }
+        Err(_) => {
+            let g = progress.lock().ok();
+            let cash = g.as_ref().and_then(|p| p.cash);
+            let watches_n = g.as_ref().and_then(|p| p.enabled_watches);
+            status.record_failed_tick(cash, watches_n, "timeout", Utc::now());
+            anyhow::bail!(
+                "eval_once timed out after {}ms",
+                EVAL_ONCE_DEADLINE.as_millis()
+            )
+        }
+    }
+}
+
+async fn eval_once_inner(
+    pool: &sqlx::SqlitePool,
+    api: &RestClient,
+    ws: &mut Option<WsClient>,
+    book: &mut Option<BookCache>,
+    force_book: bool,
+    progress: Arc<Mutex<TickProgress>>,
+) -> anyhow::Result<usize> {
     let watches = list_enabled_watches(pool).await?;
+    if let Ok(mut g) = progress.lock() {
+        g.enabled_watches = Some(watches.len());
+        g.cash = book.as_ref().map(|b| b.cash);
+    }
     if watches.is_empty() {
         tracing::trace!("alert evaluator: no enabled watches");
-        // Still publish dig so /health shows ticks with enabled_watches=0.
         let cash = book.as_ref().and_then(|b| b.cash);
-        status.record_tick(cash, 0, 0, Utc::now());
-        return Ok(());
+        if let Ok(mut g) = progress.lock() {
+            g.cash = Some(cash);
+            g.enabled_watches = Some(0);
+        }
+        return Ok(0);
     }
 
     let needs_book = watches.iter().any(watch_needs_book);
+    let wallet_only = watches_wallet_only(&watches);
     if force_book || (needs_book && book.is_none()) {
-        match load_book_cache(api).await {
+        match load_book_cache(api, wallet_only).await {
             Ok(cache) => {
                 tracing::debug!(
                     symbols = cache.symbols.len(),
                     cash = cash_presence_label(cache.cash),
                     nav = cash_presence_label(cache.nav),
+                    wallet_only,
                     "alert evaluator REST book reconcile ok"
                 );
+                if let Ok(mut g) = progress.lock() {
+                    g.cash = Some(cache.cash);
+                }
                 *book = Some(cache);
             }
             Err(e) => {
@@ -407,8 +543,10 @@ async fn eval_once(
     };
 
     let snap = build_eval_snapshot(book.as_ref(), &quotes, Utc::now());
+    if let Ok(mut g) = progress.lock() {
+        g.cash = Some(snap.cash);
+    }
 
-    // Structural only — never log cash/NAV magnitudes.
     let cash_below_enabled = watches
         .iter()
         .any(|w| matches!(w.rule, WatchRule::CashBelow));
@@ -420,8 +558,6 @@ async fn eval_once(
     }
 
     let fired = evaluate_enabled_watches(pool, &snap).await?;
-    let tick_at = Utc::now();
-    status.record_tick(snap.cash, watches.len(), fired.len(), tick_at);
     tracing::info!(
         cash = cash_presence_label(snap.cash),
         enabled_watches = watches.len(),
@@ -435,7 +571,45 @@ async fn eval_once(
             "alert evaluator inserted watch.fired outbox rows"
         );
     }
-    Ok(())
+    Ok(fired.len())
+}
+
+fn watches_wallet_only(watches: &[Watch]) -> bool {
+    let needs_holdings = watches.iter().any(|w| {
+        matches!(
+            w.rule,
+            WatchRule::MarkVsEntryPct | WatchRule::WeightBookPctAbove
+        )
+    });
+    let needs_wallet = watches.iter().any(|w| {
+        matches!(
+            w.rule,
+            WatchRule::CashBelow
+                | WatchRule::NavDayChangePct
+                | WatchRule::MarkVsEntryPct
+                | WatchRule::WeightBookPctAbove
+        )
+    });
+    needs_wallet && !needs_holdings
+}
+
+fn classify_eval_error(e: &anyhow::Error) -> &'static str {
+    let s = format!("{e:#}").to_ascii_lowercase();
+    if s.contains("timed out") || s.contains("timeout") {
+        "timeout"
+    } else if s.contains("websocket") || s.contains("ws ") {
+        "ws"
+    } else if s.contains("sqlite") || s.contains("database") || s.contains("pool") {
+        "db"
+    } else if s.contains("book")
+        || s.contains("rest")
+        || s.contains("account")
+        || s.contains("exchange")
+    {
+        "rest"
+    } else {
+        "eval"
+    }
 }
 
 fn watch_needs_book(w: &Watch) -> bool {
@@ -466,7 +640,11 @@ fn symbols_needing_quotes(watches: &[Watch]) -> Vec<String> {
 
 /// Presence label for logs — never emit cash/NAV magnitudes.
 fn cash_presence_label(v: Option<f64>) -> &'static str {
-    if v.is_some() { "Some" } else { "None" }
+    if v.is_some() {
+        "Some"
+    } else {
+        "None"
+    }
 }
 
 /// Map holdings → eval observations. Empty when assemble fails (soft path).
@@ -488,29 +666,99 @@ fn symbols_from_owning(
     symbols
 }
 
+/// Hard timeout around a single REST future (quotes-style short budget).
+async fn rest_timeout<T, F>(label: &str, fut: F) -> anyhow::Result<T>
+where
+    F: Future<Output = anyhow::Result<T>>,
+{
+    match tokio::time::timeout(REST_CALL_TIMEOUT, fut).await {
+        Ok(inner) => inner.map_err(|e| anyhow::anyhow!("REST {label}: {e}")),
+        Err(_) => anyhow::bail!(
+            "REST {label} timed out after {}ms",
+            REST_CALL_TIMEOUT.as_millis()
+        ),
+    }
+}
+
+/// Timed Dzengi snapshot — each fan-out call has its own REST budget.
+async fn load_dzengi_snapshot_timed(
+    api: &RestClient,
+) -> anyhow::Result<DzengiSnapshot> {
+    let server_ts = rest_timeout("time", api.time()).await?;
+    let (account, positions, currencies, exchange_info) = tokio::try_join!(
+        rest_timeout("account", api.account(server_ts)),
+        rest_timeout("trading_positions", api.trading_positions(server_ts)),
+        rest_timeout("currencies", api.currencies(server_ts)),
+        rest_timeout("exchangeInfo", api.exchange_info(server_ts)),
+    )?;
+    Ok(DzengiSnapshot {
+        snapshot_at: Utc::now(),
+        account,
+        positions,
+        currencies,
+        exchange_info,
+    })
+}
+
+/// Wallet-only path for CashBelow / NavDayChangePct (no holdings fan-out).
+async fn load_wallet_book_cache(api: &RestClient) -> anyhow::Result<BookCache> {
+    let server_ts = rest_timeout("time", api.time()).await?;
+    let account = rest_timeout("account", api.account(server_ts)).await?;
+    let (cash, reserved) = usd_wallet(&account);
+    let nav = nav_from_wallet(cash, reserved);
+    Ok(BookCache {
+        cash,
+        nav,
+        symbols: HashMap::new(),
+        loaded_at: Instant::now(),
+    })
+}
+
 /// REST book + wallet for CashBelow / NavDayChangePct / weight / mark-vs-entry.
 ///
 /// **Cash/NAV do not require full holdings success.** `usd_wallet` is taken
 /// from the account snapshot first; if `assemble_holdings` fails (ticker /
 /// myTrades / pair soft-hard paths), we still return a BookCache with
 /// `cash`/`nav` set and an empty symbol map so portfolio cash rules can fire.
-async fn load_book_cache(api: &RestClient) -> anyhow::Result<BookCache> {
-    let snapshot = load_dzengi_snapshot(api).await?;
-    // Wallet first — CashBelow / wallet NAV must not depend on holdings.
+///
+/// When `wallet_only` is true (CashBelow / NavDayChange only), skip positions /
+/// holdings so the first tick cannot hang on unrelated REST fan-out.
+async fn load_book_cache(
+    api: &RestClient,
+    wallet_only: bool,
+) -> anyhow::Result<BookCache> {
+    if wallet_only {
+        return load_wallet_book_cache(api).await;
+    }
+
+    let snapshot = load_dzengi_snapshot_timed(api).await?;
     let (cash, reserved) = usd_wallet(&snapshot.account);
     let nav = nav_from_wallet(cash, reserved);
 
-    let symbols = match assemble_holdings(api, &snapshot).await {
-        Ok(holdings) => {
+    let symbols = match tokio::time::timeout(
+        REST_CALL_TIMEOUT.saturating_mul(3),
+        assemble_holdings(api, &snapshot),
+    )
+    .await
+    {
+        Ok(Ok(holdings)) => {
             let owning = OwningAssets::from_holdings(holdings.assets, nav);
             symbols_from_owning(owning)
         }
-        Err(e) => {
+        Ok(Err(e)) => {
             tracing::warn!(
                 error = %e,
                 cash = cash_presence_label(cash),
                 nav = cash_presence_label(nav),
                 "assemble_holdings failed; soft-continuing with wallet cash/nav only"
+            );
+            HashMap::new()
+        }
+        Err(_) => {
+            tracing::warn!(
+                cash = cash_presence_label(cash),
+                nav = cash_presence_label(nav),
+                "assemble_holdings timed out; soft-continuing with wallet cash/nav only"
             );
             HashMap::new()
         }
@@ -571,20 +819,21 @@ async fn refresh_quotes_ws_primary(
         return Vec::new();
     }
 
-    let server_ts = match api.time().await {
+    let server_ts = match rest_timeout("time", api.time()).await {
         Ok(t) => t,
         Err(e) => {
             tracing::warn!("alert evaluator time() failed: {e}");
             return Vec::new();
         }
     };
-    let exchange_info = match api.exchange_info(server_ts).await {
-        Ok(i) => i,
-        Err(e) => {
-            tracing::warn!("alert evaluator exchangeInfo failed: {e}");
-            return Vec::new();
-        }
-    };
+    let exchange_info =
+        match rest_timeout("exchangeInfo", api.exchange_info(server_ts)).await {
+            Ok(i) => i,
+            Err(e) => {
+                tracing::warn!("alert evaluator exchangeInfo failed: {e}");
+                return Vec::new();
+            }
+        };
     let api_prefix = ws_api::ws_api_prefix(&api.base_url);
 
     let mut out = Vec::with_capacity(symbols.len());
@@ -618,11 +867,11 @@ async fn refresh_quotes_ws_primary(
                         "WS ticker failed in evaluator: {e}; REST fallback"
                     );
                     *ws = None;
-                    api.ticker(&trade).await
+                    rest_timeout("ticker", api.ticker(&trade)).await
                 }
             }
         } else {
-            api.ticker(&trade).await
+            rest_timeout("ticker", api.ticker(&trade)).await
         };
 
         match ticker {
@@ -665,11 +914,10 @@ fn positive_or_none(v: f64) -> Option<f64> {
 mod tests {
     use super::*;
     use crate::investment::watches::{WatchChannel, WatchCompare};
+    use crate::investment::ws_api::WS_REQUEST_TIMEOUT_SECS;
 
     #[test]
     fn evaluator_disabled_by_default() {
-        // Ensure we don't accidentally treat missing env as enabled in unit tests.
-        // (Cannot clear process env safely if parent set it; only assert parse helper.)
         assert!(!parse_enabled_flag(None));
         assert!(!parse_enabled_flag(Some("0")));
         assert!(!parse_enabled_flag(Some("false")));
@@ -769,9 +1017,11 @@ mod tests {
         assert!(dig.last_tick_at.is_none());
         assert!(dig.last_tick_age_secs.is_none());
         assert!(dig.last_fired_count.is_none());
+        assert!(dig.last_error.is_none());
         let json = serde_json::to_value(&dig).unwrap();
         assert_eq!(json["running"], false);
         assert!(json.get("cash").is_none());
+        assert!(json.get("last_error").is_none());
     }
 
     #[test]
@@ -797,7 +1047,6 @@ mod tests {
 
     #[test]
     fn soft_book_with_wallet_only_exposes_cash_for_cash_below() {
-        // Holdings assemble failed → empty symbols, but wallet cash/nav present.
         let book = BookCache {
             cash: Some(1500.0),
             nav: Some(1500.0),
@@ -849,5 +1098,132 @@ mod tests {
         assert!(
             crate::investment::watches::evaluate_watch(&watch, &snap).is_none()
         );
+    }
+
+    #[test]
+    fn timeout_budgets_reuse_quotes_headroom() {
+        const {
+            assert!(WS_REQUEST_TIMEOUT_SECS <= 3);
+            assert!(REST_CALL_TIMEOUT.as_secs() <= 5);
+            assert!(FIRST_EVAL_DELAY.as_secs() <= 1);
+            assert!(EVAL_ONCE_DEADLINE.as_secs() <= 25);
+        };
+        assert_eq!(EVAL_ONCE_DEADLINE, FETCH_QUOTES_DEADLINE);
+        assert!(REST_CALL_TIMEOUT >= WS_CONNECT_TIMEOUT);
+        assert!(EVAL_ONCE_DEADLINE > REST_CALL_TIMEOUT);
+    }
+
+    #[test]
+    fn classify_eval_error_kinds_are_structural() {
+        assert_eq!(
+            classify_eval_error(&anyhow::anyhow!("eval_once timed out after 20s")),
+            "timeout"
+        );
+        assert_eq!(
+            classify_eval_error(&anyhow::anyhow!(
+                "REST account timed out after 5000ms"
+            )),
+            "timeout"
+        );
+        assert_eq!(
+            classify_eval_error(&anyhow::anyhow!(
+                "book required but reconcile failed"
+            )),
+            "rest"
+        );
+        assert_eq!(
+            classify_eval_error(&anyhow::anyhow!(
+                "websocket event receiver closed"
+            )),
+            "ws"
+        );
+        assert_eq!(
+            classify_eval_error(&anyhow::anyhow!("error returned from database")),
+            "db"
+        );
+        assert_eq!(classify_eval_error(&anyhow::anyhow!("boom")), "eval");
+    }
+
+    #[test]
+    fn failed_tick_publishes_dig_with_error_kind_no_magnitudes() {
+        let s = AlertEvaluatorStatus::new();
+        s.set_running(true);
+        let at = Utc::now();
+        s.record_failed_tick(Some(Some(42_000.5)), Some(1), "timeout", at);
+        let dig = s.dig();
+        assert!(dig.running);
+        assert_eq!(dig.cash, Some("Some"));
+        assert_eq!(dig.enabled_watches, Some(1));
+        assert_eq!(dig.last_tick_at, Some(at));
+        assert_eq!(dig.last_error, Some("timeout"));
+        assert!(dig.last_fired_count.is_none());
+        let json = serde_json::to_string(&dig).unwrap();
+        assert!(json.contains("\"timeout\""));
+        assert!(!json.contains("42000"));
+        assert!(!json.contains("42_000"));
+
+        s.record_tick(None, 1, 0, Utc::now());
+        assert!(s.dig().last_error.is_none());
+        assert_eq!(s.dig().cash, Some("None"));
+    }
+
+    #[test]
+    fn cash_below_watches_are_wallet_only_path() {
+        let watches = vec![Watch {
+            id: 1,
+            symbol: None,
+            rule: WatchRule::CashBelow,
+            threshold: 1.0,
+            compare: WatchCompare::Lte,
+            channel: WatchChannel::Both,
+            cooldown_secs: 60,
+            enabled: true,
+            last_fired_at: None,
+            created_at: Utc::now(),
+        }];
+        assert!(watches_wallet_only(&watches));
+        let with_mark = vec![Watch {
+            id: 2,
+            symbol: Some("TSLA".into()),
+            rule: WatchRule::MarkVsEntryPct,
+            threshold: -5.0,
+            compare: WatchCompare::Lte,
+            channel: WatchChannel::Mcp,
+            cooldown_secs: 60,
+            enabled: true,
+            last_fired_at: None,
+            created_at: Utc::now(),
+        }];
+        assert!(!watches_wallet_only(&with_mark));
+    }
+
+    #[tokio::test]
+    async fn eval_deadline_wrapper_publishes_timeout_dig() {
+        let status = AlertEvaluatorStatus::new();
+        status.set_running(true);
+        let progress = Arc::new(Mutex::new(TickProgress {
+            cash: Some(Some(1.0)),
+            enabled_watches: Some(1),
+        }));
+        let outcome = tokio::time::timeout(Duration::from_millis(20), async {
+            tokio::time::sleep(Duration::from_secs(5)).await;
+            Ok::<usize, anyhow::Error>(0)
+        })
+        .await;
+        assert!(outcome.is_err(), "expected deadline");
+        let g = progress.lock().unwrap();
+        status.record_failed_tick(
+            g.cash,
+            g.enabled_watches,
+            "timeout",
+            Utc::now(),
+        );
+        let dig = status.dig();
+        assert_eq!(dig.last_error, Some("timeout"));
+        assert_eq!(dig.enabled_watches, Some(1));
+        assert_eq!(dig.cash, Some("Some"));
+        assert!(dig.last_tick_at.is_some());
+        let json = serde_json::to_string(&dig).unwrap();
+        assert!(!json.contains("1.0"));
     }
 }

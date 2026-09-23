@@ -21,14 +21,16 @@ use tokio::time::MissedTickBehavior;
 
 use crate::analysis::OwningAssets;
 use crate::investment::model::PortfolioEvent;
-use crate::investment::quotes::{FETCH_QUOTES_DEADLINE, Quote, resolve_quote_pair};
+use crate::investment::quotes::{
+    FETCH_QUOTES_DEADLINE, Quote, resolve_quote_pair,
+};
 use crate::investment::rest_api::RestClient;
 use crate::investment::routes::{
-    assemble_holdings, DzengiSnapshot, nav_from_wallet, usd_wallet,
+    DzengiSnapshot, assemble_holdings, nav_from_wallet, usd_wallet,
 };
 use crate::investment::watches::{
-    EvalSnapshot, SymbolObservation, Watch, WatchRule, evaluate_enabled_watches,
-    list_enabled_watches,
+    EvalSnapshot, SymbolObservation, Watch, WatchRule,
+    evaluate_enabled_watches, list_enabled_watches,
 };
 use crate::investment::ws_api::{self, Client as WsClient, WS_CONNECT_TIMEOUT};
 
@@ -151,11 +153,7 @@ impl AlertEvaluatorStatus {
         };
         let last_tick_age_secs = g.last_tick_at.map(|t| {
             let age = (Utc::now() - t).num_seconds();
-            if age < 0 {
-                0
-            } else {
-                age as u64
-            }
+            if age < 0 { 0 } else { age as u64 }
         });
         AlertEvaluatorDig {
             running: g.running,
@@ -235,7 +233,9 @@ pub async fn run_alert_evaluator(
     loop {
         match run_session(&pool, &api, &config, &status).await {
             Ok(()) => {
-                tracing::warn!("alert evaluator session ended cleanly; reconnecting");
+                tracing::warn!(
+                    "alert evaluator session ended cleanly; reconnecting"
+                );
                 backoff = Duration::from_secs(2);
             }
             Err(e) => {
@@ -267,7 +267,8 @@ async fn run_session(
     // REST-first: first CashBelow tick must not block on WS connect.
     let mut ws: Option<WsClient> = None;
     tokio::time::sleep(FIRST_EVAL_DELAY).await;
-    if let Err(e) = eval_once(pool, api, &mut ws, &mut book, true, status).await {
+    if let Err(e) = eval_once(pool, api, &mut ws, &mut book, true, status).await
+    {
         tracing::warn!(error = %e, "alert eval first tick failed");
     } else {
         last_reconcile = Instant::now();
@@ -461,7 +462,8 @@ async fn eval_once(
                 },
                 None => book.as_ref().and_then(|b| b.cash),
             };
-            let watches_n = g.as_ref().and_then(|p| p.enabled_watches).unwrap_or(0);
+            let watches_n =
+                g.as_ref().and_then(|p| p.enabled_watches).unwrap_or(0);
             status.record_tick(cash_val, watches_n, fired, Utc::now());
             Ok(())
         }
@@ -599,7 +601,10 @@ fn classify_eval_error(e: &anyhow::Error) -> &'static str {
         "timeout"
     } else if s.contains("websocket") || s.contains("ws ") {
         "ws"
-    } else if s.contains("sqlite") || s.contains("database") || s.contains("pool") {
+    } else if s.contains("sqlite")
+        || s.contains("database")
+        || s.contains("pool")
+    {
         "db"
     } else if s.contains("book")
         || s.contains("rest")
@@ -640,11 +645,7 @@ fn symbols_needing_quotes(watches: &[Watch]) -> Vec<String> {
 
 /// Presence label for logs — never emit cash/NAV magnitudes.
 fn cash_presence_label(v: Option<f64>) -> &'static str {
-    if v.is_some() {
-        "Some"
-    } else {
-        "None"
-    }
+    if v.is_some() { "Some" } else { "None" }
 }
 
 /// Map holdings → eval observations. Empty when assemble fails (soft path).
@@ -826,14 +827,18 @@ async fn refresh_quotes_ws_primary(
             return Vec::new();
         }
     };
-    let exchange_info =
-        match rest_timeout("exchangeInfo", api.exchange_info(server_ts)).await {
-            Ok(i) => i,
-            Err(e) => {
-                tracing::warn!("alert evaluator exchangeInfo failed: {e}");
-                return Vec::new();
-            }
-        };
+    let exchange_info = match rest_timeout(
+        "exchangeInfo",
+        api.exchange_info(server_ts),
+    )
+    .await
+    {
+        Ok(i) => i,
+        Err(e) => {
+            tracing::warn!("alert evaluator exchangeInfo failed: {e}");
+            return Vec::new();
+        }
+    };
     let api_prefix = ws_api::ws_api_prefix(&api.base_url);
 
     let mut out = Vec::with_capacity(symbols.len());
@@ -1116,7 +1121,9 @@ mod tests {
     #[test]
     fn classify_eval_error_kinds_are_structural() {
         assert_eq!(
-            classify_eval_error(&anyhow::anyhow!("eval_once timed out after 20s")),
+            classify_eval_error(&anyhow::anyhow!(
+                "eval_once timed out after 20s"
+            )),
             "timeout"
         );
         assert_eq!(
@@ -1138,7 +1145,9 @@ mod tests {
             "ws"
         );
         assert_eq!(
-            classify_eval_error(&anyhow::anyhow!("error returned from database")),
+            classify_eval_error(&anyhow::anyhow!(
+                "error returned from database"
+            )),
             "db"
         );
         assert_eq!(classify_eval_error(&anyhow::anyhow!("boom")), "eval");
